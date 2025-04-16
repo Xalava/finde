@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>Network Defense v4</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-color: #f2f2f2;
+        }
+
+        canvas {
+            background: #ffffff;
+            display: block;
+            margin: 20px auto;
+            border: 2px solid #333;
+        }
+
+        #ui {
+            font-size: 18px;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>💼 Financial Defense</h1>
+    <div id="ui">
+        💰 Budget: <span id="budget">100</span><br />
+        Filters: 🔍 Basic (50) → 🔬 (75 upgrade) | 🧠 AI (100) → 🤖 (150 upgrade)<br />
+        Click a node to place a filter | Click again to upgrade.
+    </div>
+    <canvas id="game" width="1000" height="800"></canvas>
+    <script src="main.js"></script>
+</body>
+
+</html>
