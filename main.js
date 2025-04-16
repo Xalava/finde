@@ -1,31 +1,33 @@
-const debug = true
+const debug = false
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
 const budgetEl = document.getElementById('budget');
 let budget = 100;
+const maintenanceEl = document.getElementById('maintenance');
+let maintenance = 0;
 
 const nodes = [
-    { id: 0, x: 250, y: 200, tower: null, corruption: 0, type: 'processor' },
-    { id: 1, x: 300, y: 600, tower: null, corruption: 0, type: 'processor' },
-    { id: 2, x: 400, y: 350, tower: null, corruption: 0, type: 'processor' },
-    { id: 3, x: 600, y: 650, tower: null, corruption: 0, type: 'processor' },
-    { id: 4, x: 750, y: 300, tower: null, corruption: 0, type: 'processor' },
+    { id: 0, x: 250, y: 200, tower: null, corruption: 0, type: 'processor', name: 'PayFlow' },
+    { id: 1, x: 300, y: 600, tower: null, corruption: 0, type: 'processor', name: 'TransactPro' },
+    { id: 2, x: 400, y: 350, tower: null, corruption: 0, type: 'processor', name: 'SecurePay' },
+    { id: 3, x: 600, y: 650, tower: null, corruption: 0, type: 'processor', name: 'FastFunds' },
+    { id: 4, x: 750, y: 300, tower: null, corruption: 0, type: 'processor', name: 'QuickTransfer' },
 
-    { id: 5, x: 400, y: 200, tower: null, corruption: 0, type: 'bank' },
-    { id: 6, x: 200, y: 250, tower: null, corruption: 0, type: 'bank' },
-    { id: 7, x: 150, y: 350, tower: null, corruption: 5, type: 'bank' },
-    { id: 8, x: 950, y: 50, tower: null, corruption: 0, type: 'bank' },
-    { id: 9, x: 900, y: 200, tower: null, corruption: 0, type: 'bank' },
-    { id: 10, x: 100, y: 150, tower: null, corruption: 0, type: 'bank' },
-    { id: 11, x: 300, y: 50, tower: null, corruption: 0, type: 'bank' },
-    { id: 12, x: 900, y: 550, tower: null, corruption: 5, type: 'bank' },
-    { id: 13, x: 850, y: 100, tower: null, corruption: 0, type: 'bank' },
-    { id: 14, x: 600, y: 250, tower: null, corruption: 0, type: 'bank' },
-    { id: 15, x: 700, y: 700, tower: null, corruption: 0, type: 'bank' },
-    { id: 16, x: 200, y: 500, tower: null, corruption: 0, type: 'bank' },
-    { id: 17, x: 800, y: 450, tower: null, corruption: 0, type: 'bank' },
-    { id: 18, x: 200, y: 750, tower: null, corruption: 0, type: 'bank' },
-    { id: 19, x: 400, y: 600, tower: null, corruption: 0, type: 'bank' },
+    { id: 5, x: 400, y: 200, tower: null, corruption: 0, type: 'bank', name: 'Global Bank' },
+    { id: 6, x: 200, y: 250, tower: null, corruption: 0, type: 'bank', name: 'Trust Bank' },
+    { id: 7, x: 150, y: 350, tower: null, corruption: 2, type: 'bank', name: 'Safe Savings' },
+    { id: 8, x: 950, y: 50, tower: null, corruption: 0, type: 'bank', name: 'Prime Bank' },
+    { id: 9, x: 900, y: 200, tower: null, corruption: 0, type: 'bank', name: 'Capital Trust' },
+    { id: 10, x: 100, y: 150, tower: null, corruption: 0, type: 'bank', name: 'Union Bank' },
+    { id: 11, x: 300, y: 50, tower: null, corruption: 0, type: 'bank', name: 'Metro Bank' },
+    { id: 12, x: 900, y: 550, tower: null, corruption: 0, type: 'bank', name: 'PioneerB ank' },
+    { id: 13, x: 850, y: 100, tower: null, corruption: 0, type: 'bank', name: 'Elite Bank' },
+    { id: 14, x: 600, y: 250, tower: null, corruption: 0, type: 'bank', name: 'Summit Bank' },
+    { id: 15, x: 700, y: 700, tower: null, corruption: 0, type: 'bank', name: 'Horizon Bank' },
+    { id: 16, x: 200, y: 500, tower: null, corruption: 0, type: 'bank', name: 'Anchor Bank' },
+    { id: 17, x: 800, y: 450, tower: null, corruption: 3, type: 'bank', name: 'Crest Bank' },
+    { id: 18, x: 200, y: 750, tower: null, corruption: 0, type: 'bank', name: 'Fortune Bank' },
+    { id: 19, x: 400, y: 600, tower: null, corruption: 0, type: 'bank', name: 'Legacy Bank' },
 ];
 
 const edges = [
@@ -159,6 +161,7 @@ function updateEffects() {
     }
 }
 
+// Handle mouse click to place towers
 canvas.addEventListener('click', (e) => {
     const rect = canvas.getBoundingClientRect();
     const mx = e.clientX - rect.left;
@@ -172,6 +175,7 @@ canvas.addEventListener('click', (e) => {
                 if (e.shiftKey && budget >= 100) {
                     node.tower = 'ai';
                     budget -= 100;
+                    maintenance -= 1
                 } else if (budget >= 50) {
                     node.tower = 'basic';
                     budget -= 50;
@@ -183,6 +187,7 @@ canvas.addEventListener('click', (e) => {
                 } else if (node.tower === 'ai' && budget >= 150) {
                     node.tower = 'advanced';
                     budget -= 150;
+                    maintenance -= 5
                 }
             }
             break;
@@ -190,15 +195,55 @@ canvas.addEventListener('click', (e) => {
     }
 });
 
+// Handle mouse hover to show tower info with a delay but no delay after
+let hoverNode = null;
+let hoverTimeout = null;
+
+canvas.addEventListener('mousemove', (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const mx = e.clientX - rect.left;
+    const my = e.clientY - rect.top;
+
+    if (hoverTimeout) clearTimeout(hoverTimeout);
+
+    hoverTimeout = setTimeout(() => {
+        hoverNode = null;
+        for (let node of nodes) {
+            const dx = node.x - mx;
+            const dy = node.y - my;
+            if (Math.hypot(dx, dy) < 20) {
+                hoverNode = node;
+                break;
+            }
+        }
+    }, 100); // Increased delay to 500ms before showing hover info
+});
+
+canvas.addEventListener('mouseleave', () => {
+    hoverNode = null; // Clear tooltip instantly when mouse leaves the canvas
+    if (hoverTimeout) clearTimeout(hoverTimeout);
+});
+
 function drawNode(node) {
+    ctx.save();  // Save canvas state
+
     ctx.beginPath();
     ctx.arc(node.x, node.y, 20, 0, Math.PI * 2);
     let color = node.type === 'bank' ? '#eee' : '#aaf';
-    if (node.corruption > 2) color = 'orange';
-    if (node.corruption > 4) color = 'red';
-    ctx.fillStyle = color
+
+    if (node.corruption > 4) {
+        ctx.shadowColor = 'red';
+        ctx.shadowBlur = 10;
+    } else if (node.corruption > 1) {
+        ctx.shadowColor = 'orange';
+        ctx.shadowBlur = 5;
+    }
+
+    ctx.fillStyle = color;
     ctx.fill();
     ctx.stroke();
+    ctx.restore(); // Restore to remove shadow for text drawing
+
     ctx.font = '20px Arial';
     ctx.fillText(node.type === 'bank' ? '🏦' : '🌐', node.x - 12, node.y + 7);
     if (node.tower) {
@@ -212,6 +257,7 @@ function drawNode(node) {
     }
     if (debug) {
         ctx.fillalign = 'center';
+        ctx.fillStyle = 'black';
         ctx.fillText(node.id, node.x - 10, node.y - 20);
         if (node.corruption) {
             ctx.fillStyle = 'red';
@@ -262,7 +308,33 @@ function gameLoop() {
     updateEffects();
     if (Math.random() < 0.03) spawnTransaction();
     deductTowerCosts();
-    budgetEl.textContent = Math.max(0, budget.toFixed(0));
+    budgetEl.textContent = Math.max(0, budget.toFixed(0))
+    maintenanceEl.textContent = maintenance
+    if (hoverNode) {
+        const tooltip = `${hoverNode.name} \nCorruption: ${hoverNode.corruption}\nControls: ${hoverNode.tower || 'None'}`;
+        ctx.font = '14px Arial';
+        ctx.fillStyle = '#333';
+        const lines = tooltip.split('\n');
+        let tooltipX = hoverNode.x + 25;
+        let tooltipY = hoverNode.y;
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(tooltipX - 5, tooltipY - 15, 140, lines.length * 18 + 8);
+        ctx.strokeStyle = '#ccc';
+        ctx.strokeRect(tooltipX - 5, tooltipY - 15, 140, lines.length * 18 + 8);
+        ctx.fillStyle = '#000';
+        lines.forEach((line, i) => ctx.fillText(line, tooltipX, tooltipY + i * 18));
+    }
+    const totalBanks = nodes.filter(n => n.type === 'bank').length;
+    const corruptedBanks = nodes.filter(n => n.type === 'bank' && n.corruption > 0).length;
+    const spread = (corruptedBanks / totalBanks) * 100;
+
+    ctx.fillStyle = '#333';
+    ctx.fillRect(10, canvas.height - 30, 200, 20);
+    ctx.fillStyle = spread > 70 ? 'red' : spread > 30 ? 'orange' : 'green';
+    ctx.fillRect(10, canvas.height - 30, 2 * spread, 20);
+    ctx.fillStyle = 'white';
+    ctx.font = '14px Arial';
+    ctx.fillText(`Corruption: ${Math.floor(spread)}%`, 15, canvas.height - 15);
     requestAnimationFrame(gameLoop);
 }
 
