@@ -5,6 +5,7 @@ const budgetEl = document.getElementById('budget');
 let budget = 100;
 const maintenanceEl = document.getElementById('maintenance');
 let maintenance = 0;
+const auditedNodes = [];
 
 const nodes = [
     { id: 0, x: 250, y: 200, tower: null, corruption: 0, type: 'processor', name: 'PayFlow' },
@@ -26,7 +27,7 @@ const nodes = [
     { id: 15, x: 700, y: 700, tower: null, corruption: 0, type: 'bank', name: 'Horizon Bank' },
     { id: 16, x: 200, y: 500, tower: null, corruption: 0, type: 'bank', name: 'Anchor Bank' },
     { id: 17, x: 800, y: 450, tower: null, corruption: 3, type: 'bank', name: 'Crest Bank' },
-    { id: 18, x: 200, y: 750, tower: null, corruption: 0, type: 'bank', name: 'Fortune Bank' },
+    { id: 18, x: 200, y: 730, tower: null, corruption: 0, type: 'bank', name: 'Fortune Bank' },
     { id: 19, x: 400, y: 600, tower: null, corruption: 0, type: 'bank', name: 'Legacy Bank' },
 ];
 
@@ -46,7 +47,7 @@ const effects = [];
 function spawnTransaction() {
     const banks = nodes.filter(n => n.type === 'bank');
     const source = banks[Math.floor(Math.random() * banks.length)];
-    const type = (Math.random() / source.corruption) < 0.1 ? 'bad' : 'legit';
+    const type = Math.random() * 10 / (source.corruption + 1) < 1 ? 'bad' : 'legit'; //10%, 20%, 33%... 
     const size = ['small', 'medium', 'large'][Math.floor(Math.random() * 3)];
     transactions.push({
         path: getPathFrom(source.id),
@@ -72,6 +73,8 @@ function getPathFrom(start) {
             for (const edge of edges) {
                 if (edge.includes(node)) {
                     const neighbor = edge[0] === node ? edge[1] : edge[0];
+                    // const isAudited = auditedNodes.some(a => a.id === neighbor && a.until > Date.now());
+                    // if (isAudited) continue; // Skip audited nodes entirely
                     if (!visited.has(neighbor)) {
                         const newPath = [...path, neighbor];
                         queue.push(newPath);
@@ -105,12 +108,20 @@ function moveTransaction(tx) {
             const dest = nodes[tx.path[tx.index]];
             if (tx.type === 'bad') {
                 dest.corruption++;
-                if (dest.corruption > 3) dest.color = 'red';
-                budget -= tx.size === 'large' ? 30 : tx.size === 'medium' ? 20 : 10;
+                let basePenalty = tx.size === 'large' ? 30 : tx.size === 'medium' ? 20 : 10;
+                budget -= basePenalty;
                 drawEffect(dest.x, dest.y, '💥');
+                drawEffect(dest.x, dest.y, "-" + basePenalty, 'malus');
+
+
                 console.log(`💥 Breach at node ${dest.id}`);
             } else {
-                budget += tx.size === 'large' ? 15 : tx.size === 'medium' ? 10 : 5;
+                let baseIncome = tx.size === 'large' ? 15 : tx.size === 'medium' ? 10 : 5;
+                const isAudited = auditedNodes.some(a => a.id === dest.id);
+                if (isAudited) baseIncome = Math.floor(baseIncome / 2)
+                budget += baseIncome;
+                drawEffect(dest.x, dest.y, "+" + baseIncome, 'bonus');
+
             }
             tx.active = false;
         }
@@ -140,21 +151,38 @@ function detect(tx) {
 
     if (Math.random() < efficiency) {
         tx.active = false;
-        budget += tx.size === 'large' ? 30 : tx.size === 'medium' ? 20 : 10;
-        drawEffect(node.x, node.y, '✅');
-        console.log(`✅ Blocked at node ${node.id}`);
+        // budget += tx.size === 'large' ? 30 : tx.size === 'medium' ? 20 : 10;
+        drawEffect(node.x, node.y, '✔️');
+        console.log(`✔️ Blocked at node ${node.id}`);
     }
 }
 
-function drawEffect(x, y, emoji) {
-    effects.push({ x, y, emoji, timer: 60 });
+function drawEffect(x, y, emoji, type = 'default') {
+    if (type === "default")
+        effects.push({ x, y, emoji, timer: 60, type: type })
+    else
+        effects.push({ x, y, emoji, timer: 20, type: type })
 }
 
 function updateEffects() {
     effects.forEach(e => {
         e.timer -= 1;
-        ctx.font = '24px Arial';
-        ctx.fillText(e.emoji, e.x - 10, e.y - 30);
+        switch (e.type) {
+            case 'malus':
+                ctx.fillStyle = 'red';
+                ctx.font = '12px Arial';
+                ctx.fillText(e.emoji, e.x - 5, e.y - 50);
+                break;
+            case 'bonus':
+                ctx.fillStyle = 'green';
+                ctx.font = '12px Arial';
+                ctx.fillText(e.emoji, e.x - 10, e.y - 25);
+                break;
+            default:
+                ctx.font = '24px Arial';
+                ctx.fillStyle = 'black';
+                ctx.fillText(e.emoji, e.x - 10, e.y - 30);
+        }
     });
     for (let i = effects.length - 1; i >= 0; i--) {
         if (effects[i].timer <= 0) effects.splice(i, 1);
@@ -255,6 +283,12 @@ function drawNode(node) {
         }[node.tower];
         ctx.fillText(emoji, node.x - 10, node.y + 25);
     }
+    const auditStatus = auditedNodes.find(a => a.id === node.id && a.until > Date.now());
+    if (auditStatus) {
+        ctx.font = '14px Arial';
+        ctx.fillStyle = '#000';
+        ctx.fillText('🕴️ Audit', node.x - 20, node.y - 30);
+    }
     if (debug) {
         ctx.fillalign = 'center';
         ctx.fillStyle = 'black';
@@ -265,6 +299,28 @@ function drawNode(node) {
         }
     }
 }
+
+canvas.addEventListener('contextmenu', (e) => {
+    e.preventDefault(); // Prevent default right-click menu
+
+    const rect = canvas.getBoundingClientRect();
+    const mx = e.clientX - rect.left;
+    const my = e.clientY - rect.top;
+
+    for (let node of nodes) {
+        const dx = node.x - mx;
+        const dy = node.y - my;
+        if (Math.hypot(dx, dy) < 20) {
+            const now = Date.now();
+            if (budget >= 100 && !auditedNodes.find(a => a.id === node.id)) {
+                auditedNodes.push({ id: node.id, until: now + 10000 });
+                budget -= 100;
+                console.log(`🔎 Audit started at node ${node.id}`);
+            }
+            break;
+        }
+    }
+});
 
 function drawEdge([a, b]) {
 
@@ -324,17 +380,26 @@ function gameLoop() {
         ctx.fillStyle = '#000';
         lines.forEach((line, i) => ctx.fillText(line, tooltipX, tooltipY + i * 18));
     }
-    const totalBanks = nodes.filter(n => n.type === 'bank').length;
-    const corruptedBanks = nodes.filter(n => n.type === 'bank' && n.corruption > 0).length;
-    const spread = (corruptedBanks / totalBanks) * 100;
+    const totalActors = nodes.length;// filter(n => n.type === 'bank')
+    const totalCorruption = nodes.reduce((sum, n) => sum + n.corruption, 0);
+    const spread = (totalCorruption / (3 * totalActors)) * 100;// We consider 4 as fully corrupted (red)
 
     ctx.fillStyle = '#333';
     ctx.fillRect(10, canvas.height - 30, 200, 20);
     ctx.fillStyle = spread > 70 ? 'red' : spread > 30 ? 'orange' : 'green';
-    ctx.fillRect(10, canvas.height - 30, 2 * spread, 20);
+    ctx.fillRect(10, canvas.height - 30, 2 * Math.min(spread, 100), 20);
     ctx.fillStyle = 'white';
     ctx.font = '14px Arial';
     ctx.fillText(`Corruption: ${Math.floor(spread)}%`, 15, canvas.height - 15);
+    // Remove expired audits
+    const now = Date.now();
+    for (let i = auditedNodes.length - 1; i >= 0; i--) {
+        if (auditedNodes[i].until <= now) {
+            console.log(`✅ Audit complete on node ${auditedNodes[i].id}`);
+            nodes[auditedNodes[i].id].corruption = Math.floor(nodes[auditedNodes[i].id].corruption / 2);
+            auditedNodes.splice(i, 1);
+        }
+    }
     requestAnimationFrame(gameLoop);
 }
 
