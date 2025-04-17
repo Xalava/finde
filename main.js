@@ -1,11 +1,20 @@
 const debug = false
+
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
-const budgetEl = document.getElementById('budget');
+const ui = {
+    budget: document.getElementById('budget'),
+    gdp: document.getElementById('gdp'),
+    maintenance: document.getElementById('maintenance'),
+}
+
 let budget = 100;
-const maintenanceEl = document.getElementById('maintenance');
 let maintenance = 0;
+let taxRate = 0.2; // 20% tax rate
+let gdp = 0;
 const auditedNodes = [];
+const gdpLog = []
+
 
 const nodes = [
     { id: 0, x: 250, y: 200, tower: null, corruption: 0, type: 'processor', name: 'PayFlow' },
@@ -21,7 +30,7 @@ const nodes = [
     { id: 9, x: 900, y: 200, tower: null, corruption: 0, type: 'bank', name: 'Capital Trust' },
     { id: 10, x: 100, y: 150, tower: null, corruption: 0, type: 'bank', name: 'Union Bank' },
     { id: 11, x: 300, y: 50, tower: null, corruption: 0, type: 'bank', name: 'Metro Bank' },
-    { id: 12, x: 900, y: 550, tower: null, corruption: 0, type: 'bank', name: 'PioneerB ank' },
+    { id: 12, x: 900, y: 550, tower: null, corruption: 0, type: 'bank', name: 'Pioneer Bank' },
     { id: 13, x: 850, y: 100, tower: null, corruption: 0, type: 'bank', name: 'Elite Bank' },
     { id: 14, x: 600, y: 250, tower: null, corruption: 0, type: 'bank', name: 'Summit Bank' },
     { id: 15, x: 700, y: 700, tower: null, corruption: 0, type: 'bank', name: 'Horizon Bank' },
@@ -106,21 +115,18 @@ function moveTransaction(tx) {
         tx.index++;
         if (tx.index >= tx.path.length - 1) {
             const dest = nodes[tx.path[tx.index]];
+            let baseIncome = tx.size === 'large' ? 15 : tx.size === 'medium' ? 10 : 5;
+            const isAudited = auditedNodes.some(a => a.id === dest.id);
+            if (isAudited) baseIncome = Math.floor(baseIncome / 2)
+            gdpLog.push({ amount: baseIncome, timestamp: Date.now() });
+            budget += baseIncome * taxRate
+            drawEffect(dest.x, dest.y, "+" + baseIncome * taxRate, 'bonus');
+
             if (tx.type === 'bad') {
                 dest.corruption++;
-                let basePenalty = tx.size === 'large' ? 30 : tx.size === 'medium' ? 20 : 10;
-                budget -= basePenalty;
                 drawEffect(dest.x, dest.y, '💥');
-                drawEffect(dest.x, dest.y, "-" + basePenalty, 'malus');
-
-
                 console.log(`💥 Breach at node ${dest.id}`);
             } else {
-                let baseIncome = tx.size === 'large' ? 15 : tx.size === 'medium' ? 10 : 5;
-                const isAudited = auditedNodes.some(a => a.id === dest.id);
-                if (isAudited) baseIncome = Math.floor(baseIncome / 2)
-                budget += baseIncome;
-                drawEffect(dest.x, dest.y, "+" + baseIncome, 'bonus');
 
             }
             tx.active = false;
@@ -176,12 +182,12 @@ function updateEffects() {
             case 'bonus':
                 ctx.fillStyle = 'green';
                 ctx.font = '12px Arial';
-                ctx.fillText(e.emoji, e.x - 10, e.y - 25);
+                ctx.fillText(e.emoji, e.x + 25, e.y + 5);
                 break;
             default:
                 ctx.font = '24px Arial';
                 ctx.fillStyle = 'black';
-                ctx.fillText(e.emoji, e.x - 10, e.y - 30);
+                ctx.fillText(e.emoji, e.x - 12, e.y - 30);
         }
     });
     for (let i = effects.length - 1; i >= 0; i--) {
@@ -340,16 +346,39 @@ function drawTransaction(tx) {
 }
 
 function deductTowerCosts() {
-    nodes.forEach(node => {
-        if (node.tower === 'ai') budget -= 1 / 60;
-        if (node.tower === 'advanced') budget -= 5 / 60;
-    });
+    budget -= maintenance / 60;
+    // nodes.forEach(node => {
+    //     if (node.tower === 'ai') budget -= 1 / 60;
+    //     if (node.tower === 'advanced') budget -= 5 / 60;
+    // });
 }
 const startTime = Date.now()
+function endGame(condition) {
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    ctx.fillStyle = 'red';
+    ctx.font = '48px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('You have been fired', canvas.width / 2, canvas.height / 2 - 20);
+
+    ctx.font = '24px Arial';
+    ctx.fillStyle = 'white';
+    ctx.fillText(condition, canvas.width / 2, canvas.height / 2 + 20);
+}
+
 function gameLoop() {
+    const now = Date.now();
     if (debug) {
-        console.log('> Game loop', Math.floor((Date.now() - startTime) / 1000), ' seconds');
+        console.log('> Game loop', Math.floor(now - startTime) / 1000, ' seconds');
     }
+
+    // Remove old transactions from the log
+    while (gdpLog.length && gdpLog[0].timestamp < now - 60000) {
+        gdpLog.shift();
+    }
+    gdp = gdpLog.reduce((sum, tx) => sum + tx.amount, 0);
+
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     edges.forEach(drawEdge);
     nodes.forEach(drawNode);
@@ -364,8 +393,10 @@ function gameLoop() {
     updateEffects();
     if (Math.random() < 0.03) spawnTransaction();
     deductTowerCosts();
-    budgetEl.textContent = Math.max(0, budget.toFixed(0))
-    maintenanceEl.textContent = maintenance
+    ui.budget.textContent = budget.toFixed(0)
+    ui.maintenance.textContent = maintenance
+    ui.gdp.textContent = gdp.toFixed(0);
+
     if (hoverNode) {
         const tooltip = `${hoverNode.name} \nCorruption: ${hoverNode.corruption}\nControls: ${hoverNode.tower || 'None'}`;
         ctx.font = '14px Arial';
@@ -380,19 +411,29 @@ function gameLoop() {
         ctx.fillStyle = '#000';
         lines.forEach((line, i) => ctx.fillText(line, tooltipX, tooltipY + i * 18));
     }
+
+    // Corruption spread
     const totalActors = nodes.length;// filter(n => n.type === 'bank')
     const totalCorruption = nodes.reduce((sum, n) => sum + n.corruption, 0);
     const spread = (totalCorruption / (3 * totalActors)) * 100;// We consider 4 as fully corrupted (red)
-
-    ctx.fillStyle = '#333';
-    ctx.fillRect(10, canvas.height - 30, 200, 20);
-    ctx.fillStyle = spread > 70 ? 'red' : spread > 30 ? 'orange' : 'green';
-    ctx.fillRect(10, canvas.height - 30, 2 * Math.min(spread, 100), 20);
-    ctx.fillStyle = 'white';
-    ctx.font = '14px Arial';
-    ctx.fillText(`Corruption: ${Math.floor(spread)}%`, 15, canvas.height - 15);
+    if (spread >= 100) {
+        endGame('Corruption has reached critical levels!');
+        return;
+    } else {
+        ctx.fillStyle = '#333';
+        ctx.fillRect(10, canvas.height - 30, 200, 20);
+        ctx.fillStyle = spread > 70 ? 'red' : spread > 30 ? 'orange' : 'green';
+        ctx.fillRect(10, canvas.height - 30, 2 * Math.min(spread, 100), 20);
+        ctx.fillStyle = 'white';
+        ctx.font = '14px Arial';
+        ctx.fillText(`Corruption: ${Math.floor(spread)}%`, 15, canvas.height - 15);
+    }
+    // budget check
+    if (budget < 0) {
+        endGame('The country is bankrupt!');
+        return;
+    }
     // Remove expired audits
-    const now = Date.now();
     for (let i = auditedNodes.length - 1; i >= 0; i--) {
         if (auditedNodes[i].until <= now) {
             console.log(`✅ Audit complete on node ${auditedNodes[i].id}`);
