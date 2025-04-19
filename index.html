@@ -8,27 +8,120 @@
 </head>
 
 <body>
-    <h1>💼 Financial Defense</h1>
-    <div id="indicators">
-        📊 GDP: <span id="gdp">0</span> |
-        💰 <strong>Budget:</strong> <span id="budget">100</span> |
-        🛠 <strong>Maintenance:</strong> <span id="maintenance">0</span>
+    <div id="app-container">
+        <!-- Top Navigation Bar -->
+        <header id="topbar">
+            <div class="logo">
+                <span class="icon">💼</span>
+                <span class="title">Financial Defense</span>
+            </div>
+            <div class="stats">
+                <div class="stat-item" data-tooltip="Current game day">
+                    🗓️ Day <span id="day">0</span><span id="holiday"></span>
+                </div>
+            </div>
+
+            <div class="indicators">
+                <div class="stat-item" data-tooltip="GDP from financial transactions (past quarter)">
+                    📊 <strong>GDP </strong><span id="gdp">0</span>
+                </div>
+                <div class="stat-item" data-tooltip="Available operational budget">
+                    💰 <strong>Budget</strong> <span id="budget">150</span>
+                </div>
+                <div class="stat-item" data-tooltip="Ongoing system maintenance costs per second">
+                    🛠 <strong>Maintenance</strong> <span id="maintenance">0</span>
+                </div>
+                <!-- 
+                <div class="stat-item pulse-animation" data-tooltip="Your public trust rating">
+                    🌟 <strong>Reputation:</strong> <span id="reputation">100</span>
+                </div> -->
+            </div>
+        </header>
+
+        <main id="game-container">
+            <canvas id="game" width="1000" height="800"></canvas>
+
+            <div id="node-details-panel" class="panel">
+                <div class="panel-header">
+                    <h2 id="panel-title">Node Name</h2>
+                    <button id="close-panel" class="close-button">×</button>
+                </div>
+                <div class="panel-content">
+                    <div class="node-details">
+                        <div class="detail-row">
+                            <div class="detail-label">Type:</div>
+                            <div class="detail-value" id="panel-type">Bank</div>
+                        </div>
+                        <div class="detail-row">
+                            <div class="detail-label">Corruption Level:</div>
+                            <div class="detail-value" id="panel-corruption">0</div>
+                        </div>
+                        <div class="detail-row">
+                            <div class="detail-label">Transactions Received:</div>
+                            <div class="detail-value" id="panel-received">0</div>
+                        </div>
+                        <div class="detail-row">
+                            <div class="detail-label">Illegal Transactions Detected:</div>
+                            <div class="detail-value" id="panel-detected">0</div>
+                        </div>
+
+                        <div class="reputation-container">
+                            <div class="detail-label">Entity Reputation:</div>
+                            <div class="bar-container">
+                                <div class="bar-fill good" id="reputation-bar" style="width: 80%"></div>
+                            </div>
+                            <div class="bar-value" id="reputation-value">80</div>
+                        </div>
+                    </div>
+
+                    <div class="panel-section">
+                        <h3>Control Systems</h3>
+                        <div id="tower-options">
+                            <!-- Tower buttons will be added dynamically -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <div id="instructions" class="panel hidden">
+            <div class="panel-header">
+                <h3>💼 Financial Defense System</h3>
+                <button class="close-button" id="close-instructions">×</button>
+            </div>
+            <div class="instruction-content">
+                <p>Monitor and secure the financial network against illegal transactions and corruption.</p>
+
+                <h3>Controls:</h3>
+                <ul>
+                    <li><strong>Click</strong> on any node to view details and install control systems</li>
+                    <li>Use <strong>Basic Filters</strong> to begin detecting illegal transactions</li>
+                    <li>Use <strong>AI Systems</strong> for better detection but higher maintenance costs</li>
+                    <li>Trigger <strong>Audits</strong> to reduce existing corruption at an entity</li>
+                </ul>
+
+                <h3>Game Objectives:</h3>
+                <ul>
+                    <li>Prevent the spread of corruption throughout the network</li>
+                    <li>Maintain a positive budget by collecting taxes from transactions</li>
+                </ul>
+                <h3>Game mechanics:</h3>
+                <ul>
+                    <li>Holidays result in more transactions</li>
+                    <li>Entities with higher corruption produce more illegal transactions</li>
+                </ul>
+            </div>
+        </div>
     </div>
 
-    <canvas id="game" width="1000" height="800"></canvas>
+    <div id="toast-container">
+        <!-- Notification toasts will be added here dynamically -->
+    </div>
 
-    <div id="instructions">
-        ✅ <strong>Filters:</strong>
-        <span title="Intercepts medium and high fraud only, low efficiency">🔍 Basic (50)</span> →
-        <span title="Handles all sizes, medium efficiency">🔬 Enhanced (75)</span> |
-        <span title="Medium efficiency, +1 maintenance">🧠 AI (100)</span> →
-        <span title="High efficiency, +5 maintenance">🤖 Advanced (150)</span><br />
-
-        🖱️ <strong>Controls:</strong>
-        Click = place <span title="Basic filter for small fraud"> Basic</span> |
-        <kbd>Shift</kbd> + Click = place <span title="AI filter, medium efficiency"> AI</span> |
-        Click again = upgrade |
-        <span title="Locks node for 10s, halves corruption">Right-click = 🕴️ Audit (100)</span>
+    <div class="game-controls">
+        <button id="toggle-instructions">❔ Explanations</button>
+        <button id="center-view">⭕️ Center</button>
+        <button id="toggle-debug">🔧 Debug</button>
     </div>
 
     <script src="main.js"></script>
