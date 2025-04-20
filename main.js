@@ -1,5 +1,7 @@
 import * as Camera from './js/camera.js'
 import * as UI from './js/ui-manager.js'
+import { towerOptions, legalityOptions, txSizeOptions, nodeOptions, actionOptions, CORRUPTION_THRESHOLD } from './js/config.js'
+
 // == UI == 
 let debug = false
 const canvas = document.getElementById('game')
@@ -38,7 +40,7 @@ document.addEventListener('DOMContentLoaded', () => {
         })
 
         if (clickedNode) {
-            UI.showNodeDetails(clickedNode, towerTypes, budget, placeTower)
+            UI.showNodeDetails(clickedNode, budget, placeTower, enforceAction)
         } else {
             Camera.startDrag(e)
         }
@@ -60,34 +62,46 @@ let reputation = 100
 let holiday = false
 
 // Game internal data 
-const auditedNodes = []
 const gdpLog = []
 let transactions = []
 const startTime = Date.now()
 let currentDay = 0
 
 const nodes = [
-    { id: 0, x: 250, y: 200, corruption: 0, type: 'processor', name: 'PayFlow' },
+    { id: 0, x: 250, y: 200, corruption: 0, type: 'processor', name: 'PayFlow', active: true },
     { id: 1, x: 300, y: 600, corruption: 0, type: 'processor', name: 'TransactPro' },
     { id: 2, x: 400, y: 350, corruption: 0, type: 'processor', name: 'SecurePay' },
     { id: 3, x: 600, y: 650, corruption: 0, type: 'processor', name: 'FastFunds' },
     { id: 4, x: 750, y: 300, corruption: 0, type: 'processor', name: 'QuickTransfer' },
 
-    { id: 5, x: 400, y: 200, corruption: 0, type: 'bank', name: 'Global Bank' },
-    { id: 6, x: 200, y: 250, corruption: 0, type: 'bank', name: 'Trust Bank' },
-    { id: 7, x: 150, y: 350, corruption: 2, type: 'bank', name: 'Safe Savings' },
+    { id: 5, x: 400, y: 200, corruption: 0, type: 'bank', name: 'Global Bank', active: true },
+    { id: 6, x: 200, y: 250, corruption: 0, type: 'bank', name: 'Trust Bank', active: true },
+    { id: 7, x: 150, y: 350, corruption: 2, type: 'bank', name: 'Safe Savings', active: true },
     { id: 8, x: 950, y: 50, corruption: 0, type: 'bank', name: 'Prime Bank' },
     { id: 9, x: 900, y: 200, corruption: 0, type: 'bank', name: 'Capital Trust' },
-    { id: 10, x: 100, y: 150, corruption: 0, type: 'bank', name: 'Union Bank' },
-    { id: 11, x: 300, y: 50, corruption: 0, type: 'bank', name: 'Metro Bank' },
+    { id: 10, x: 100, y: 150, corruption: 0, type: 'bank', name: 'Union Bank', active: true },
+    { id: 11, x: 300, y: 50, corruption: 0, type: 'bank', name: 'Metro Bank', active: true },
     { id: 12, x: 900, y: 550, corruption: 0, type: 'bank', name: 'Pioneer Bank' },
-    { id: 13, x: 850, y: 100, corruption: 0, type: 'bank', name: 'Elite Bank' },
-    { id: 14, x: 600, y: 250, corruption: 0, type: 'bank', name: 'Summit Bank' },
+    { id: 13, x: 800, y: 100, corruption: 0, type: 'bank', name: 'Elite Bank' },
+    { id: 14, x: 600, y: 250, corruption: 0, type: 'bank', name: 'Summit Bank', active: true },
     { id: 15, x: 700, y: 700, corruption: 0, type: 'bank', name: 'Horizon Bank' },
     { id: 16, x: 200, y: 500, corruption: 0, type: 'bank', name: 'Anchor Bank' },
     { id: 17, x: 800, y: 450, corruption: 3, type: 'bank', name: 'Crest Bank' },
     { id: 18, x: 200, y: 730, corruption: 0, type: 'bank', name: 'Fortune Bank' },
     { id: 19, x: 400, y: 600, corruption: 0, type: 'bank', name: 'Legacy Bank' },
+
+    // New 🚀 Fintech nodes
+    { id: 20, x: 550, y: 140, corruption: 0, type: 'fintech', name: 'Rocket Pay' },
+    { id: 21, x: 650, y: 160, corruption: 0, type: 'fintech', name: 'Astro Finance' },
+    { id: 22, x: 950, y: 200, corruption: 0, type: 'fintech', name: 'Lunar Pay' },
+    { id: 23, x: 500, y: 800, corruption: 0, type: 'fintech', name: 'Orbit Funds' },
+    { id: 24, x: 850, y: 300, corruption: 0, type: 'fintech', name: 'Stellar Bank' },
+
+    // New  Crypto Exchange nodes
+    { id: 25, x: 100, y: 550, corruption: 0, type: 'cryptoExchange', name: 'CryptoX' },
+    { id: 26, x: 630, y: 550, corruption: 0, type: 'cryptoExchange', name: 'BitMarket' },
+    { id: 27, x: 950, y: 750, corruption: 0, type: 'cryptoExchange', name: 'CoinTrade' },
+
 ]
 
 // for each node, we add empty variables tower:null, detectedAmount:0, receivedAmount:0, reputation:80
@@ -105,37 +119,16 @@ const edges = [
     [0, 10], [0, 11], [0, 6], [1, 16], [1, 18], [1, 19], [2, 16], [3, 19], [3, 15], [4, 9], [4, 14], [4, 17], [5, 0],
     // banks to banks
     [6, 7], [8, 13], [9, 13], [10, 11], [11, 13], [11, 14], [12, 17], [13, 14], [15, 17], [16, 17], [16, 18], [17, 19],
+    // fintech connections
+    [20, 21], [14, 21], [8, 22], [9, 22], [15, 23], [3, 23], [13, 24], [17, 24],
+    // crypto exchange connections
+    [16, 25], [12, 27], [3, 26],
 ]
-
-const towerTypes = {
-    basic: { name: 'Basic Filter', cost: 50, accuracy: 0.5, maintenance: 0, icon: '🔍', description: 'Detects medium and large illegal transactions with 50% accuracy' },
-    enhanced: { name: 'Enhanced Filter', cost: 75, accuracy: 0.7, maintenance: 0, icon: '🔬', description: 'Detects all sizes of illegal transactions with 70% accuracy' },
-    ai: { name: 'AI System', cost: 100, accuracy: 0.8, maintenance: 1, icon: '🧠', description: 'Powerful detection with 80% accuracy, costs 1 maintenance per day' },
-    advanced: { name: 'Advanced AI', cost: 150, accuracy: 0.9, maintenance: 5, icon: '🤖', description: 'High-end system with 90% accuracy, costs 5 maintenance per day' }
-}
-
-const audit = {
-    name: 'Audit',
-    cost: 100,
-    description: 'Audit the node for illegal transactions',
-    icon: '🕵️‍♂️',
-    duration: 10
-}
-
-const HIGH_CORRUPTION = 4
-
-const txSizeOptions = {
-    small: { name: 'small', amount: 5 },
-    medium: { name: 'medium', amount: 10 },
-    large: { name: 'large', amount: 15 }
-}
-
-const legalityOptions = ['legit', 'questionable', 'illegal'];
 
 // == Canvas drawing functions == 
 function spawnTransaction() {
-    const banks = nodes.filter(n => n.type === 'bank')
-    const source = banks[Math.floor(Math.random() * banks.length)];
+    const activeNodes = nodes.filter(n => (n.type !== 'processor' && n.active))
+    const source = activeNodes[Math.floor(Math.random() * activeNodes.length)];
 
     // Illegal transaction depends on the corruption of the source, 10%, 20%, 33%... 
     // If corruption is 0, 10% chance of being illegal, 5% chance of being questionable
@@ -168,26 +161,24 @@ function spawnTransaction() {
 
 }
 function getPathFrom(start) {
-    const visited = new Set()
-    const queue = [[start]]
+    const visited = new Set();
+    const queue = [[start]];
 
     while (queue.length > 0) {
-        const path = queue.shift()
-        const node = path[path.length - 1]
+        const path = queue.shift();
+        const node = path[path.length - 1];
         if (!visited.has(node)) {
-            visited.add(node)
+            visited.add(node);
             for (const edge of edges) {
                 if (edge.includes(node)) {
-                    const neighbor = edge[0] === node ? edge[1] : edge[0]
-                    // const isAudited = auditedNodes.some(a => a.id === neighbor && a.until > Date.now())
-                    // if (isAudited) continue // Skip audited nodes entirely
-                    if (!visited.has(neighbor)) {
-                        const newPath = [...path, neighbor]
-                        queue.push(newPath)
+                    const neighbor = edge[0] === node ? edge[1] : edge[0];
+                    if (!visited.has(neighbor) && nodes[neighbor].active) {
+                        const newPath = [...path, neighbor];
+                        queue.push(newPath);
                         if (nodes[neighbor].type === 'bank') {
                             // If a valid path to a bank is found, continue exploring for longer paths occasionally
                             if (Math.random() < 0.5 || queue.length === 0) {
-                                return newPath
+                                return newPath;
                             }
                         }
                     }
@@ -195,8 +186,8 @@ function getPathFrom(start) {
             }
         }
     }
-    const fallbackPath = Array.from(visited) // Use visited nodes as a fallback path
-    return fallbackPath.length > 1 ? fallbackPath : [start]
+    const fallbackPath = Array.from(visited).filter(node => nodes[node].active); // Use visited active nodes as a fallback path
+    return fallbackPath.length > 1 ? fallbackPath : [start];
 }
 
 function moveTransaction(tx) {
@@ -240,7 +231,7 @@ function moveTransaction(tx) {
 
             // Update panel if the affected node is selected
             if (UI.getSelectedNode() && UI.getSelectedNode().id === dest.id) {
-                UI.showNodeDetails(dest, towerTypes, budget, placeTower)
+                UI.showNodeDetails(dest, budget, placeTower)
             }
 
             tx.active = false
@@ -253,19 +244,34 @@ function moveTransaction(tx) {
 
 function placeTower(node, towerType) {
     node.tower = towerType
-    const tower = towerTypes[towerType]
+    node.accuracy = towerOptions[towerType].accuracy // We move the accuracy to the node for AI usages
+    const tower = towerOptions[towerType]
     budget -= tower.cost
     maintenance -= tower.maintenance
     console.log(`🛠️ Tower placed at node ${node.id}`)
     // Update UI immediately after placing tower
-    UI.showNodeDetails(node, towerTypes, budget, placeTower)
+    UI.showNodeDetails(node, budget, placeTower, enforceAction)
 }
+
+function enforceAction(node, action) {
+    const actionCost = actionOptions[action].cost
+    if (budget < actionCost) {
+        UI.showToast('Insufficient budget', `You need 💰${actionCost} to perform this action`, 'error')
+        return
+    } else {
+        budget -= actionCost
+        node.reputation += actionOptions[action].reputationEffect//negative
+        node.enforcementAction = action
+        node.enforcementEnd = Date.now() + actionOptions[action].duration * 1000
+    }
+}
+
 
 function detect(tx) {
     const node = nodes[tx.path[tx.index]];
     if (!node || !node.tower || tx.legality !== 'illegal') return false
 
-    let detectionChance = towerTypes[node.tower].accuracy;
+    let detectionChance = towerOptions[node.tower].accuracy;
 
     if (node.tower === 'basic' && tx.size === 'small') {
         detectionChance *= 0.5; // Reduce accuracy for small transactions
@@ -276,7 +282,7 @@ function detect(tx) {
     if (Math.random() < detectionChance) {
         tx.active = false;
         drawEffect(node.x, node.y, '✔️');
-        UI.showToast('Illegal transaction blocked', `Detected at ${node.name} (${towerTypes[node.tower].name})`, 'success')
+        UI.showToast('Illegal transaction blocked', `Detected at ${node.name} (${towerOptions[node.tower].name})`, 'success')
         console.log(`✔️ Illegal tx blocked at node ${node.id}`)
         node.detectedAmount += tx.amount
         node.receivedAmount += tx.amount
@@ -287,7 +293,7 @@ function detect(tx) {
 
         // Update panel if the detection happens at the selected node
         if (UI.getSelectedNode() && UI.getSelectedNode().id === node.id) {
-            UI.showNodeDetails(node, towerTypes, budget, placeTower)
+            UI.showNodeDetails(node, budget, placeTower, enforceAction)
         }
 
         if (debug) console.log(tx)
@@ -340,7 +346,7 @@ canvas.addEventListener('click', (e) => {
         const dx = node.x - worldPos.x
         const dy = node.y - worldPos.y
         if (Math.hypot(dx, dy) < 20) {
-            UI.showNodeDetails(node, towerTypes, budget, placeTower)
+            UI.showNodeDetails(node, budget, placeTower, enforceAction)
             clickedOnNode = true
             break
         }
@@ -363,10 +369,10 @@ function drawNode(node) {
     // Draw outer ring
     ctx.beginPath()
     ctx.arc(node.x, node.y, nodeRadius, 0, Math.PI * 2)
-    let color = node.type === 'bank' ? '#eee' : '#aaf'
+    let color = nodeOptions[node.type].color
 
     // Add corruption glow
-    if (node.corruption > HIGH_CORRUPTION) {
+    if (node.corruption > CORRUPTION_THRESHOLD) {
         ctx.shadowColor = 'red'
         ctx.shadowBlur = 15
         color = '#ffdddd'
@@ -408,7 +414,7 @@ function drawNode(node) {
         ctx.textAlign = 'center'
         ctx.textBaseline = 'middle'
         ctx.fillStyle = '#000'
-        ctx.fillText(towerTypes[node.tower].icon, node.x, node.y + 25)
+        ctx.fillText(towerOptions[node.tower].icon, node.x, node.y + 25)
 
         // Reset shadow to avoid affecting other elements
         ctx.shadowBlur = 0
@@ -417,16 +423,14 @@ function drawNode(node) {
 
     // Draw node type emoji
     ctx.font = `20px ${uiFont}`
-    ctx.fillText(node.type === 'bank' ? '🏦' : '🌐', node.x - 12, node.y + 7)
+    ctx.fillText(nodeOptions[node.type].icon, node.x - 12, node.y + 7)
 
-
-    const auditStatus = auditedNodes.find(a => a.id === node.id && a.until > Date.now())
-    if (auditStatus) {
+    if (node.enforcementAction) {
         ctx.font = `14px ${uiFont}`
         ctx.fillStyle = '#000'
         ctx.shadowColor = color
         ctx.shadowBlur = 4
-        ctx.fillText('🕴️ Audit', node.x - 24, node.y - 30)
+        ctx.fillText(`${actionOptions[node.enforcementAction].icon} ${actionOptions[node.enforcementAction].name}`, node.x - 24, node.y - 30)
     }
     if (debug) {
         ctx.font = `14px ${uiFont}`
@@ -489,7 +493,7 @@ function drawTooltip(hoverNode) {
     const tooltip = [
         { text: hoverNode.name, bold: true },
         { text: `Type: ${hoverNode.type}` },
-        { text: `Controls: ${hoverNode.tower ? towerTypes[hoverNode.tower].name : "None"}` },
+        { text: `Controls: ${hoverNode.tower ? towerOptions[hoverNode.tower].name : "None"}` },
         { text: `Click for details` }
     ];
     ctx.font = `14px  ${uiFont}`
@@ -531,7 +535,7 @@ function calculateIndicators() {
         (oldBudget < cost && budget >= cost) ||
         (oldBudget >= cost && budget < cost)
     )) {
-        UI.updateCurrentNodeDetails(budget)
+        UI.updateCurrentNodeDetails(budget, placeTower, enforceAction)
     }
 }
 
@@ -542,7 +546,7 @@ function drawEndGame(condition) {
     ctx.fillStyle = 'red'
     ctx.font = `48px ${uiFont}`
     ctx.textAlign = 'center'
-    ctx.fillText('You have been fired', canvas.width / 2, canvas.height / 2 - 20)
+    ctx.fillText('You have lost', canvas.width / 2, canvas.height / 2 - 20)
 
     ctx.font = `24px  ${uiFont}`
     ctx.fillStyle = 'white'
@@ -553,29 +557,42 @@ function drawEndGame(condition) {
 }
 
 
-function removeExpiredAudits(now) {
-    for (let i = auditedNodes.length - 1; i >= 0; i--) {
-        if (auditedNodes[i].until <= now) {
-            const auditedNode = nodes[auditedNodes[i].id]
-            console.log(`✅ Audit complete on node ${auditedNodes[i].id} `)
-            auditedNode.corruption = Math.floor(auditedNode.corruption / 2)
-            UI.showToast('Audit completed', `Corruption reduced at ${auditedNode.name}`, 'info')
-            auditedNodes.splice(i, 1)
+function removeExpiredEnforcementActions(now) {
+    nodes.filter(node => node.enforcementAction)
+        .forEach(node => {
+            if (node.enforcementEnd <= now) {
+                let endingAction = actionOptions[node.enforcementAction]
+                node.corruption = node.corruption / endingAction.corruptionEffect
+                node.enforcementAction = null
+                node.enforcementEnd = null
+                UI.showToast(`${endingAction.icon} ${endingAction.name} ended`, `Corruption reduced at ${node.name}`, 'info')
+                console.log(`✅ Enforcement action ended at node ${node.id}`)
 
-            // Update the panel if the audited node is selected
-            if (UI.getSelectedNode() && UI.getSelectedNode().id === auditedNode.id) {
-                UI.showNodeDetails(auditedNode, towerTypes, budget, placeTower)
+
+                // Update the panel if the audited node is selected
+                if (UI.getSelectedNode() && UI.getSelectedNode().id === node.id) {
+                    UI.showNodeDetails(node, budget, placeTower, enforceAction)
+                }
             }
-        }
-    }
-
+        })
 }
 
 function calculateCorruptionSpread() {
     // Corruption spread
     const totalActors = nodes.length
     const totalCorruption = nodes.reduce((sum, n) => sum + n.corruption, 0)
-    return Math.round((totalCorruption / (HIGH_CORRUPTION * totalActors)) * 100)
+    return Math.round((totalCorruption / (CORRUPTION_THRESHOLD * totalActors)) * 100)
+}
+
+function increaseAIaccuracy() {
+    nodes.filter(n => n.active && n.tower === "ai" || n.tower === "super")
+        .forEach(n => {
+            if (n.tower === "ai" && n.accuracy < 0.85) {
+                n.accuracy *= 1.005
+            } else if (n.tower === "super" && n.accuracy < 0.98) {
+                n.accuracy += 1.01
+            }
+        })
 }
 
 let priorNow = Date.now()
@@ -591,25 +608,44 @@ function gameLoop() {
         // const year = Math.floor(currentDay / 365)
 
         holiday = false
-
         // Check for specific holidays
         switch (dayOfYear) {
             case 15: // Lunar New Year
-            case 90: // Eid
+                holiday = true
+                UI.showToast('🎆 Holiday!', 'Happy Lunar New Year!', 'info')
+                break
+            case 85: // Eid
+                holiday = true
+                UI.showToast('🫖 Holiday!', 'Happy Eid!', 'info')
+                break
             case 356: // Christmas
                 holiday = true
-                console.log("🎉 holiday!")
+                UI.showToast('🎁 Holiday!', 'Merry Christmas!', 'info')
                 break
         }
+        // We perform the following tasks once a day
         UI.updateDate(currentDay, holiday)
-    }
+        if (currentDay % 60 === 0) {
+            // Every 60 days, a new node is added
+            const inactiveNodes = nodes.filter(n => !n.active && edges.some(([a, b]) => (a === n.id && nodes[b].active) || (b === n.id && nodes[a].active)));
+            if (inactiveNodes.length > 0) {
+                const newNode = inactiveNodes[Math.floor(Math.random() * inactiveNodes.length)];
+                newNode.active = true;
+                console.log(`🌟 New node activated: ${newNode.name}`);
+                UI.showToast('🌟 A new actor has emerged', `Welcome ${newNode.name}`, 'info');
+            }
+        }
+        increaseAIaccuracy()
 
-    if (Math.random() < (holiday ? 0.06 : 0.03)) {
+        removeExpiredEnforcementActions(now)
+    }
+    const nbActiveNodes = nodes.filter(n => n.active).length
+    const holidayBonus = holiday ? 3 : 1
+    if (Math.random() < 0.01 + (0.001 * nbActiveNodes * holidayBonus)) {
         spawnTransaction();
     }
 
     calculateIndicators()
-    removeExpiredAudits(now)
 
     // == Updade the game display ==
     ctx.clearRect(0, 0, canvas.width, canvas.height)
@@ -625,8 +661,9 @@ function gameLoop() {
     Camera.applyCamera(ctx)
     if (debug) Camera.drawDebugGrid(ctx)
 
-    edges.forEach(drawEdge)
-    nodes.forEach(drawNode)
+    edges.filter(([a, b]) => nodes[a].active && nodes[b].active)
+        .forEach(drawEdge);
+    nodes.filter(n => n.active).forEach(drawNode);
     transactions = transactions.filter(t => t.active);
     transactions.forEach(tx => {
         moveTransaction(tx)
@@ -652,7 +689,7 @@ function gameLoop() {
         return
     }
 
-    if (budget < 0) {
+    if (budget < -100) {
         drawEndGame('The country is bankrupt!')
         return
     }

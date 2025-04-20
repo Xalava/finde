@@ -1,4 +1,5 @@
 // Module for pure UI management. 
+import { towerOptions, actionOptions } from './config.js'
 
 let indicators = null;
 let instructions = null;
@@ -33,6 +34,7 @@ export function initUI() {
         reputationBar: document.getElementById('reputation-bar'),
         reputationValue: document.getElementById('reputation-value'),
         towerOptions: document.getElementById('tower-options'),
+        actionOptions: document.getElementById('action-options'),
         close: document.getElementById('close-panel')
     }
 
@@ -81,7 +83,7 @@ export function toggleInstructions() {
     instructions.panel.classList.toggle('hidden')
 }
 
-export function showNodeDetails(node, towerTypes, budget, placeTower) {
+export function showNodeDetails(node, budget, placeTower, enforceAction) {
     selectedNode = node
     nodeDetails.title.textContent = node.name
     nodeDetails.type.textContent = node.type.charAt(0).toUpperCase() + node.type.slice(1)
@@ -101,50 +103,87 @@ export function showNodeDetails(node, towerTypes, budget, placeTower) {
         nodeDetails.reputationBar.className = 'bar-fill poor'
     }
 
-    updateTowerOptions(node, towerTypes, budget, placeTower)
+    updateTowerOptions(node, budget, placeTower)
+    updateActionOptions(node, budget, enforceAction)
     nodeDetails.panel.classList.add('visible')
     return selectedNode
 }
 
-function updateTowerOptions(node, towerTypes, budget, placeTower) {
-    nodeDetails.towerOptions.innerHTML = ''
-
-    if (!node.tower) {
-        createTowerButton('basic', node, towerTypes, budget, placeTower)
-        createTowerButton('ai', node, towerTypes, budget, placeTower)
-    } else if (node.tower === 'basic') {
-        createTowerButton('enhanced', node, towerTypes, budget, placeTower)
-    } else if (node.tower === 'ai') {
-        createTowerButton('advanced', node, towerTypes, budget, placeTower)
-    } else {
+function updateActionOptions(node, budget, enforceAction) {
+    nodeDetails.actionOptions.innerHTML = ''
+    let foundOption = false
+    Object.keys(actionOptions).forEach(actionType => {
+        createActionButton(actionType, node, budget, enforceAction)
+        foundOption = true
+    })
+    if (!foundOption) {
         const maxMessage = document.createElement('div')
         maxMessage.className = 'max-tier'
-        maxMessage.textContent = `Maximum ${towerTypes[node.tower].name} already installed`
+        maxMessage.textContent = `No actions available`
+        nodeDetails.actionOptions.appendChild(maxMessage)
+    }
+}
+
+function createButtonTemplate(icon, name, cost, maintenance, duration, description) {
+    return `
+    <span class="option-icon">${icon}</span>
+    <div class="option-info">   
+        <div class="option-name">${name} (💰${cost}${maintenance ? ", 🛠️ -" + maintenance : ''}${duration ? ", ⏱️ " + duration : ''})</div>
+        <div class="option-desc">${description}</div>
+    </div>
+    `
+}
+
+function createActionButton(actionType, node, budget, enforceAction) {
+    const button = document.createElement('button')
+    let action = actionOptions[actionType]
+    button.className = 'option-button' // Use same class as tower buttons
+    button.disabled = budget < action.cost
+    button.innerHTML = createButtonTemplate(
+        action.icon, action.name, action.cost, null, action.duration, action.description
+    )
+    button.onclick = () => {
+        if (budget >= action.cost) {
+            enforceAction(node, actionType)
+            showToast(action.name + ' deployed', 'Action executed at ' + node.name, 'success')
+        }
+    }
+    nodeDetails.actionOptions.appendChild(button)
+}
+
+function updateTowerOptions(node, budget, placeTower) {
+    nodeDetails.towerOptions.innerHTML = ''
+
+    let foundOption = false
+    Object.keys(towerOptions).forEach(towerType => {
+        const tower = towerOptions[towerType];
+        if (tower.depend === node.tower && node.tower !== towerType) {
+            createTowerButton(towerType, node, budget, placeTower)
+            foundOption = true
+        }
+    })
+    if (!foundOption) {
+        const maxMessage = document.createElement('div')
+        maxMessage.className = 'max-tier'
+        maxMessage.textContent = `Maximum ${towerOptions[node.tower].name} already installed`
         nodeDetails.towerOptions.appendChild(maxMessage)
     }
 }
 
-function createTowerButton(towerType, node, towerTypes, budget, placeTower) {
-    const tower = towerTypes[towerType]
+function createTowerButton(towerType, node, budget, placeTower) {
+    const tower = towerOptions[towerType]
     const button = document.createElement('button')
-    button.className = 'tower-button'
+    button.className = 'option-button'
     button.disabled = budget < tower.cost
-
-    button.innerHTML = `
-        <span class="tower-icon">${tower.icon}</span>
-        <div class="tower-info">
-            <div class="tower-name">${tower.name} (${tower.cost})</div>
-            <div class="tower-desc">${tower.description}</div>
-        </div>
-    `
-
+    button.innerHTML = createButtonTemplate(
+        tower.icon, tower.name, tower.cost, tower.maintenance, null, tower.description
+    )
     button.onclick = () => {
         if (budget >= tower.cost) {
             placeTower(node, towerType)
             showToast(tower.name + ' deployed', 'Installation complete at ' + node.name, 'success')
         }
     }
-
     nodeDetails.towerOptions.appendChild(button)
 }
 
@@ -158,8 +197,8 @@ export function getSelectedNode() {
     return selectedNode
 }
 
-export function updateCurrentNodeDetails(budget) {
+export function updateCurrentNodeDetails(budget, placeTower, enforceAction) {
     if (selectedNode) {
-        showNodeDetails(selectedNode, towerTypes, budget, placeTower)
+        showNodeDetails(selectedNode, budget, placeTower, enforceAction)
     }
 }

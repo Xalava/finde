@@ -73,12 +73,14 @@ export function resizeCanvas(ctx) {
 export function centerView(nodes = []) {
     if (!canvas || nodes.length === 0) return
     let totalX = 0, totalY = 0
-    nodes.forEach(node => {
+    let activeNodes = nodes.filter(node => node.active)
+    if (activeNodes.length === 0) return
+    activeNodes.forEach(node => {
         totalX += node.x
         totalY += node.y
     })
-    const centerX = totalX / nodes.length
-    const centerY = totalY / nodes.length
+    const centerX = totalX / activeNodes.length
+    const centerY = totalY / activeNodes.length
 
     camera.x = canvas.width / 2 - centerX * camera.zoom
     camera.y = canvas.height / 2 - centerY * camera.zoom
