@@ -1,34 +1,56 @@
-// UI
+import * as Camera from './js/camera.js'
+import * as UI from './js/ui-manager.js'
+// == UI == 
 let debug = false
 const canvas = document.getElementById('game')
 const ctx = canvas.getContext('2d')
-const UIindicators = {
-    budget: document.getElementById('budget'),
-    gdp: document.getElementById('gdp'),
-    maintenance: document.getElementById('maintenance')
-}
-const UInodeDetails = {
-    panel: document.getElementById('node-details-panel'),
-    title: document.getElementById('panel-title'),
-    type: document.getElementById('panel-type'),
-    corruption: document.getElementById('panel-corruption'),
-    received: document.getElementById('panel-received'),
-    detected: document.getElementById('panel-detected'),
-    reputationBar: document.getElementById('reputation-bar'),
-    reputationValue: document.getElementById('reputation-value'),
-    towerOptions: document.getElementById('tower-options'),
-    close: document.getElementById('close-panel')
-}
-// Instructions Panel
-const UIinstructions = {
-    panel: document.getElementById('instructions'),
-    close: document.getElementById('close-instructions')
-}
-let selectedNode = null
-const effects = []
+Camera.initCamera(canvas)
+window.addEventListener('resize', Camera.resizeCanvas.bind(null, ctx))
+UI.initUI() // Handle indicators and instructions
+
+const centerBtn = document.getElementById('center-view')
+const debugBtn = document.getElementById('toggle-debug')
+
+let effects = []
 const uiFont = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+let animationFrameId
 
 
+// Initialization of UI elements, waiting for the DOM (and actually the game data)
+document.addEventListener('DOMContentLoaded', () => {
+
+    centerBtn.addEventListener('click', Camera.centerView.bind(null, nodes))
+    debugBtn.addEventListener('click', () => {
+        debug = !debug
+        debugBtn.style.backgroundColor = debug ? 'rgba(255, 0, 0, 0.2)' : ''
+    })
+    canvas.addEventListener('mousedown', (e) => {
+        const rect = canvas.getBoundingClientRect()
+        const mouseX = e.clientX - rect.left
+        const mouseY = e.clientY - rect.top
+
+        // Check if clicked on a node
+        const worldPos = Camera.getWorldPosition(e.clientX, e.clientY)
+        let clickedNode = nodes.find(node => {
+            const dx = node.x - worldPos.x
+            const dy = node.y - worldPos.y
+            return Math.hypot(dx, dy) < 20
+        })
+
+        if (clickedNode) {
+            UI.showNodeDetails(clickedNode, towerTypes, budget, placeTower)
+        } else {
+            Camera.startDrag(e)
+        }
+    })
+
+    Camera.setCameraActions()
+    Camera.resizeCanvas(ctx)
+    Camera.centerView(nodes)
+})
+
+
+// == Game data ==
 // Economics & Game play
 let budget = 150
 let maintenance = 0
@@ -43,162 +65,6 @@ const gdpLog = []
 let transactions = []
 const startTime = Date.now()
 let currentDay = 0
-
-// Add these variables near the top with other UI constants
-const camera = {
-    x: 0,
-    y: 0,
-    zoom: 1,
-    dragging: false,
-    lastX: 0,
-    lastY: 0
-}
-
-// Add this function to handle canvas resize
-function resizeCanvas() {
-    const container = document.getElementById('game-container')
-    canvas.width = container.clientWidth
-    canvas.height = container.clientHeight
-
-    // Force a redraw after resize
-    ctx.setTransform(1, 0, 0, 1, 0, 0)
-    centerView()
-}
-
-// Add resize observer for more reliable size updates
-const resizeObserver = new ResizeObserver(() => {
-    resizeCanvas()
-})
-resizeObserver.observe(document.getElementById('game-container'))
-
-// Update the mouse event handlers
-canvas.addEventListener('mousedown', (e) => {
-    const rect = canvas.getBoundingClientRect()
-    const mouseX = e.clientX - rect.left
-    const mouseY = e.clientY - rect.top
-
-    // Check if clicked on a node
-    const worldPos = getWorldPosition(e.clientX, e.clientY)
-    let clickedNode = nodes.find(node => {
-        const dx = node.x - worldPos.x
-        const dy = node.y - worldPos.y
-        return Math.hypot(dx, dy) < 20
-    })
-
-    if (clickedNode) {
-        showNodeDetails(clickedNode)
-    } else {
-        // Start dragging if not clicked on a node
-        camera.dragging = true
-        camera.lastX = e.clientX
-        camera.lastY = e.clientY
-        canvas.style.cursor = 'grabbing'
-    }
-})
-
-canvas.addEventListener('mousemove', (e) => {
-    if (camera.dragging) {
-        const dx = e.clientX - camera.lastX
-        const dy = e.clientY - camera.lastY
-        camera.x += dx
-        camera.y += dy
-        camera.lastX = e.clientX
-        camera.lastY = e.clientY
-    }
-})
-
-canvas.addEventListener('mouseup', () => {
-    camera.dragging = false
-    canvas.style.cursor = 'default'
-})
-
-canvas.addEventListener('mouseleave', () => {
-    camera.dragging = false
-    canvas.style.cursor = 'default'
-})
-
-// Add touch support
-canvas.addEventListener('touchstart', (e) => {
-    e.preventDefault()
-    const touch = e.touches[0]
-    camera.dragging = true
-    camera.lastX = touch.clientX
-    camera.lastY = touch.clientY
-})
-
-canvas.addEventListener('touchmove', (e) => {
-    e.preventDefault()
-    if (camera.dragging) {
-        const touch = e.touches[0]
-        camera.x += (touch.clientX - camera.lastX) / camera.zoom
-        camera.y += (touch.clientY - camera.lastY) / camera.zoom
-        camera.lastX = touch.clientX
-        camera.lastY = touch.clientY
-    }
-})
-
-canvas.addEventListener('touchend', () => {
-    camera.dragging = false
-})
-
-canvas.addEventListener('wheel', (e) => {
-    e.preventDefault()
-    const zoomFactor = e.deltaY < 0 ? 1.1 : 0.9
-    const mouseX = e.clientX - canvas.getBoundingClientRect().left
-    const mouseY = e.clientY - canvas.getBoundingClientRect().top
-
-    // Convert mouse position to world space before zoom
-    const worldX = (mouseX - camera.x) / camera.zoom
-    const worldY = (mouseY - camera.y) / camera.zoom
-
-    camera.zoom *= zoomFactor
-    camera.zoom = Math.min(Math.max(0.5, camera.zoom), 2) // Limit zoom range
-
-    // Adjust camera position to zoom toward mouse position
-    camera.x = mouseX - worldX * camera.zoom
-    camera.y = mouseY - worldY * camera.zoom
-})
-
-// Prevent context menu on right click
-canvas.addEventListener('contextmenu', (e) => e.preventDefault())
-
-// Update the drawing functions to use camera transform
-function applyCamera(ctx) {
-    ctx.save()
-    ctx.translate(camera.x, camera.y)
-    ctx.scale(camera.zoom, camera.zoom)
-}
-
-function restoreCamera(ctx) {
-    ctx.restore()
-}
-
-// // Close panels when clicking outside
-// document.addEventListener('click', (e) => {
-
-//     // Close instructions if clicking outside
-//     if (!UIinstructions.panel.contains(e.target) &&
-//         !UIinstructions.panel.classList.contains('hidden')) {
-//         toggleInstructions()
-//     }
-
-//     // Close node details if clicking outside
-//     if (!UInodeDetails.panel.contains(e.target) &&
-//         !canvas.contains(e.target)) {
-//         hideNodeDetails()
-//     }
-// })
-
-// Helper functions
-function toggleInstructions() {
-    UIinstructions.panel.classList.toggle('hidden')
-    if (debug) console.log("toggling instructions!")
-}
-
-function hideNodeDetails() {
-    UInodeDetails.panel.classList.remove('visible')
-    selectedNode = null
-}
 
 const nodes = [
     { id: 0, x: 250, y: 200, corruption: 0, type: 'processor', name: 'PayFlow' },
@@ -232,7 +98,6 @@ nodes.forEach(node => {
     node.reputation = 80 // Default node reputation
 })
 
-
 const edges = [
     // processor to processor
     [0, 2], [1, 2], [2, 4],
@@ -245,150 +110,29 @@ const edges = [
 const towerTypes = {
     basic: { name: 'Basic Filter', cost: 50, accuracy: 0.5, maintenance: 0, icon: '🔍', description: 'Detects medium and large illegal transactions with 50% accuracy' },
     enhanced: { name: 'Enhanced Filter', cost: 75, accuracy: 0.7, maintenance: 0, icon: '🔬', description: 'Detects all sizes of illegal transactions with 70% accuracy' },
-    ai: { name: 'AI System', cost: 100, accuracy: 0.8, maintenance: 1, icon: '🧠', description: 'Powerful detection with 80% accuracy, costs 2 maintenance per second' },
-    advanced: { name: 'Advanced AI', cost: 150, accuracy: 0.9, maintenance: 5, icon: '🤖', description: 'High-end system with 90% accuracy, costs 5 maintenance per second' }
+    ai: { name: 'AI System', cost: 100, accuracy: 0.8, maintenance: 1, icon: '🧠', description: 'Powerful detection with 80% accuracy, costs 1 maintenance per day' },
+    advanced: { name: 'Advanced AI', cost: 150, accuracy: 0.9, maintenance: 5, icon: '🤖', description: 'High-end system with 90% accuracy, costs 5 maintenance per day' }
 }
 
+const audit = {
+    name: 'Audit',
+    cost: 100,
+    description: 'Audit the node for illegal transactions',
+    icon: '🕵️‍♂️',
+    duration: 10
+}
+
+const HIGH_CORRUPTION = 4
+
 const txSizeOptions = {
-    small: { name: 'small', speed: 1, amount: 5 },
-    medium: { name: 'medium', speed: 0.75, amount: 10 },
-    large: { name: 'large', speed: 0.5, amount: 15 }
+    small: { name: 'small', amount: 5 },
+    medium: { name: 'medium', amount: 10 },
+    large: { name: 'large', amount: 15 }
 }
 
 const legalityOptions = ['legit', 'questionable', 'illegal'];
 
-// Panel functions
-function showNodeDetails(node) {
-    selectedNode = node
-    UInodeDetails.title.textContent = node.name
-    UInodeDetails.type.textContent = node.type.charAt(0).toUpperCase() + node.type.slice(1)
-    UInodeDetails.corruption.textContent = node.corruption
-    UInodeDetails.received.textContent = node.receivedAmount
-    UInodeDetails.detected.textContent = node.detectedAmount
-
-    // Calculate node reputation (inverse to corruption)
-    const nodeRepValue = Math.max(0, 100 - (node.corruption * 20))
-    UInodeDetails.reputationValue.textContent = nodeRepValue
-    UInodeDetails.reputationBar.style.width = nodeRepValue + '%'
-
-    // Set reputation bar color based on value
-    if (nodeRepValue > 70) {
-        UInodeDetails.reputationBar.className = 'bar-fill good'
-    } else if (nodeRepValue > 30) {
-        UInodeDetails.reputationBar.className = 'bar-fill medium'
-    } else {
-        UInodeDetails.reputationBar.className = 'bar-fill poor'
-    }
-
-    // Clear previous tower buttons
-    UInodeDetails.towerOptions.innerHTML = ''
-
-    // Create tower buttons based on current state
-    if (!node.tower) {
-        // Show base options
-        createTowerButton('basic', node)
-        createTowerButton('ai', node)
-    } else if (node.tower === 'basic') {
-        // Show upgrade path for basic
-        createTowerButton('enhanced', node)
-    } else if (node.tower === 'ai') {
-        // Show upgrade path for AI
-        createTowerButton('advanced', node)
-    } else {
-        // Already at top tier, show message
-        const maxMessage = document.createElement('div')
-        maxMessage.className = 'max-tier'
-        maxMessage.textContent = `Maximum ${towerTypes[node.tower].name} already installed`
-        UInodeDetails.towerOptions.appendChild(maxMessage)
-    }
-
-    // Show audit button if not already audited
-    if (!auditedNodes.find(a => a.id === node.id)) {
-        const auditButton = document.createElement('button')
-        auditButton.className = 'audit-button'
-        auditButton.innerHTML = '🕴️ Audit (100)'
-        auditButton.onclick = () => {
-            if (budget >= 100) {
-                auditedNodes.push({ id: node.id, until: Date.now() + 10000 })
-                budget -= 100
-                showToast('Audit initiated at ' + node.name, 'Analyzing financial activities...', 'info')
-                updateNodeDetails()
-            } else {
-                showToast('Insufficient funds', 'Budget too low for audit', 'error')
-            }
-        }
-        UInodeDetails.towerOptions.appendChild(auditButton)
-    } else {
-        const auditActive = document.createElement('div')
-        auditActive.className = 'audit-active'
-        auditActive.textContent = '🕴️ Audit in progress...'
-        UInodeDetails.towerOptions.appendChild(auditActive)
-    }
-
-    // Show the panel
-    UInodeDetails.panel.classList.add('visible')
-}
-
-function updateNodeDetails() {
-    if (selectedNode) {
-        showNodeDetails(selectedNode)
-    }
-}
-
-function createTowerButton(towerType, node) {
-    const tower = towerTypes[towerType]
-    const button = document.createElement('button')
-    button.className = 'tower-button'
-    button.disabled = budget < tower.cost
-
-    button.innerHTML = `
-        <span class="tower-icon">${tower.icon}</span>
-        <div class="tower-info">
-            <div class="tower-name">${tower.name} (${tower.cost})</div>
-            <div class="tower-desc">${tower.description}</div>
-        </div>
-    `
-
-    button.onclick = () => {
-        if (budget >= tower.cost) {
-            placeTower(node, towerType)
-            updateNodeDetails()
-            showToast(tower.name + ' deployed', 'Installation complete at ' + node.name, 'success')
-        }
-    }
-
-    UInodeDetails.towerOptions.appendChild(button)
-}
-
-function showToast(title, message, type = 'info') {
-    const toast = document.createElement('div')
-    toast.className = `toast ${type}`
-
-    toast.innerHTML = `
-        <div class="toast-content">
-            <div class="toast-title">${title}</div>
-            <div class="toast-message">${message}</div>
-        </div>
-    `
-
-    const toastContainer = document.getElementById('toast-container')
-    toastContainer.appendChild(toast)
-
-    // Trigger animation
-    setTimeout(() => {
-        toast.classList.add('show')
-    }, 10)
-
-    // Auto remove after 4 seconds
-    setTimeout(() => {
-        toast.classList.remove('show')
-        setTimeout(() => {
-            toast.remove()
-        }, 300)
-    }, 4000)
-}
-
-
+// == Canvas drawing functions == 
 function spawnTransaction() {
     const banks = nodes.filter(n => n.type === 'bank')
     const source = banks[Math.floor(Math.random() * banks.length)];
@@ -399,15 +143,15 @@ function spawnTransaction() {
     // if corruption is 5, 60% chance of being illegal, 30% chance of being questionable
     const dice10 = Math.random() * 10 / (source.corruption + 1);
     const legality = legalityOptions[dice10 < 1 ? 2 : dice10 < 1.5 ? 1 : 0];
-
-    const size = ['small', 'medium', 'large'][Math.floor(Math.random() * 3)];
+    const dice3 = Math.floor(Math.random() * 3)
+    const size = ['small', 'medium', 'large'][dice3];
 
     const newTx = {
         path: getPathFrom(source.id),
         index: 0,
         x: source.x,
         y: source.y,
-        speed: txSizeOptions[size].speed,
+        speed: 0.5 + Math.random() + dice3 * 0.5, // [0.5:2.5]. increasing with size
         legality,
         size,
         amount: txSizeOptions[size].amount,
@@ -417,7 +161,6 @@ function spawnTransaction() {
 
     if (debug) {
         console.log(`${newTx.legality === 'illegal' ? '💸' : '💵'} from ${source.id} to ${newTx.path[newTx.path.length - 1]}`)
-        newTx.speed = newTx.speed / 3
     }
     transactions.push(newTx)
     // we give a chance for detection
@@ -457,17 +200,23 @@ function getPathFrom(start) {
 }
 
 function moveTransaction(tx) {
-    const curr = nodes[tx.path[tx.index]]
+    const prec = nodes[tx.path[tx.index]]
     const next = nodes[tx.path[tx.index + 1]]
     if (!next) return  // we had reached the end of the path
 
     const dx = next.x - tx.x
     const dy = next.y - tx.y
+    let speed = debug ? tx.speed / 3 : tx.speed
+
     const dist = Math.hypot(dx, dy)
     // remaining distance to next node is less than the speed of the transaction
-    if (dist < tx.speed) {
+    if (dist < speed) {
         tx.index++
-        detect(tx) // we check for detection when we reach a node. If detected, there will be no income
+        // we check for detection when we reach a node. If detected, there will be no income
+        if (detect(tx)) {
+            tx.active = false
+            return
+        }
         if (tx.index >= tx.path.length - 1) {
             // We have reached the end of the path
             const dest = nodes[tx.path[tx.index]]
@@ -482,23 +231,23 @@ function moveTransaction(tx) {
             if (tx.legality === 'illegal') {
                 dest.corruption++
                 drawEffect(dest.x, dest.y, '💥')
-                reputation -= 2 // Reputation decreases when illegal transactions go through
-                // showToast('Illegal transaction completed', 'Corruption increased at ' + dest.name, 'error')
+                dest.reputation -= 2 // Reputation decreases when illegal transactions go through
+                // UI.showToast('Illegal transaction completed', 'Corruption increased at ' + dest.name, 'error')
                 console.log(`💥 Breach at node ${dest.id}, from ${tx.path[0]}`)
             } else {
-                reputation += 0.1 // Small reputation gain for legitimate transactions
+                dest.reputation += 0.1 // Small reputation gain for legitimate transactions
             }
 
             // Update panel if the affected node is selected
-            if (selectedNode && selectedNode.id === dest.id) {
-                updateNodeDetails()
+            if (UI.getSelectedNode() && UI.getSelectedNode().id === dest.id) {
+                UI.showNodeDetails(dest, towerTypes, budget, placeTower)
             }
 
             tx.active = false
         }
     } else {
-        tx.x += (dx / dist) * tx.speed
-        tx.y += (dy / dist) * tx.speed
+        tx.x += (dx / dist) * speed
+        tx.y += (dy / dist) * speed
     }
 }
 
@@ -508,12 +257,13 @@ function placeTower(node, towerType) {
     budget -= tower.cost
     maintenance -= tower.maintenance
     console.log(`🛠️ Tower placed at node ${node.id}`)
-
+    // Update UI immediately after placing tower
+    UI.showNodeDetails(node, towerTypes, budget, placeTower)
 }
 
 function detect(tx) {
     const node = nodes[tx.path[tx.index]];
-    if (!node || !node.tower || tx.legality !== 'illegal') return;
+    if (!node || !node.tower || tx.legality !== 'illegal') return false
 
     let detectionChance = towerTypes[node.tower].accuracy;
 
@@ -526,19 +276,24 @@ function detect(tx) {
     if (Math.random() < detectionChance) {
         tx.active = false;
         drawEffect(node.x, node.y, '✔️');
-        showToast('Illegal transaction blocked', `Detected at ${node.name} (${towerTypes[node.tower].name})`, 'success')
+        UI.showToast('Illegal transaction blocked', `Detected at ${node.name} (${towerTypes[node.tower].name})`, 'success')
         console.log(`✔️ Illegal tx blocked at node ${node.id}`)
         node.detectedAmount += tx.amount
+        node.receivedAmount += tx.amount
+        budget += tx.amount * taxRate // To be refined, a percentage of the amount could still reach the budget
 
         // Gain reputation for successful detection
-        reputation += 3
+        node.reputation += 3
 
         // Update panel if the detection happens at the selected node
-        if (selectedNode && selectedNode.id === node.id) {
-            updateNodeDetails()
+        if (UI.getSelectedNode() && UI.getSelectedNode().id === node.id) {
+            UI.showNodeDetails(node, towerTypes, budget, placeTower)
         }
 
         if (debug) console.log(tx)
+        return true
+    } else {
+        return false
     }
 }
 
@@ -569,34 +324,30 @@ function updateEffects() {
                 ctx.fillText(e.emoji, e.x - 12, e.y - 30)
         }
     })
-    for (let i = effects.length - 1; i >= 0; i--) {
-        if (effects[i].timer <= 0) effects.splice(i, 1)
-    }
-}
 
-function updateIndicators() {
-    UIindicators.budget.textContent = budget.toFixed(0)
-    UIindicators.maintenance.textContent = maintenance
-    UIindicators.gdp.textContent = gdp.toFixed(0)
+    effects = effects.filter(e => {
+        e.timer -= 1;
+        return e.timer > 0;
+    });
 }
 
 // Handle mouse click to select nodes
 canvas.addEventListener('click', (e) => {
-    const worldPos = getWorldPosition(e.clientX, e.clientY)
+    const worldPos = Camera.getWorldPosition(e.clientX, e.clientY)
     let clickedOnNode = false
 
     for (let node of nodes) {
         const dx = node.x - worldPos.x
         const dy = node.y - worldPos.y
         if (Math.hypot(dx, dy) < 20) {
-            showNodeDetails(node)
+            UI.showNodeDetails(node, towerTypes, budget, placeTower)
             clickedOnNode = true
             break
         }
     }
 
-    if (!clickedOnNode && !UInodeDetails.panel.contains(e.target)) {
-        hideNodeDetails()
+    if (!clickedOnNode) {
+        UI.hideNodeDetails()
     }
 })
 
@@ -605,7 +356,7 @@ let hoverNode = null
 let hoverTimeout = null
 
 function drawNode(node) {
-    const isSelected = node === selectedNode
+    const isSelected = node === UI.getSelectedNode()
     const nodeRadius = 20
     ctx.save()  // Save canvas state
 
@@ -615,7 +366,7 @@ function drawNode(node) {
     let color = node.type === 'bank' ? '#eee' : '#aaf'
 
     // Add corruption glow
-    if (node.corruption > 4) {
+    if (node.corruption > HIGH_CORRUPTION) {
         ctx.shadowColor = 'red'
         ctx.shadowBlur = 15
         color = '#ffdddd'
@@ -624,8 +375,6 @@ function drawNode(node) {
         ctx.shadowBlur = 10
         color = '#fff0dd'
     }
-
-
 
     // Add selection highlight
     if (isSelected) {
@@ -680,11 +429,13 @@ function drawNode(node) {
         ctx.fillText('🕴️ Audit', node.x - 24, node.y - 30)
     }
     if (debug) {
+        ctx.font = `14px ${uiFont}`
+
         ctx.fillStyle = 'white'
-        ctx.fillText(node.id, node.x - 10, node.y - 20)
+        ctx.fillText(node.id, node.x + 20, node.y - 6)
         if (node.corruption) {
             ctx.fillStyle = 'red'
-            ctx.fillText(node.corruption, node.x, node.y + 30)
+            ctx.fillText(node.corruption, node.x + 20, node.y + 16)
         }
     }
 }
@@ -700,9 +451,9 @@ function drawEdge([a, b]) {
 
 function drawTransaction(tx) {
     const emoji = tx.legality === 'illegal' ? '💸' : '💵'
-    let fontSize = tx.size === 'small' ? '18px' : tx.size === 'medium' ? '24px' : '32px'
-    ctx.font = fontSize + `${uiFont}`
-    ctx.fillText(emoji, tx.x - 10, tx.y + 10)
+    let fontSize = tx.size === 'small' ? 18 : tx.size === 'medium' ? 24 : 32
+    ctx.font = `${fontSize}px ${uiFont}`
+    ctx.fillText(emoji, tx.x - fontSize / 2, tx.y + fontSize / 3);
 }
 
 function drawCorruptionMeter(spread) {
@@ -766,19 +517,25 @@ function drawTooltip(hoverNode) {
 
 function calculateIndicators() {
     // Remove old transactions from the log (older than 90 seconds, each second is a day)
-    while (gdpLog.length && gdpLog[0].timestamp < Date.now() - 90000) {
+    while (gdpLog.length && gdpLog[0].timestamp < Date.now() - 90 * 1000) {
         gdpLog.shift()
     }
     gdp = gdpLog.reduce((sum, tx) => sum + tx.amount, 0)
 
-    budget += maintenance / 60 // maintenance is per second, we divide by 60 to get one by loop . Also, maintenace is negative
-    // nodes.forEach(node => {
-    //     if (node.tower === 'ai') budget -= 1 / 60
-    //     if (node.tower === 'advanced') budget -= 5 / 60
-    // })
+    const oldBudget = budget
+    budget += maintenance / 60
+
+    // If budget crosses a tower cost threshold, update UI
+    const thresholds = [50, 75, 100, 150] // tower costs
+    if (thresholds.some(cost =>
+        (oldBudget < cost && budget >= cost) ||
+        (oldBudget >= cost && budget < cost)
+    )) {
+        UI.updateCurrentNodeDetails(budget)
+    }
 }
 
-function endGame(condition) {
+function drawEndGame(condition) {
     ctx.fillStyle = 'rgba(0, 0, 0, 0.7)'
     ctx.fillRect(0, 0, canvas.width, canvas.height)
 
@@ -795,9 +552,37 @@ function endGame(condition) {
     cancelAnimationFrame(animationFrameId)
 }
 
-let animationFrameId
+
+function removeExpiredAudits(now) {
+    for (let i = auditedNodes.length - 1; i >= 0; i--) {
+        if (auditedNodes[i].until <= now) {
+            const auditedNode = nodes[auditedNodes[i].id]
+            console.log(`✅ Audit complete on node ${auditedNodes[i].id} `)
+            auditedNode.corruption = Math.floor(auditedNode.corruption / 2)
+            UI.showToast('Audit completed', `Corruption reduced at ${auditedNode.name}`, 'info')
+            auditedNodes.splice(i, 1)
+
+            // Update the panel if the audited node is selected
+            if (UI.getSelectedNode() && UI.getSelectedNode().id === auditedNode.id) {
+                UI.showNodeDetails(auditedNode, towerTypes, budget, placeTower)
+            }
+        }
+    }
+
+}
+
+function calculateCorruptionSpread() {
+    // Corruption spread
+    const totalActors = nodes.length
+    const totalCorruption = nodes.reduce((sum, n) => sum + n.corruption, 0)
+    return Math.round((totalCorruption / (HIGH_CORRUPTION * totalActors)) * 100)
+}
+
+let priorNow = Date.now()
+let deltaTime = 0
 
 function gameLoop() {
+    // == Update the game state == 
     const now = Date.now()
     const newCurrentDay = Math.floor((now - startTime) / 1000) // in seconds
     if (newCurrentDay !== currentDay) {
@@ -816,71 +601,60 @@ function gameLoop() {
                 console.log("🎉 holiday!")
                 break
         }
-        document.getElementById('day').textContent = currentDay
-        document.getElementById('holiday').textContent = holiday ? '🎉' : ''
+        UI.updateDate(currentDay, holiday)
     }
 
-    // Fix transaction spawning rate
     if (Math.random() < (holiday ? 0.06 : 0.03)) {
-        spawnTransaction()
+        spawnTransaction();
     }
 
-    ctx.clearRect(0, 0, canvas.width, canvas.height)
+    calculateIndicators()
+    removeExpiredAudits(now)
 
-    applyCamera(ctx)
+    // == Updade the game display ==
+    ctx.clearRect(0, 0, canvas.width, canvas.height)
+    if (debug) Camera.drawCameraInfo(ctx)
+    if (debug) {
+        const newDeltaTime = now - priorNow
+        priorNow = now
+        ctx.font = `18px ${uiFont}`
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+        ctx.fillText(`FPS: ${Math.round(1000 / ((deltaTime + newDeltaTime) / 2))}`, 10, 70)
+        deltaTime = newDeltaTime
+    }
+    Camera.applyCamera(ctx)
+    if (debug) Camera.drawDebugGrid(ctx)
 
     edges.forEach(drawEdge)
     nodes.forEach(drawNode)
+    transactions = transactions.filter(t => t.active);
     transactions.forEach(tx => {
-        if (tx.active) {
-            moveTransaction(tx)
-            drawTransaction(tx)
-        }
+        moveTransaction(tx)
+        drawTransaction(tx)
     })
-    transactions = transactions.filter(t => t.active)
     updateEffects()
 
-    restoreCamera(ctx)
+    Camera.restoreCamera(ctx)
 
-    calculateIndicators()
-    updateIndicators()
+    // == Update the UI ==
+    UI.updateIndicators(budget, gdp, maintenance)
 
-    if (hoverNode && !selectedNode) {
+    if (hoverNode && !UI.getSelectedNode()) {
         drawTooltip(hoverNode)
     }
 
-    // Corruption spread
-    const totalActors = nodes.length
-    const totalCorruption = nodes.reduce((sum, n) => sum + n.corruption, 0)
-    const spread = Math.round((totalCorruption / (3 * totalActors)) * 100)
-
+    const spread = calculateCorruptionSpread()
     drawCorruptionMeter(spread)
 
     // Game end conditions
     if (spread >= 100) {
-        endGame('Corruption has reached critical levels!')
+        drawEndGame('Corruption has reached critical levels!')
         return
     }
 
     if (budget < 0) {
-        endGame('The country is bankrupt!')
+        drawEndGame('The country is bankrupt!')
         return
-    }
-
-    // Remove expired audits
-    for (let i = auditedNodes.length - 1; i >= 0; i--) {
-        if (auditedNodes[i].until <= now) {
-            const auditedNode = nodes[auditedNodes[i].id]
-            console.log(`✅ Audit complete on node ${auditedNodes[i].id} `)
-            auditedNode.corruption = Math.floor(auditedNode.corruption / 2)
-            showToast('Audit completed', `Corruption reduced at ${auditedNode.name}`, 'info')
-            auditedNodes.splice(i, 1)
-
-            // Update the panel if the audited node is selected
-            if (selectedNode && selectedNode.id === auditedNode.id) {
-                updateNodeDetails()
-            }
-        }
     }
 
     animationFrameId = requestAnimationFrame(gameLoop)
@@ -888,62 +662,3 @@ function gameLoop() {
 
 // Initialize the game
 gameLoop()
-
-// Update mouse position calculations in click and hover handlers
-function getWorldPosition(clientX, clientY) {
-    const rect = canvas.getBoundingClientRect()
-    const screenX = clientX - rect.left
-    const screenY = clientY - rect.top
-    return {
-        x: (screenX - camera.x) / camera.zoom,
-        y: (screenY - camera.y) / camera.zoom
-    }
-}
-
-// Add window resize handler
-window.addEventListener('resize', resizeCanvas)
-
-// Initialize canvas size
-resizeCanvas()
-
-// Add this function near the start of the file
-function centerView() {
-    // Calculate center point of all nodes
-    let totalX = 0, totalY = 0;
-    nodes.forEach(node => {
-        totalX += node.x;
-        totalY += node.y;
-    });
-
-    const centerX = totalX / nodes.length;
-    const centerY = totalY / nodes.length;
-
-    // Set camera to center on the nodes
-    camera.x = canvas.width / 2 - centerX * camera.zoom;
-    camera.y = canvas.height / 2 - centerY * camera.zoom;
-}
-
-// Wrap the initialization code in DOMContentLoaded
-document.addEventListener('DOMContentLoaded', () => {
-    // Initialize UI elements
-    const instructionsBtn = document.getElementById('toggle-instructions')
-    const centerBtn = document.getElementById('center-view')
-    const debugBtn = document.getElementById('toggle-debug')
-    const closeInstructionsBtn = document.getElementById('close-instructions')
-    const closeNodeDetailsBtn = document.getElementById('close-panel')
-
-    // Set up event listeners
-    instructionsBtn.addEventListener('click', toggleInstructions)
-    closeInstructionsBtn.addEventListener('click', toggleInstructions)
-    closeNodeDetailsBtn.addEventListener('click', hideNodeDetails)
-    centerBtn.addEventListener('click', centerView)
-    debugBtn.addEventListener('click', () => {
-        debug = !debug
-        debugBtn.style.backgroundColor = debug ? 'rgba(255, 0, 0, 0.2)' : ''
-    })
-
-    // Initialize the game
-    resizeCanvas()
-    centerView()
-    gameLoop()
-})
