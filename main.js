@@ -1,6 +1,6 @@
 import * as Camera from './js/camera.js'
 import * as UI from './js/ui-manager.js'
-import { towerOptions, legalityOptions, txSizeOptions, nodeOptions, actionOptions, CORRUPTION_THRESHOLD } from './js/config.js'
+import { towerOptions, legalityOptions, txSizeOptions, nodeTypes, actionOptions, userTypes, CORRUPTION_THRESHOLD } from './js/config.js'
 
 // == UI == 
 let debug = false
@@ -16,7 +16,6 @@ const debugBtn = document.getElementById('toggle-debug')
 let effects = []
 const uiFont = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
 let animationFrameId
-
 
 // Initialization of UI elements, waiting for the DOM (and actually the game data)
 document.addEventListener('DOMContentLoaded', () => {
@@ -45,10 +44,19 @@ document.addEventListener('DOMContentLoaded', () => {
             Camera.startDrag(e)
         }
     })
+    // canvas.addEventListener('mousemove', (e) => {
+    //     const rect = canvas.getBoundingClientRect();
+    //     lastMouseX = e.clientX - rect.left;
+    //     lastMouseY = e.clientY - rect.top;
+    //     Camera.moveCamera(e)
+    // })
 
     Camera.setCameraActions()
     Camera.resizeCanvas(ctx)
     Camera.centerView(nodes)
+    // Zoom in slightly when the game starts
+    Camera.cinematicZoom(1.8)
+
 })
 
 
@@ -66,6 +74,9 @@ const gdpLog = []
 let transactions = []
 const startTime = Date.now()
 let currentDay = 0
+const users = []
+const userEdges = []
+
 
 const nodes = [
     { id: 0, x: 250, y: 200, corruption: 0, type: 'processor', name: 'PayFlow', active: true },
@@ -83,7 +94,7 @@ const nodes = [
     { id: 11, x: 300, y: 50, corruption: 0, type: 'bank', name: 'Metro Bank', active: true },
     { id: 12, x: 900, y: 550, corruption: 0, type: 'bank', name: 'Pioneer Bank' },
     { id: 13, x: 800, y: 100, corruption: 0, type: 'bank', name: 'Elite Bank' },
-    { id: 14, x: 600, y: 250, corruption: 0, type: 'bank', name: 'Summit Bank', active: true },
+    { id: 14, x: 600, y: 250, corruption: 0, type: 'bank', name: 'Summit Bank' },
     { id: 15, x: 700, y: 700, corruption: 0, type: 'bank', name: 'Horizon Bank' },
     { id: 16, x: 200, y: 500, corruption: 0, type: 'bank', name: 'Anchor Bank' },
     { id: 17, x: 800, y: 450, corruption: 3, type: 'bank', name: 'Crest Bank' },
@@ -110,6 +121,7 @@ nodes.forEach(node => {
     node.detectedAmount = 0
     node.receivedAmount = 0
     node.reputation = 80 // Default node reputation
+    // node.active = true
 })
 
 const edges = [
@@ -124,71 +136,152 @@ const edges = [
     // crypto exchange connections
     [16, 25], [12, 27], [3, 26],
 ]
+function generateUsers(target = false) {
+    const activeNodes = nodes.filter(n => n.type !== 'processor' && n.active)
+    const targetNodes = target ? [target] : activeNodes
+
+    targetNodes.forEach(t => {
+        const finalCount = Math.ceil(Math.random() * nodeTypes[t.type].usersCount * 2) + 1 // 2 to count*2 +1
+        for (let i = 0; i < finalCount; i++) {
+            const random = Math.random()
+            let type = ''
+            if (t.type === 'bank')
+                type = random < 0.5 ? 'person' : random < 0.8 ? 'business' : 'government'
+            else
+                type = random < 0.7 ? 'person' : 'business'
+            let user = null;
+            let tries = 0;
+            do {
+                const x = t.x + (Math.random() - 0.5) * 150;
+                const y = t.y + (Math.random() - 0.5) * 150;
+                const overlapping = nodes.some(n => Math.hypot(x - n.x, y - n.y) < 30) || users.some(u => Math.hypot(x - u.x, y - u.y) < 25);
+                if (!overlapping) {
+                    user = {
+                        id: `${users.length}`,
+                        x,
+                        y,
+                        type: type,
+                        corruption: Math.floor(Math.random() * 5),
+                        activity: Math.random(),
+                        active: true
+                    }
+                }
+                tries++
+            } while (!user && tries < 10)
+
+            if (user) {
+                users.push(user)
+                // assignNearestBank(user)
+                // As we generate around a platform, we don't need to look for the nearest for the moment
+                user.bankId = t.id
+                userEdges.push([user.id, t.id])
+            }
+        }
+    })
+}
+
+// Not used in the current design
+function assignNearestBank(user) {
+    let activeNodes = []
+    if (user.type === 'government') {
+        activeNodes = nodes.filter(n => n.type === 'bank' && n.active)
+    } else {
+        activeNodes = nodes.filter(n => n.type !== 'processor' && n.active)
+    }
+    const nearest = activeNodes.sort((a, b) => Math.hypot(user.x - a.x, user.y - a.y) - Math.hypot(user.x - b.x, user.y - b.y))[0]
+    if (nearest) {
+        user.bankId = nearest.id
+        userEdges.push([user.id, nearest.id])
+    }
+}
+
+function realignUserBanks() {
+    users.forEach(user => {
+        const prevBank = user.bankId
+        assignNearestBank(user)
+        if (user.bankId !== prevBank) {
+            const index = userEdges.findIndex(e => e[0] === user.id)
+            if (index !== -1) userEdges[index] = [user.id, user.bankId]
+        }
+    })
+}
+
+generateUsers();
 
 // == Canvas drawing functions == 
+
 function spawnTransaction() {
-    const activeNodes = nodes.filter(n => (n.type !== 'processor' && n.active))
-    const source = activeNodes[Math.floor(Math.random() * activeNodes.length)];
+    const activeUsers = users.filter(u => u.active)
+    if (activeUsers.length === 0) return
+
+    const sourceUser = activeUsers[Math.floor(Math.random() * activeUsers.length)]
+    const activeNodes = nodes.filter(n => n.active && n.type !== 'processor')
+    const targetNode = activeNodes[Math.floor(Math.random() * activeNodes.length)]
 
     // Illegal transaction depends on the corruption of the source, 10%, 20%, 33%... 
     // If corruption is 0, 10% chance of being illegal, 5% chance of being questionable
     // if corruption is 3, 40% chance of being illegal, 20% chance of being questionable
     // if corruption is 5, 60% chance of being illegal, 30% chance of being questionable
-    const dice10 = Math.random() * 10 / (source.corruption + 1);
-    const legality = legalityOptions[dice10 < 1 ? 2 : dice10 < 1.5 ? 1 : 0];
+    const dice10 = Math.random() * 10 / (sourceUser.corruption + 1)
+    const legality = legalityOptions[dice10 < 1 ? 2 : dice10 < 1.5 ? 1 : 0]
     const dice3 = Math.floor(Math.random() * 3)
-    const size = ['small', 'medium', 'large'][dice3];
+    const size = ['small', 'medium', 'large'][dice3]
+
+    const sourceBank = nodes[sourceUser.bankId]
+
+    if (!sourceUser || !targetNode || !sourceBank) {
+        console.log("Error spawning transaction: missing user, bank, or target.");
+        return;
+    }
+
+    const innerPath = getPathFrom(sourceBank.id, targetNode.id)
+    if (!innerPath || innerPath.length < 2) return
+
+    const txPath = [sourceUser.id, ...innerPath]
 
     const newTx = {
-        path: getPathFrom(source.id),
+        path: txPath,
         index: 0,
-        x: source.x,
-        y: source.y,
-        speed: 0.5 + Math.random() + dice3 * 0.5, // [0.5:2.5]. increasing with size
+        x: sourceUser.x,
+        y: sourceUser.y,
+        speed: 0.5 + Math.random() * (dice3 + 1) / 2,
         legality,
         size,
         amount: txSizeOptions[size].amount,
-        source,
+        sourceUser,
         active: true
     }
-
     if (debug) {
-        console.log(`${newTx.legality === 'illegal' ? '💸' : '💵'} from ${source.id} to ${newTx.path[newTx.path.length - 1]}`)
+        console.log(`${newTx.legality === 'illegal' ? '💸' : '💵'} from ${sourceUser.id} to ${newTx.path[newTx.path.length - 1]}`)
     }
+
     transactions.push(newTx)
-    // we give a chance for detection
-    detect(transactions[transactions.length - 1])
+    addEffect(sourceUser.x, sourceUser.y, '', 'pulse');
 
 }
-function getPathFrom(start) {
+
+function getPathFrom(startId, targetId = null) {
     const visited = new Set();
-    const queue = [[start]];
+    const queue = [[startId]];
 
     while (queue.length > 0) {
         const path = queue.shift();
-        const node = path[path.length - 1];
-        if (!visited.has(node)) {
-            visited.add(node);
-            for (const edge of edges) {
-                if (edge.includes(node)) {
-                    const neighbor = edge[0] === node ? edge[1] : edge[0];
-                    if (!visited.has(neighbor) && nodes[neighbor].active) {
-                        const newPath = [...path, neighbor];
-                        queue.push(newPath);
-                        if (nodes[neighbor].type === 'bank') {
-                            // If a valid path to a bank is found, continue exploring for longer paths occasionally
-                            if (Math.random() < 0.5 || queue.length === 0) {
-                                return newPath;
-                            }
-                        }
-                    }
+        const current = path[path.length - 1];
+        if (!visited.has(current)) {
+            visited.add(current);
+            for (const [a, b] of edges) {
+                const neighbor = (a === current ? b : b === current ? a : null);
+                if (neighbor !== null && !visited.has(neighbor) && nodes[neighbor].active) {
+                    const newPath = [...path, neighbor];
+                    if (neighbor === targetId) return newPath;
+                    queue.push(newPath);
                 }
             }
         }
     }
-    const fallbackPath = Array.from(visited).filter(node => nodes[node].active); // Use visited active nodes as a fallback path
-    return fallbackPath.length > 1 ? fallbackPath : [start];
+    return null;
 }
+
 
 function moveTransaction(tx) {
     const prec = nodes[tx.path[tx.index]]
@@ -211,22 +304,33 @@ function moveTransaction(tx) {
         if (tx.index >= tx.path.length - 1) {
             // We have reached the end of the path
             const dest = nodes[tx.path[tx.index]]
+            addEffect(dest.x, dest.y, '', 'pulseNode', 'rgba(255, 0, 0, 0.2)')
             dest.receivedAmount += tx.amount
             // in the future, inspection could cost to budget
             // const isAudited = auditedNodes.some(a => a.id === dest.id)
             // if (isAudited) baseIncome = Math.floor(tx.amount / 2)
             gdpLog.push({ amount: tx.amount, timestamp: Date.now() })
-            budget += tx.amount * taxRate
-            drawEffect(dest.x, dest.y, "+" + tx.amount * taxRate, 'bonus')
+            let income = tx.amount * taxRate
+            budget += income
+            // addEffect(dest.x, dest.y, "+" + tx.amount * taxRate, 'bonus')
+            addEffect(dest.x, dest.y, "+" + income, 'budget')
 
             if (tx.legality === 'illegal') {
+                addEffect(dest.x, dest.y, '', 'pulseNode', 'rgba(255, 0, 0, 0.2)')
+
                 dest.corruption++
-                drawEffect(dest.x, dest.y, '💥')
-                dest.reputation -= 2 // Reputation decreases when illegal transactions go through
+                // addEffect(dest.x, dest.y, '💥')
+                dest.reputation -= 5 // Reputation decreases when illegal transactions go through
                 // UI.showToast('Illegal transaction completed', 'Corruption increased at ' + dest.name, 'error')
                 console.log(`💥 Breach at node ${dest.id}, from ${tx.path[0]}`)
+            } else if (tx.legality === 'questionable') {
+                addEffect(dest.x, dest.y, '', 'pulseNode', 'rgba(255, 187, 0, 0.2)')
+
+                // no particular effect
             } else {
-                dest.reputation += 0.1 // Small reputation gain for legitimate transactions
+                dest.reputation += 1 // Small reputation gain for legitimate transactions
+                addEffect(dest.x, dest.y, '', 'pulseNode', 'rgba(0, 255, 0, 0.2)')
+
             }
 
             // Update panel if the affected node is selected
@@ -281,12 +385,16 @@ function detect(tx) {
 
     if (Math.random() < detectionChance) {
         tx.active = false;
-        drawEffect(node.x, node.y, '✔️');
+        addEffect(node.x, node.y, '✔️');
         UI.showToast('Illegal transaction blocked', `Detected at ${node.name} (${towerOptions[node.tower].name})`, 'success')
         console.log(`✔️ Illegal tx blocked at node ${node.id}`)
         node.detectedAmount += tx.amount
         node.receivedAmount += tx.amount
-        budget += tx.amount * taxRate // To be refined, a percentage of the amount could still reach the budget
+
+        // To be refined, a percentage of the amount could still reach the budget 
+        let income = tx.amount * taxRate
+        budget += income
+        addEffect(node.x, node.y, income, 'budget')
 
         // Gain reputation for successful detection
         node.reputation += 3
@@ -303,14 +411,25 @@ function detect(tx) {
     }
 }
 
-function drawEffect(x, y, emoji, type = 'default') {
-    if (type === "default")
-        effects.push({ x, y, emoji, timer: 60, type: type })
-    else
-        effects.push({ x, y, emoji, timer: 20, type: type })
+function addEffect(x, y, emoji, type = 'default', color = null) {
+    let timer = 0
+    switch (type) {
+        case 'default':
+            timer = 60// Emojis for big actions
+            break
+        case 'pulse':
+        case 'pulseNode':
+            timer = 14
+            break
+        default:
+            timer = 30 // small text notifications)
+
+    }
+    effects.push({ x, y, emoji, timer: timer, type: type, color: color })
+
 }
 
-function updateEffects() {
+function drawEffects() {
     effects.forEach(e => {
         e.timer -= 1
         switch (e.type) {
@@ -324,6 +443,30 @@ function updateEffects() {
                 ctx.font = `12px ${uiFont}`
                 ctx.fillText(e.emoji, e.x + 25, e.y + 5)
                 break
+            case 'budget':
+                ctx.fillStyle = '#666'
+                ctx.font = `8px ${uiFont}`
+                ctx.fillText(e.emoji, e.x + 25, e.y + 5)
+                ctx.font = `4px ${uiFont}`
+                ctx.fillText('🪙', e.x + 35, e.y + 4)
+                break
+            case 'pulse':
+                ctx.beginPath()
+                const pulseRadius = e.timer // contract over time
+                ctx.arc(e.x, e.y, pulseRadius, 0, Math.PI * 2)
+                ctx.strokeStyle = 'rgba(255,255,255,0.2)'
+                ctx.lineWidth = 2
+                ctx.stroke()
+                break
+            case 'pulseNode':
+                ctx.beginPath()
+                const pulseRadiusNode = 5 + (20 - e.timer) // expand over time
+                ctx.arc(e.x, e.y, pulseRadiusNode, 0, Math.PI * 2)
+                // ctx.strokeStyle = 'rgba(255,255,255,0.2)'
+                ctx.strokeStyle = e.color
+                ctx.lineWidth = 4
+                ctx.stroke()
+                break
             default:
                 ctx.font = `24px ${uiFont}`
                 ctx.fillStyle = 'black'
@@ -332,9 +475,9 @@ function updateEffects() {
     })
 
     effects = effects.filter(e => {
-        e.timer -= 1;
-        return e.timer > 0;
-    });
+        e.timer -= 1
+        return e.timer > 0
+    })
 }
 
 // Handle mouse click to select nodes
@@ -360,16 +503,54 @@ canvas.addEventListener('click', (e) => {
 // Handle mouse hover to show tooltips
 let hoverNode = null
 let hoverTimeout = null
+function drawUser(user) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(user.x, user.y, 1 + user.activity * 2, 0, Math.PI * 2);
+
+    ctx.fillStyle = userTypes[user.type].color;
+
+    ctx.shadowColor = '#0e0e14' // from background color in CSS
+    ctx.shadowBlur = 10
+
+    // Fun fact : the filder belwo destroys perforamnce
+    // ctx.filter = "brightness(50%)";
+
+    ctx.fill();
+
+    if (debug) {
+        ctx.font = '6px sans-serif'
+        ctx.fillText(user.id, user.x + 5, user.y - 2)
+    }
+
+    ctx.restore();
+}
+
+
+function drawUserEdge([userId, bankId]) {
+    if (debug) { console.log(`User ${userId} edge to ${bankId} `) }
+    const user = users.find(u => u.id === userId)
+    const bank = nodes.find(n => n.id === bankId)
+    if (!user || !bank) return
+    ctx.save()
+    ctx.beginPath()
+    ctx.moveTo(user.x, user.y)
+    ctx.lineTo(bank.x, bank.y)
+    ctx.strokeStyle = '#555'
+    ctx.lineWidth = 0.3
+    ctx.stroke()
+    ctx.restore()
+}
 
 function drawNode(node) {
     const isSelected = node === UI.getSelectedNode()
     const nodeRadius = 20
-    ctx.save()  // Save canvas state
+    ctx.save()  // Save canvas stated
 
     // Draw outer ring
     ctx.beginPath()
     ctx.arc(node.x, node.y, nodeRadius, 0, Math.PI * 2)
-    let color = nodeOptions[node.type].color
+    let color = nodeTypes[node.type].color
 
     // Add corruption glow
     if (node.corruption > CORRUPTION_THRESHOLD) {
@@ -380,6 +561,9 @@ function drawNode(node) {
         ctx.shadowColor = 'orange'
         ctx.shadowBlur = 10
         color = '#fff0dd'
+    } else if (!isSelected) {
+        ctx.shadowColor = 'black' // No shadow when selected
+        ctx.shadowBlur = 5
     }
 
     // Add selection highlight
@@ -387,8 +571,8 @@ function drawNode(node) {
         ctx.strokeStyle = '#FFD700' // Gold color for selected node
         ctx.lineWidth = 3
     } else {
-        ctx.strokeStyle = '#666'
-        ctx.lineWidth = 1
+        ctx.strokeStyle = '#222'
+        ctx.lineWidth = 0.1
     }
 
     ctx.stroke()
@@ -423,7 +607,7 @@ function drawNode(node) {
 
     // Draw node type emoji
     ctx.font = `20px ${uiFont}`
-    ctx.fillText(nodeOptions[node.type].icon, node.x - 12, node.y + 7)
+    ctx.fillText(nodeTypes[node.type].icon, node.x - 12, node.y + 7)
 
     if (node.enforcementAction) {
         ctx.font = `14px ${uiFont}`
@@ -453,11 +637,35 @@ function drawEdge([a, b]) {
     ctx.stroke()
 }
 
+
 function drawTransaction(tx) {
-    const emoji = tx.legality === 'illegal' ? '💸' : '💵'
-    let fontSize = tx.size === 'small' ? 18 : tx.size === 'medium' ? 24 : 32
-    ctx.font = `${fontSize}px ${uiFont}`
-    ctx.fillText(emoji, tx.x - fontSize / 2, tx.y + fontSize / 3);
+    //  const emoji = tx.legality === 'illegal' ? '💸' : '💵'
+    //  let fontSize = tx.size === 'small' ? 18 : tx.size === 'medium' ? 24 : 32
+    //  ctx.font = `${fontSize}px ${uiFont}`
+    //  ctx.fillText(emoji, tx.x - fontSize / 2, tx.y + fontSize / 3);
+    ctx.save();
+    const radius = tx.size === 'small' ? 2 : tx.size === 'medium' ? 4 : 6;
+
+    // Set shadow based on legality
+    if (tx.legality === 'illegal') {
+        ctx.shadowColor = 'rgba(255, 0, 0, 0.7)'; // Red shadow for illegal
+    } else if (tx.legality === 'questionable') {
+        ctx.shadowColor = 'rgba(255, 165, 0, 0.7)'; // Orange shadow for questionable
+    } else {
+        ctx.shadowColor = 'rgba(0, 255, 0, 0.7)'; // Green shadow for legal
+    }
+    ctx.shadowBlur = 4;
+
+    // Create gradient for the transaction
+    const gradient = ctx.createRadialGradient(tx.x, tx.y, 1, tx.x, tx.y, radius * 2);
+    gradient.addColorStop(0, 'rgb(255, 255, 255)'); // Somber base color
+    gradient.addColorStop(1, 'rgba(145, 145, 145, 0)');
+
+    ctx.fillStyle = gradient;
+    ctx.beginPath();
+    ctx.arc(tx.x, tx.y, radius * 2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
 }
 
 function drawCorruptionMeter(spread) {
@@ -633,16 +841,20 @@ function gameLoop() {
                 newNode.active = true;
                 console.log(`🌟 New node activated: ${newNode.name}`);
                 UI.showToast('🌟 A new actor has emerged', `Welcome ${newNode.name}`, 'info');
+
+                generateUsers(newNode)
+                // realignUserBanks()
             }
         }
         increaseAIaccuracy()
 
         removeExpiredEnforcementActions(now)
     }
+
     const nbActiveNodes = nodes.filter(n => n.active).length
     const holidayBonus = holiday ? 3 : 1
     if (Math.random() < 0.01 + (0.001 * nbActiveNodes * holidayBonus)) {
-        spawnTransaction();
+        spawnTransaction()
     }
 
     calculateIndicators()
@@ -661,15 +873,17 @@ function gameLoop() {
     Camera.applyCamera(ctx)
     if (debug) Camera.drawDebugGrid(ctx)
 
+    userEdges.forEach(drawUserEdge)
     edges.filter(([a, b]) => nodes[a].active && nodes[b].active)
         .forEach(drawEdge);
     nodes.filter(n => n.active).forEach(drawNode);
+    users.filter(n => n.active).forEach(drawUser)
     transactions = transactions.filter(t => t.active);
     transactions.forEach(tx => {
         moveTransaction(tx)
         drawTransaction(tx)
     })
-    updateEffects()
+    drawEffects()
 
     Camera.restoreCamera(ctx)
 
@@ -678,6 +892,10 @@ function gameLoop() {
 
     if (hoverNode && !UI.getSelectedNode()) {
         drawTooltip(hoverNode)
+    } else {
+        // const worldPos = Camera.getWorldPosition(lastMouseX, lastMouseY)
+        // const hoveredUser = users.find(user => Math.hypot(worldPos.x - user.x, worldPos.y - user.y) < 15)
+        // if (hoveredUser) drawUserTooltip(hoveredUser)
     }
 
     const spread = calculateCorruptionSpread()

@@ -110,29 +110,54 @@ export const txSizeOptions = {
 export const legalityOptions = ['legit', 'questionable', 'illegal']
 
 
-export const nodeOptions = {
+export const nodeTypes = {
     bank: {
         name: 'Bank',
         InitialReputation: 80,
         icon: '🏦',
-        color: '#EEE'
+        color: '#DDE',
+        usersCount: 4
     },
     processor: {
         name: 'Processor',
         InitialReputation: 70,
         icon: '🌐',
-        color: '#AAF'
+        color: '#99D',
+        usersCount: 0
     },
     fintech: {
         name: 'Fintech',
         InitialReputation: 60,
         icon: '🚀',
-        color: '#AFF'
+        color: '#9DD',
+        usersCount: 8,
     },
     cryptoExchange: {
         name: 'Crypto Exchange',
         InitialReputation: 50,
         icon: '💱',
-        color: '#AFA'
+        color: '#9DA',
+        usersCount: 5
     }
+}
+
+export const userTypes = {
+    person: {
+        name: 'Individual',
+        color: '#BBB',
+        icon: '👤',
+        frequency: 0.6
+    },
+    business: {
+        name: 'Business',
+        color: '#119',
+        icon: '🏢',
+        frequency: 0.3
+    },
+    government: {
+        name: 'Government',
+        color: '#555',
+        icon: '🏛️',
+        frequency: 0.1
+    },
 }

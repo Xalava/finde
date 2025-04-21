@@ -127,6 +127,29 @@ export function endDrag() {
     canvas.style.cursor = 'default'
 }
 
+export function cinematicZoom(zoomFactor) {
+    const startZoom = camera.zoom
+    const targetZoom = camera.zoom * zoomFactor
+    const duration = 800 // 1 second
+    const startTime = Date.now()
+
+    const centerX = canvas.width / 2
+    const centerY = canvas.height / 2
+    const worldCenterX = (centerX - camera.x) / camera.zoom
+    const worldCenterY = (centerY - camera.y) / camera.zoom
+
+    function animateZoom() {
+        const progress = Math.min((Date.now() - startTime) / duration, 1)
+        camera.zoom = startZoom + (targetZoom - startZoom) * progress
+        camera.x = centerX - worldCenterX * camera.zoom
+        camera.y = centerY - worldCenterY * camera.zoom
+
+        if (progress < 1) requestAnimationFrame(animateZoom)
+    }
+
+    animateZoom()
+}
+
 export function adjustZoom(e, zoomFactor) {
     // Get mouse position relative to canvas
     const rect = canvas.getBoundingClientRect();
@@ -138,11 +161,10 @@ export function adjustZoom(e, zoomFactor) {
     const worldY = (mouseY - camera.y) / camera.zoom;
 
     // Apply zoom
-    camera.zoom *= zoomFactor;
+    camera.zoom *= zoomFactor
 
     // Limit zoom range
-    camera.zoom = Math.min(Math.max(0.5, camera.zoom), 2);
-
+    camera.zoom = Math.min(Math.max(0.5, camera.zoom), 5)
     // Adjust camera position to zoom toward mouse cursor position
     camera.x = mouseX - worldX * camera.zoom;
     camera.y = mouseY - worldY * camera.zoom;
