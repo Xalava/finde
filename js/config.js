@@ -8,6 +8,7 @@ export const towerOptions = {
         icon: '🔍',
         description: 'Detects medium and large illegal transactions with 50% accuracy',
         depend: null,
+        errors: 1
     },
     medium: {
         name: 'Medium Filter',
@@ -17,6 +18,7 @@ export const towerOptions = {
         icon: '🔬',
         description: 'Detects all sizes of illegal transactions with 70% accuracy',
         depend: 'basic',
+        errors: 1
     },
     robust: {
         name: 'Robust Filter',
@@ -26,6 +28,7 @@ export const towerOptions = {
         icon: '🔧',
         description: 'Robust detection with 80% accuracy. Reduces false positives by 50%',
         depend: 'medium',
+        errors: 0.5,
     },
     superRobust: {
         name: 'Super Robust Filter',
@@ -33,8 +36,9 @@ export const towerOptions = {
         accuracy: 0.9,
         maintenance: 3,
         icon: '🔩',
-        description: 'Super robust detection with 90% accuracy. Reduces false positives by 75%',
+        description: 'Super robust detection with 90% accuracy. Reduces false positives by 90%',
         depend: 'robust',
+        errors: 0.10
     },
     advanced: {
         name: 'Advanced Filter',
@@ -44,6 +48,7 @@ export const towerOptions = {
         icon: '🔭',
         description: 'Advanced detection with 85% accuracy',
         depend: 'medium',
+        errors: 1
     },
     ai: {
         name: 'AI System',
@@ -53,6 +58,7 @@ export const towerOptions = {
         icon: '🧠',
         description: 'Powerful detection with 60% accuracy that learns and improves by 0.5% per day, up to 80%.',
         depend: 'basic',
+        errors: 1
     },
     super: {
         name: 'Supra AI System',
@@ -62,6 +68,7 @@ export const towerOptions = {
         icon: '🤖',
         description: 'High-end system with 80% accuracy that learns and improves by 1% per day, up to 98%!.',
         depend: 'ai',
+        errors: 1
     },
     quantum: {
         name: 'Quantum Filter',
@@ -71,6 +78,7 @@ export const towerOptions = {
         icon: '⚛️',
         description: 'State-of-the-art quantum system with 95% accuracy, ',
         depend: 'advanced',
+        errors: 1
     }
 }
 
@@ -97,7 +105,6 @@ export const actionOptions = {
         corruptionEffect: 3,
     }
 }
-
 
 export const CORRUPTION_THRESHOLD = 4;
 

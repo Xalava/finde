@@ -68,6 +68,8 @@ let taxRate = 0.2 // 20% tax rate
 let gdp = 0
 let reputation = 100
 let holiday = false
+let dropProbability = 0.00001
+let BASE_SPAWN_RATE = 0.002
 
 // Game internal data 
 const gdpLog = []
@@ -97,7 +99,7 @@ const nodes = [
     { id: 14, x: 600, y: 250, corruption: 0, type: 'bank', name: 'Summit Bank' },
     { id: 15, x: 700, y: 700, corruption: 0, type: 'bank', name: 'Horizon Bank' },
     { id: 16, x: 200, y: 500, corruption: 0, type: 'bank', name: 'Anchor Bank' },
-    { id: 17, x: 800, y: 450, corruption: 3, type: 'bank', name: 'Crest Bank' },
+    { id: 17, x: 800, y: 450, corruption: 4, type: 'bank', name: 'Crest Bank' },
     { id: 18, x: 200, y: 730, corruption: 0, type: 'bank', name: 'Fortune Bank' },
     { id: 19, x: 400, y: 600, corruption: 0, type: 'bank', name: 'Legacy Bank' },
 
@@ -121,7 +123,8 @@ nodes.forEach(node => {
     node.detectedAmount = 0
     node.receivedAmount = 0
     node.reputation = 80 // Default node reputation
-    // node.active = true
+    node.accuracy = 0
+    node.active = true
 })
 
 const edges = [
@@ -141,7 +144,8 @@ function generateUsers(target = false) {
     const targetNodes = target ? [target] : activeNodes
 
     targetNodes.forEach(t => {
-        const finalCount = Math.ceil(Math.random() * nodeTypes[t.type].usersCount * 2) + 1 // 2 to count*2 +1
+        const c = nodeTypes[t.type].usersCount
+        const finalCount = Math.max(Math.floor(c / 2), Math.ceil(Math.random() * c * 2))  // count/2 to count*2 
         for (let i = 0; i < finalCount; i++) {
             const random = Math.random()
             let type = ''
@@ -161,7 +165,7 @@ function generateUsers(target = false) {
                         x,
                         y,
                         type: type,
-                        corruption: Math.floor(Math.random() * 5),
+                        corruption: Math.floor(Math.random() * 5), // 0 to 4
                         activity: Math.random(),
                         active: true
                     }
@@ -215,29 +219,29 @@ function spawnTransaction() {
     if (activeUsers.length === 0) return
 
     const sourceUser = activeUsers[Math.floor(Math.random() * activeUsers.length)]
-    const activeNodes = nodes.filter(n => n.active && n.type !== 'processor')
-    const targetNode = activeNodes[Math.floor(Math.random() * activeNodes.length)]
+    // const activeNodes = nodes.filter(n => n.active && n.type !== 'processor')
+    // const targetNode = activeNodes[Math.floor(Math.random() * activeNodes.length)]
+    const targetUser = activeUsers[Math.floor(Math.random() * activeUsers.length)]
+    const sourceBank = nodes[sourceUser.bankId]
+    const targetBank = nodes[targetUser.bankId]
 
-    // Illegal transaction depends on the corruption of the source, 10%, 20%, 33%... 
-    // If corruption is 0, 10% chance of being illegal, 5% chance of being questionable
-    // if corruption is 3, 40% chance of being illegal, 20% chance of being questionable
-    // if corruption is 5, 60% chance of being illegal, 30% chance of being questionable
-    const dice10 = Math.random() * 10 / (sourceUser.corruption + 1)
+    // Illegal tx depends on the corruption of the source user (avg 2) and its bank (0 then increase)
+    // If corruption is 2, 10% chance of being illegal, 5% chance of being questionable
+    const dice10 = Math.random() * 30 / (sourceUser.corruption + sourceBank.corruption * 3 + 1)
     const legality = legalityOptions[dice10 < 1 ? 2 : dice10 < 1.5 ? 1 : 0]
     const dice3 = Math.floor(Math.random() * 3)
     const size = ['small', 'medium', 'large'][dice3]
 
-    const sourceBank = nodes[sourceUser.bankId]
 
-    if (!sourceUser || !targetNode || !sourceBank) {
+    if (!sourceUser || !targetUser || !sourceBank) {
         console.log("Error spawning transaction: missing user, bank, or target.");
         return;
     }
 
-    const innerPath = getPathFrom(sourceBank.id, targetNode.id)
+    const innerPath = getPathFrom(sourceBank.id, targetBank.id)
     if (!innerPath || innerPath.length < 2) return
 
-    const txPath = [sourceUser.id, ...innerPath]
+    const txPath = [sourceUser.id, ...innerPath, targetUser.id]
 
     const newTx = {
         path: txPath,
@@ -249,14 +253,14 @@ function spawnTransaction() {
         size,
         amount: txSizeOptions[size].amount,
         sourceUser,
-        active: true
+        active: true,
     }
     if (debug) {
         console.log(`${newTx.legality === 'illegal' ? '💸' : '💵'} from ${sourceUser.id} to ${newTx.path[newTx.path.length - 1]}`)
     }
 
     transactions.push(newTx)
-    addEffect(sourceUser.x, sourceUser.y, '', 'pulse');
+    addEffect(sourceUser.x, sourceUser.y, '', 'invertedPulse');
 
 }
 
@@ -282,65 +286,89 @@ function getPathFrom(startId, targetId = null) {
     return null;
 }
 
-
+let firstLostTransaction = false
 function moveTransaction(tx) {
     const prec = nodes[tx.path[tx.index]]
-    const next = nodes[tx.path[tx.index + 1]]
+    let next
+    //convoluted approach as we store nodes and users in different tables
+    // could be either joined or final destination stored separately
+    if (tx.index == tx.path.length - 2) {
+        next = users[tx.path[tx.index + 1]]
+    } else {
+        next = nodes[tx.path[tx.index + 1]]
+    }
     if (!next) return  // we had reached the end of the path
 
     const dx = next.x - tx.x
     const dy = next.y - tx.y
     let speed = debug ? tx.speed / 3 : tx.speed
 
+
     const dist = Math.hypot(dx, dy)
-    // remaining distance to next node is less than the speed of the transaction
+
     if (dist < speed) {
+        // remaining distance to next node is less than the speed of the transaction
         tx.index++
         // we check for detection when we reach a node. If detected, there will be no income
         if (detect(tx)) {
             tx.active = false
             return
         }
-        if (tx.index >= tx.path.length - 1) {
+        if (tx.index == tx.path.length - 2) {
             // We have reached the end of the path
-            const dest = nodes[tx.path[tx.index]]
-            addEffect(dest.x, dest.y, '', 'pulseNode', 'rgba(255, 0, 0, 0.2)')
-            dest.receivedAmount += tx.amount
+            next.receivedAmount += tx.amount
             // in the future, inspection could cost to budget
-            // const isAudited = auditedNodes.some(a => a.id === dest.id)
+            // Also, these effect could happen to all nodes, except taxes
+            // const isAudited = auditedNodes.some(a => a.id === next.id)
             // if (isAudited) baseIncome = Math.floor(tx.amount / 2)
             gdpLog.push({ amount: tx.amount, timestamp: Date.now() })
             let income = tx.amount * taxRate
             budget += income
-            // addEffect(dest.x, dest.y, "+" + tx.amount * taxRate, 'bonus')
-            addEffect(dest.x, dest.y, "+" + income, 'budget')
+            // addEffect(next.x, next.y, "+" + tx.amount * taxRate, 'bonus')
+            addEffect(next.x, next.y, "+" + income, 'budget')
 
             if (tx.legality === 'illegal') {
-                addEffect(dest.x, dest.y, '', 'pulseNode', 'rgba(255, 0, 0, 0.2)')
+                addEffect(next.x, next.y, '', 'pulseNode', 'rgba(255, 0, 0, 0.2)')
 
-                dest.corruption++
-                // addEffect(dest.x, dest.y, '💥')
-                dest.reputation -= 5 // Reputation decreases when illegal transactions go through
-                // UI.showToast('Illegal transaction completed', 'Corruption increased at ' + dest.name, 'error')
-                console.log(`💥 Breach at node ${dest.id}, from ${tx.path[0]}`)
+                next.corruption++
+                // addEffect(next.x, next.y, '💥')
+                next.reputation -= 5 // Reputation decreases when illegal transactions go through
+                // UI.showToast('Illegal transaction completed', 'Corruption increased at ' + next.name, 'error')
+                console.log(`💥 Breach at node ${next.id}, from ${tx.path[0]}`)
             } else if (tx.legality === 'questionable') {
-                addEffect(dest.x, dest.y, '', 'pulseNode', 'rgba(255, 187, 0, 0.2)')
+                // addEffect(next.x, next.y, '', 'pulseNode', 'rgba(255, 187, 0, 0.2)')
 
                 // no particular effect
             } else {
-                dest.reputation += 1 // Small reputation gain for legitimate transactions
-                addEffect(dest.x, dest.y, '', 'pulseNode', 'rgba(0, 255, 0, 0.2)')
+                next.reputation += 1 // Small reputation gain for legitimate transactions
+                // addEffect(next.x, next.y, '', 'pulseNode', 'rgba(0, 255, 0, 0.2)')
 
             }
 
             // Update panel if the affected node is selected
-            if (UI.getSelectedNode() && UI.getSelectedNode().id === dest.id) {
-                UI.showNodeDetails(dest, budget, placeTower)
+            if (UI.getSelectedNode() && UI.getSelectedNode().id === next.id) {
+                UI.showNodeDetails(next, budget, placeTower)
             }
 
+        }
+        if (tx.index == tx.path.length - 1) {
+            addEffect(next.x, next.y, '', 'pulse')
             tx.active = false
+            tx.end = 'success'
+
+
         }
     } else {
+        if (Math.random() < dropProbability) {
+            tx.active = false
+            tx.end = "lost"
+            console.log("Transaction lost!")
+            addEffect(tx.x - 2, tx.y, "∅", "insitus")
+            if (!firstLostTransaction) {
+                UI.showToast('∅ Lost transaction', `Develop the appropriate Technology to reduce errors`, 'error')
+                firstLostTransaction = true
+            }
+        }
         tx.x += (dx / dist) * speed
         tx.y += (dy / dist) * speed
     }
@@ -348,11 +376,12 @@ function moveTransaction(tx) {
 
 function placeTower(node, towerType) {
     node.tower = towerType
-    node.accuracy = towerOptions[towerType].accuracy // We move the accuracy to the node for AI usages
     const tower = towerOptions[towerType]
+
+    node.accuracy = tower.accuracy + (node.type === 'fintech' ? 0.1 : 0)// We move the accuracy to the node for AI usages
     budget -= tower.cost
     maintenance -= tower.maintenance
-    console.log(`🛠️ Tower placed at node ${node.id}`)
+    console.log(`🛠️ Tower placed at node ${node.id}`, tower)
     // Update UI immediately after placing tower
     UI.showNodeDetails(node, budget, placeTower, enforceAction)
 }
@@ -370,23 +399,50 @@ function enforceAction(node, action) {
     }
 }
 
-
+let firstDetection = false
+let firstFalsePositive = false
 function detect(tx) {
-    const node = nodes[tx.path[tx.index]];
-    if (!node || !node.tower || tx.legality !== 'illegal') return false
+    const node = nodes[tx.path[tx.index]]
 
-    let detectionChance = towerOptions[node.tower].accuracy;
+    if (!node || !node.tower) return false
+
+    let detectionChance = node.accuracy // towerOptions[node.tower].accuracy
 
     if (node.tower === 'basic' && tx.size === 'small') {
         detectionChance *= 0.5; // Reduce accuracy for small transactions
     }
+    if (tx.legality === 'legit') {
+        console.log("We check a legit tx with chance ", detectionChance)
+        // small chance of false flag, inversely proportional to accuracy, then 10% unless robust tech
+        if (Math.random() > detectionChance && Math.random() < towerOptions[node.tower].errors * 0.01) {
+            addEffect(node.x, node.y, '🛑')
+            tx.active = false
+            tx.end = "FalsePositive"
+            console.log(`🛑 False postive at `, node.name)
+            node.reputation -= 5 // harmful for reputation, but not for corruption. Also the transaction ends when it shouldn't have
+            if (!firstFalsePositive) {
+                UI.showToast(`🛑 First false postive at`, `Reputation damaged at ${node.name}`, 'error')
+                firstFalsePositive = true
+            }
+            return true
+
+        }
+    }
+
+
+    if (tx.legality !== 'illegal') return
+
     if (debug) console.log(`Detection roll at ${node.id}, chance: ${detectionChance}`)
 
 
     if (Math.random() < detectionChance) {
-        tx.active = false;
-        addEffect(node.x, node.y, '✔️');
-        UI.showToast('Illegal transaction blocked', `Detected at ${node.name} (${towerOptions[node.tower].name})`, 'success')
+        tx.active = false
+        tx.end = "detected"
+        addEffect(node.x, node.y, '✔️')
+        if (!firstDetection) {
+            UI.showToast('First illegal transaction blocked!', `Detected at ${node.name} (${towerOptions[node.tower].name})`, 'success')
+            firstDetection = true
+        }
         console.log(`✔️ Illegal tx blocked at node ${node.id}`)
         node.detectedAmount += tx.amount
         node.receivedAmount += tx.amount
@@ -417,6 +473,7 @@ function addEffect(x, y, emoji, type = 'default', color = null) {
         case 'default':
             timer = 60// Emojis for big actions
             break
+        case 'invertedPulse':
         case 'pulse':
         case 'pulseNode':
             timer = 14
@@ -433,6 +490,9 @@ function drawEffects() {
     effects.forEach(e => {
         e.timer -= 1
         switch (e.type) {
+            case 'insitus':
+                ctx.font = `6px ${uiFont}`
+                ctx.fillText(e.emoji, e.x, e.y)
             case 'malus':
                 ctx.fillStyle = 'red'
                 ctx.font = `12px ${uiFont}`
@@ -450,9 +510,17 @@ function drawEffects() {
                 ctx.font = `4px ${uiFont}`
                 ctx.fillText('🪙', e.x + 35, e.y + 4)
                 break
+            case 'invertedPulse':
+                ctx.beginPath()
+                const InvertedPulseRadius = e.timer // contract over time
+                ctx.arc(e.x, e.y, InvertedPulseRadius, 0, Math.PI * 2)
+                ctx.strokeStyle = 'rgba(255,255,255,0.2)'
+                ctx.lineWidth = 2
+                ctx.stroke()
+                break
             case 'pulse':
                 ctx.beginPath()
-                const pulseRadius = e.timer // contract over time
+                const pulseRadius = 14 - e.timer // expand over time
                 ctx.arc(e.x, e.y, pulseRadius, 0, Math.PI * 2)
                 ctx.strokeStyle = 'rgba(255,255,255,0.2)'
                 ctx.lineWidth = 2
@@ -528,7 +596,7 @@ function drawUser(user) {
 
 
 function drawUserEdge([userId, bankId]) {
-    if (debug) { console.log(`User ${userId} edge to ${bankId} `) }
+    // if (debug) { console.log(`User ${userId} edge to ${bankId} `) }
     const user = users.find(u => u.id === userId)
     const bank = nodes.find(n => n.id === bankId)
     if (!user || !bank) return
@@ -735,7 +803,7 @@ function calculateIndicators() {
     gdp = gdpLog.reduce((sum, tx) => sum + tx.amount, 0)
 
     const oldBudget = budget
-    budget += maintenance / 60
+    budget += maintenance / (60 * 7) // maintenance is per week for balance   
 
     // If budget crosses a tower cost threshold, update UI
     const thresholds = [50, 75, 100, 150] // tower costs
@@ -763,7 +831,6 @@ function drawEndGame(condition) {
     // Stop the game loop
     cancelAnimationFrame(animationFrameId)
 }
-
 
 function removeExpiredEnforcementActions(now) {
     nodes.filter(node => node.enforcementAction)
@@ -850,11 +917,16 @@ function gameLoop() {
 
         removeExpiredEnforcementActions(now)
     }
-
-    const nbActiveNodes = nodes.filter(n => n.active).length
-    const holidayBonus = holiday ? 3 : 1
-    if (Math.random() < 0.01 + (0.001 * nbActiveNodes * holidayBonus)) {
+    if (transactions.filter(t => t.active).length === 0) {
+        // ensure there is always a transaction going
         spawnTransaction()
+    } else {
+        const nbActiveNodes = nodes.filter(n => n.active).length
+        const holidayBonus = holiday ? 20 : 1
+        const spawnRate = nbActiveNodes * holidayBonus * Math.log10(currentDay + 1) * BASE_SPAWN_RATE
+        if (Math.random() < spawnRate) {
+            spawnTransaction()
+        }
     }
 
     calculateIndicators()

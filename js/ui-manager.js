@@ -145,7 +145,7 @@ function createActionButton(actionType, node, budget, enforceAction) {
     button.onclick = () => {
         if (budget >= action.cost) {
             enforceAction(node, actionType)
-            showToast(action.name + ' deployed', 'Action executed at ' + node.name, 'success')
+            showToast(action.name + ' launched', 'Action executed at ' + node.name, 'info')
         }
     }
     nodeDetails.actionOptions.appendChild(button)
@@ -181,7 +181,7 @@ function createTowerButton(towerType, node, budget, placeTower) {
     button.onclick = () => {
         if (budget >= tower.cost) {
             placeTower(node, towerType)
-            showToast(tower.name + ' deployed', 'Installation complete at ' + node.name, 'success')
+            // showToast(tower.name + ' deployed', 'Installation complete at ' + node.name, 'success')
         }
     }
     nodeDetails.towerOptions.appendChild(button)

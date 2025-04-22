@@ -67,7 +67,6 @@ export function resizeCanvas(ctx) {
     canvas.width = container.clientWidth
     canvas.height = container.clientHeight
     ctx.setTransform(1, 0, 0, 1, 0, 0)
-    centerView()
 }
 
 export function centerView(nodes = []) {
@@ -84,6 +83,9 @@ export function centerView(nodes = []) {
 
     camera.x = canvas.width / 2 - centerX * camera.zoom
     camera.y = canvas.height / 2 - centerY * camera.zoom
+    // Todo: 
+    // - animate movement toward center 
+    // - adjust zoom to current needs
 }
 
 export function getWorldPosition(clientX, clientY) {
@@ -129,7 +131,7 @@ export function endDrag() {
 
 export function cinematicZoom(zoomFactor) {
     const startZoom = camera.zoom
-    const targetZoom = camera.zoom * zoomFactor
+    const targetZoom = zoomFactor
     const duration = 800 // 1 second
     const startTime = Date.now()
 
