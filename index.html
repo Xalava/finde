@@ -20,6 +20,12 @@
                 </div>
             </div>
 
+            <div>
+                <button id="research-button" class="stat-item research-button hidden" data-tooltip="Technology Tree">
+                    🧪 Research <span id="research-points">0</span>
+                </button>
+            </div>
+
             <div class="indicators">
                 <div class="stat-item" data-tooltip="GDP from financial transactions (past quarter)">
                     📊 <strong>GDP </strong><span id="gdp">0</span>
@@ -113,6 +119,20 @@
                     <li>Holidays result in more transactions</li>
                     <li>Entities with higher corruption produce more illegal transactions</li>
                 </ul>
+            </div>
+        </div>
+        <div id="research-panel" class="panel hidden">
+            <div class="panel-header">
+                <h2>Research</h2>
+                <button id="close-research" class="close-button">×</button>
+            </div>
+            <div class="panel-tabs">
+                <button class="tab-button active" data-tab="compliance">Compliance</button>
+                <button class="tab-button" data-tab="enforcement">Enforcement</button>
+                <button class="tab-button" data-tab="network">Network</button>
+            </div>
+            <div class="panel-content">
+                <div id="tech-tree-container"></div>
             </div>
         </div>
     </div>

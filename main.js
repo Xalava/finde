@@ -1,9 +1,12 @@
 import * as Camera from './js/camera.js'
 import * as UI from './js/ui-manager.js'
 import { towerOptions, legalityOptions, txSizeOptions, nodeTypes, actionOptions, userTypes, CORRUPTION_THRESHOLD } from './js/config.js'
-
+import * as tech from './js/tech.js'
+import * as TechUI from './js/tech-ui.js'
 // == UI == 
 let debug = false
+const debugAvailable = ['localhost', '127.0.0.1'].includes(location.hostname);
+
 const canvas = document.getElementById('game')
 const ctx = canvas.getContext('2d')
 Camera.initCamera(canvas)
@@ -19,11 +22,13 @@ let animationFrameId
 
 // Initialization of UI elements, waiting for the DOM (and actually the game data)
 document.addEventListener('DOMContentLoaded', () => {
+    if (!debugAvailable) document.getElementById('debug-button').style.display = "none"
 
     centerBtn.addEventListener('click', Camera.centerView.bind(null, nodes))
     debugBtn.addEventListener('click', () => {
         debug = !debug
         debugBtn.style.backgroundColor = debug ? 'rgba(255, 0, 0, 0.2)' : ''
+        tech.addResearchPoints(1000)
     })
     canvas.addEventListener('mousedown', (e) => {
         const rect = canvas.getBoundingClientRect()
@@ -62,14 +67,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // == Game data ==
 // Economics & Game play
-let budget = 150
+let budget = 100
 let maintenance = 0
 let taxRate = 0.2 // 20% tax rate
 let gdp = 0
 let reputation = 100
 let holiday = false
 let dropProbability = 0.00001
+
+
 let BASE_SPAWN_RATE = 0.002
+let HOLIDAY_SPAWN_BONUS = 10
 
 // Game internal data 
 const gdpLog = []
@@ -89,7 +97,7 @@ const nodes = [
 
     { id: 5, x: 400, y: 200, corruption: 0, type: 'bank', name: 'Global Bank', active: true },
     { id: 6, x: 200, y: 250, corruption: 0, type: 'bank', name: 'Trust Bank', active: true },
-    { id: 7, x: 150, y: 350, corruption: 2, type: 'bank', name: 'Safe Savings', active: true },
+    { id: 7, x: 150, y: 350, corruption: 3, type: 'bank', name: 'Safe Savings', active: true },
     { id: 8, x: 950, y: 50, corruption: 0, type: 'bank', name: 'Prime Bank' },
     { id: 9, x: 900, y: 200, corruption: 0, type: 'bank', name: 'Capital Trust' },
     { id: 10, x: 100, y: 150, corruption: 0, type: 'bank', name: 'Union Bank', active: true },
@@ -124,7 +132,7 @@ nodes.forEach(node => {
     node.receivedAmount = 0
     node.reputation = 80 // Default node reputation
     node.accuracy = 0
-    node.active = true
+    // node.active = true
 })
 
 const edges = [
@@ -226,8 +234,9 @@ function spawnTransaction() {
     const targetBank = nodes[targetUser.bankId]
 
     // Illegal tx depends on the corruption of the source user (avg 2) and its bank (0 then increase)
-    // If corruption is 2, 10% chance of being illegal, 5% chance of being questionable
-    const dice10 = Math.random() * 30 / (sourceUser.corruption + sourceBank.corruption * 3 + 1)
+    // If corruption is 2, 10% chance of being illegal, 5% chance of being questionable. Increase quickly with bank corruption
+    const dice10 = Math.random() * 30 / (sourceUser.corruption + sourceBank.corruption * 5 + 1)
+    console.log("factor", 30 / (sourceUser.corruption + sourceBank.corruption * 5 + 1))
     const legality = legalityOptions[dice10 < 1 ? 2 : dice10 < 1.5 ? 1 : 0]
     const dice3 = Math.floor(Math.random() * 3)
     const size = ['small', 'medium', 'large'][dice3]
@@ -246,6 +255,8 @@ function spawnTransaction() {
     const newTx = {
         path: txPath,
         index: 0,
+        issuanceDate: Date.now(),
+        terminationDate: null,
         x: sourceUser.x,
         y: sourceUser.y,
         speed: 0.5 + Math.random() * (dice3 + 1) / 2,
@@ -301,8 +312,7 @@ function moveTransaction(tx) {
 
     const dx = next.x - tx.x
     const dy = next.y - tx.y
-    let speed = debug ? tx.speed / 3 : tx.speed
-
+    let speed = debug ? tx.speed / 3 : tx.speed * tech.bonus.transactionSpeed
 
     const dist = Math.hypot(dx, dy)
 
@@ -311,6 +321,7 @@ function moveTransaction(tx) {
         tx.index++
         // we check for detection when we reach a node. If detected, there will be no income
         if (detect(tx)) {
+            dailyDetectedTransactions++
             tx.active = false
             return
         }
@@ -375,25 +386,40 @@ function moveTransaction(tx) {
 }
 
 function placeTower(node, towerType) {
-    node.tower = towerType
     const tower = towerOptions[towerType]
 
-    node.accuracy = tower.accuracy + (node.type === 'fintech' ? 0.1 : 0)// We move the accuracy to the node for AI usages
+
+    // Only check if this tower has a tech requirement
+    const requiredTech = tower.techRequirement
+    if (requiredTech) {
+        const progress = tech.getResearchProgress();
+        if (!progress[requiredTech]?.researched) {
+            UI.showToast('Technology Required', `Research "${requiredTech}" to unlock this tower`, 'error');
+            return;
+        }
+    }
+
+    node.accuracy = tower.accuracy * tech.bonus.accuracy + (node.type === 'fintech' ? 0.1 : 0)
+
+    node.tower = towerType
+    // node.accuracy = tower.accuracy + (node.type === 'fintech' ? 0.1 : 0)// We move the accuracy to the node for AI usages
     budget -= tower.cost
     maintenance -= tower.maintenance
-    console.log(`🛠️ Tower placed at node ${node.id}`, tower)
+    console.log(`🛠️ Tower placed at node ${node.id}`)
+    if (debug) console.log(tower)
     // Update UI immediately after placing tower
     UI.showNodeDetails(node, budget, placeTower, enforceAction)
 }
 
+
 function enforceAction(node, action) {
-    const actionCost = actionOptions[action].cost
+    const actionCost = actionOptions[action].cost * tech.bonus.enforcementCost
     if (budget < actionCost) {
         UI.showToast('Insufficient budget', `You need 💰${actionCost} to perform this action`, 'error')
         return
     } else {
         budget -= actionCost
-        node.reputation += actionOptions[action].reputationEffect//negative
+        node.reputation += actionOptions[action].reputationEffect * tech.bonus.reputationDamage//negative
         node.enforcementAction = action
         node.enforcementEnd = Date.now() + actionOptions[action].duration * 1000
     }
@@ -412,9 +438,9 @@ function detect(tx) {
         detectionChance *= 0.5; // Reduce accuracy for small transactions
     }
     if (tx.legality === 'legit') {
-        console.log("We check a legit tx with chance ", detectionChance)
+        // console.log("We check a legit tx with chance ", detectionChance)
         // small chance of false flag, inversely proportional to accuracy, then 10% unless robust tech
-        if (Math.random() > detectionChance && Math.random() < towerOptions[node.tower].errors * 0.01) {
+        if (Math.random() > detectionChance && Math.random() < towerOptions[node.tower].errors * 0.01 * tech.bonus.falsePositive) {
             addEffect(node.x, node.y, '🛑')
             tx.active = false
             tx.end = "FalsePositive"
@@ -803,7 +829,7 @@ function calculateIndicators() {
     gdp = gdpLog.reduce((sum, tx) => sum + tx.amount, 0)
 
     const oldBudget = budget
-    budget += maintenance / (60 * 7) // maintenance is per week for balance   
+    budget += maintenance / (60 * 7) * tech.bonus.maintenance// maintenance is per week for balance   
 
     // If budget crosses a tower cost threshold, update UI
     const thresholds = [50, 75, 100, 150] // tower costs
@@ -863,17 +889,21 @@ function increaseAIaccuracy() {
     nodes.filter(n => n.active && n.tower === "ai" || n.tower === "super")
         .forEach(n => {
             if (n.tower === "ai" && n.accuracy < 0.85) {
-                n.accuracy *= 1.005
+                n.accuracy *= 1.005 * tech.bonus.aiLearning
             } else if (n.tower === "super" && n.accuracy < 0.98) {
-                n.accuracy += 1.01
+                n.accuracy += 1.01 * tech.bonus.aiLearning
             }
         })
 }
 
 let priorNow = Date.now()
 let deltaTime = 0
+let dailyDetectedTransactions = 0
+tech.initTechTree()
+TechUI.initTechUI()
 
 function gameLoop() {
+
     // == Update the game state == 
     const now = Date.now()
     const newCurrentDay = Math.floor((now - startTime) / 1000) // in seconds
@@ -913,6 +943,15 @@ function gameLoop() {
                 // realignUserBanks()
             }
         }
+        const researchPointsGain = tech.calculateResearchPointsGain(gdp, dailyDetectedTransactions)
+        tech.addResearchPoints(researchPointsGain)
+        if (researchPointsGain > 0) {
+            //   UI.showToast('Research Progress', `Gained ${researchPointsGain} Research Points`, 'info')
+        }
+        dailyDetectedTransactions = 0
+        TechUI.updateResearchUI();
+
+
         increaseAIaccuracy()
 
         removeExpiredEnforcementActions(now)
@@ -922,7 +961,7 @@ function gameLoop() {
         spawnTransaction()
     } else {
         const nbActiveNodes = nodes.filter(n => n.active).length
-        const holidayBonus = holiday ? 20 : 1
+        const holidayBonus = holiday ? HOLIDAY_SPAWN_BONUS : 1
         const spawnRate = nbActiveNodes * holidayBonus * Math.log10(currentDay + 1) * BASE_SPAWN_RATE
         if (Math.random() < spawnRate) {
             spawnTransaction()
@@ -960,7 +999,7 @@ function gameLoop() {
     Camera.restoreCamera(ctx)
 
     // == Update the UI ==
-    UI.updateIndicators(budget, gdp, maintenance)
+    UI.updateIndicators(budget, gdp, maintenance * tech.bonus.maintenance)
 
     if (hoverNode && !UI.getSelectedNode()) {
         drawTooltip(hoverNode)

@@ -1,6 +1,6 @@
 // Module for pure UI management. 
 import { towerOptions, actionOptions } from './config.js'
-
+import * as tech from './tech.js'
 let indicators = null;
 let instructions = null;
 let nodeDetails = null;
@@ -112,9 +112,20 @@ export function showNodeDetails(node, budget, placeTower, enforceAction) {
 function updateActionOptions(node, budget, enforceAction) {
     nodeDetails.actionOptions.innerHTML = ''
     let foundOption = false
+
+    // Get research progress
+    const progress = tech.getResearchProgress();
+
     Object.keys(actionOptions).forEach(actionType => {
-        createActionButton(actionType, node, budget, enforceAction)
-        foundOption = true
+        // Check if technology requirement is met
+        const techRequirement = actionOptions[actionType].techRequirement
+        const techUnlocked = !techRequirement || progress[techRequirement]?.researched;
+
+        // Only show actions that have been unlocked through research
+        if (techUnlocked) {
+            createActionButton(actionType, node, budget, enforceAction);
+            foundOption = true;
+        }
     })
     if (!foundOption) {
         const maxMessage = document.createElement('div')
@@ -135,17 +146,20 @@ function createButtonTemplate(icon, name, cost, maintenance, duration, descripti
 }
 
 function createActionButton(actionType, node, budget, enforceAction) {
+    let action = actionOptions[actionType];
+    // compute effective enforcement cost based on tech bonus
+    const effectiveCost = Math.ceil(action.cost * tech.bonus.enforcementCost)
     const button = document.createElement('button')
-    let action = actionOptions[actionType]
-    button.className = 'option-button' // Use same class as tower buttons
-    button.disabled = budget < action.cost
+    button.className = 'option-button'; // Use same class as tower buttons
+    button.disabled = (budget < effectiveCost) || node.enforcementAction;
     button.innerHTML = createButtonTemplate(
-        action.icon, action.name, action.cost, null, action.duration, action.description
-    )
-    button.onclick = () => {
-        if (budget >= action.cost) {
+        action.icon, action.name, effectiveCost, null, action.duration, action.description
+    );
+    button.onclick = (e) => {
+        if (budget >= effectiveCost) {
             enforceAction(node, actionType)
             showToast(action.name + ' launched', 'Action executed at ' + node.name, 'info')
+            e.currentTarget.disabled = true
         }
     }
     nodeDetails.actionOptions.appendChild(button)
@@ -153,19 +167,28 @@ function createActionButton(actionType, node, budget, enforceAction) {
 
 function updateTowerOptions(node, budget, placeTower) {
     nodeDetails.towerOptions.innerHTML = ''
+    const progress = tech.getResearchProgress();
 
-    let foundOption = false
+
+    let foundOption = false;
     Object.keys(towerOptions).forEach(towerType => {
-        const tower = towerOptions[towerType];
-        if (tower.depend === node.tower && node.tower !== towerType) {
-            createTowerButton(towerType, node, budget, placeTower)
-            foundOption = true
+        // Check if this tower depends on the current tower and is not already installed
+        const validUpgrade = towerOptions[towerType].depend === node.tower && node.tower !== towerType;
+
+        // Check if technology requirement is met (if any)
+        const techRequirement = towerOptions[towerType].techRequirement
+        const techUnlocked = !techRequirement || progress[techRequirement]?.researched;
+
+        // Only show options that are valid upgrades and have their tech requirements met
+        if (validUpgrade && techUnlocked) {
+            createTowerButton(towerType, node, budget, placeTower);
+            foundOption = true;
         }
     })
     if (!foundOption) {
         const maxMessage = document.createElement('div')
         maxMessage.className = 'max-tier'
-        maxMessage.textContent = `Maximum ${towerOptions[node.tower].name} already installed`
+        maxMessage.textContent = `Maximum filter already installed` //${towerOptions[node.tower].name}
         nodeDetails.towerOptions.appendChild(maxMessage)
     }
 }
