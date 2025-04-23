@@ -2,7 +2,7 @@ import * as Camera from './js/camera.js'
 import * as UI from './js/ui-manager.js'
 import { towerOptions, legalityOptions, txSizeOptions, nodeTypes, actionOptions, userTypes, CORRUPTION_THRESHOLD } from './js/config.js'
 import * as tech from './js/tech.js'
-import * as TechUI from './js/tech-ui.js'
+import * as techUI from './js/tech-ui.js'
 // == UI == 
 let debug = false
 const debugAvailable = ['localhost', '127.0.0.1'].includes(location.hostname);
@@ -11,7 +11,6 @@ const canvas = document.getElementById('game')
 const ctx = canvas.getContext('2d')
 Camera.initCamera(canvas)
 window.addEventListener('resize', Camera.resizeCanvas.bind(null, ctx))
-UI.initUI() // Handle indicators and instructions
 
 const centerBtn = document.getElementById('center-view')
 const debugBtn = document.getElementById('toggle-debug')
@@ -22,7 +21,12 @@ let animationFrameId
 
 // Initialization of UI elements, waiting for the DOM (and actually the game data)
 document.addEventListener('DOMContentLoaded', () => {
-    if (!debugAvailable) document.getElementById('debug-button').style.display = "none"
+    // Initialize UI panels 
+    UI.initUI()
+    // Set initial canvas size and enable touch/mouse camera actions
+    Camera.resizeCanvas(ctx)
+    Camera.setCameraActions()
+    if (!debugAvailable) document.getElementById('toggle-debug').style.display = "none"
 
     centerBtn.addEventListener('click', Camera.centerView.bind(null, nodes))
     debugBtn.addEventListener('click', () => {
@@ -49,6 +53,18 @@ document.addEventListener('DOMContentLoaded', () => {
             Camera.startDrag(e)
         }
     })
+    // Handle touch taps for mobile: show node details
+    canvas.addEventListener('touchend', (e) => {
+        e.preventDefault()
+        const touch = e.changedTouches[0]
+        const worldPos = Camera.getWorldPosition(touch.clientX, touch.clientY)
+        let clickedNode = nodes.find(node => {
+            const dx = node.x - worldPos.x
+            const dy = node.y - worldPos.y
+            return Math.hypot(dx, dy) < 20
+        })
+        if (clickedNode) UI.showNodeDetails(clickedNode, budget, placeTower, enforceAction)
+    })
     // canvas.addEventListener('mousemove', (e) => {
     //     const rect = canvas.getBoundingClientRect();
     //     lastMouseX = e.clientX - rect.left;
@@ -56,12 +72,13 @@ document.addEventListener('DOMContentLoaded', () => {
     //     Camera.moveCamera(e)
     // })
 
-    Camera.setCameraActions()
-    Camera.resizeCanvas(ctx)
     Camera.centerView(nodes)
     // Zoom in slightly when the game starts
-    Camera.cinematicZoom(1.8)
-
+    Camera.cinematicZoom(window.innerWidth < 600 ? 1.1 : 1.8)
+    // Initialize the game
+    tech.initTechTree()
+    techUI.initTechUI()
+    gameLoop()
 })
 
 
@@ -71,7 +88,7 @@ let budget = 100
 let maintenance = 0
 let taxRate = 0.2 // 20% tax rate
 let gdp = 0
-let reputation = 100
+// let globalReputation = 100 // Todo
 let holiday = false
 let dropProbability = 0.00001
 
@@ -236,7 +253,7 @@ function spawnTransaction() {
     // Illegal tx depends on the corruption of the source user (avg 2) and its bank (0 then increase)
     // If corruption is 2, 10% chance of being illegal, 5% chance of being questionable. Increase quickly with bank corruption
     const dice10 = Math.random() * 30 / (sourceUser.corruption + sourceBank.corruption * 5 + 1)
-    console.log("factor", 30 / (sourceUser.corruption + sourceBank.corruption * 5 + 1))
+    // console.log("factor", 30 / (sourceUser.corruption + sourceBank.corruption * 5 + 1))
     const legality = legalityOptions[dice10 < 1 ? 2 : dice10 < 1.5 ? 1 : 0]
     const dice3 = Math.floor(Math.random() * 3)
     const size = ['small', 'medium', 'large'][dice3]
@@ -343,7 +360,7 @@ function moveTransaction(tx) {
 
                 next.corruption++
                 // addEffect(next.x, next.y, '💥')
-                next.reputation -= 5 // Reputation decreases when illegal transactions go through
+                next.reputation = Math.max(0, next.reputation - 5) // Reputation decreases when illegal transactions go through
                 // UI.showToast('Illegal transaction completed', 'Corruption increased at ' + next.name, 'error')
                 console.log(`💥 Breach at node ${next.id}, from ${tx.path[0]}`)
             } else if (tx.legality === 'questionable') {
@@ -351,7 +368,7 @@ function moveTransaction(tx) {
 
                 // no particular effect
             } else {
-                next.reputation += 1 // Small reputation gain for legitimate transactions
+                next.reputation = Math.min(100, next.reputation + 1) // Small reputation gain for legitimate transactions
                 // addEffect(next.x, next.y, '', 'pulseNode', 'rgba(0, 255, 0, 0.2)')
 
             }
@@ -879,7 +896,7 @@ function removeExpiredEnforcementActions(now) {
 }
 
 function calculateCorruptionSpread() {
-    // Corruption spread
+    // Corruption spread (on all nodes, giving more margin at the begining of the game)
     const totalActors = nodes.length
     const totalCorruption = nodes.reduce((sum, n) => sum + n.corruption, 0)
     return Math.round((totalCorruption / (CORRUPTION_THRESHOLD * totalActors)) * 100)
@@ -899,8 +916,7 @@ function increaseAIaccuracy() {
 let priorNow = Date.now()
 let deltaTime = 0
 let dailyDetectedTransactions = 0
-tech.initTechTree()
-TechUI.initTechUI()
+
 
 function gameLoop() {
 
@@ -949,7 +965,7 @@ function gameLoop() {
             //   UI.showToast('Research Progress', `Gained ${researchPointsGain} Research Points`, 'info')
         }
         dailyDetectedTransactions = 0
-        TechUI.updateResearchUI();
+        techUI.updateResearchUI();
 
 
         increaseAIaccuracy()
@@ -1026,5 +1042,3 @@ function gameLoop() {
     animationFrameId = requestAnimationFrame(gameLoop)
 }
 
-// Initialize the game
-gameLoop()

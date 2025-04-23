@@ -3,6 +3,7 @@
 
 <head>
     <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>Financial Defense</title>
     <link rel="stylesheet" href="style.css" />
 </head>
@@ -16,13 +17,13 @@
             </div>
             <div class="stats">
                 <div class="stat-item" data-tooltip="Current game day">
-                    🗓️ Day <span id="day">0</span><span id="holiday"></span>
+                    🗓️ <strong>Day</strong> <span id="day">0</span><span id="holiday"></span>
                 </div>
             </div>
 
             <div>
                 <button id="research-button" class="stat-item research-button hidden" data-tooltip="Technology Tree">
-                    🧪 Research <span id="research-points">0</span>
+                    🧪 <strong>Research</strong> <span id="research-points">0</span>
                 </button>
             </div>
 
@@ -34,7 +35,7 @@
                     💰 <strong>Budget</strong> <span id="budget">150</span>
                 </div>
                 <div class="stat-item" data-tooltip="Ongoing system maintenance costs per second">
-                    🛠️ <strong>Maintenance</strong> <span id="maintenance">0</span>
+                    🛠️ <strong>Upkeep</strong> <span id="maintenance">0</span>
                 </div>
                 <!-- 
                 <div class="stat-item pulse-animation" data-tooltip="Your public trust rating">
@@ -44,7 +45,7 @@
         </header>
 
         <main id="game-container">
-            <canvas id="game" width="1000" height="800"></canvas>
+            <canvas id="game"></canvas>
 
             <div id="node-details-panel" class="panel">
                 <div class="panel-header">

@@ -24,7 +24,7 @@ export const towerOptions = {
     },
     robust: {
         name: 'Robust Filter',
-        cost: 50,
+        cost: 75,
         accuracy: 0.8,
         maintenance: 1,
         icon: '🔧',
@@ -46,7 +46,7 @@ export const towerOptions = {
     },
     advanced: {
         name: 'Advanced Filter',
-        cost: 200,
+        cost: 250,
         accuracy: 0.85,
         maintenance: 1,
         icon: '🔭',
@@ -68,7 +68,7 @@ export const towerOptions = {
     },
     super: {
         name: 'Supra AI System',
-        cost: 250,
+        cost: 275,
         accuracy: 0.8,
         maintenance: 5,
         icon: '🤖',
@@ -93,7 +93,7 @@ export const towerOptions = {
 export const actionOptions = {
     audit: {
         name: 'Audit',
-        cost: 120,
+        cost: 120, // will be 90
         description: 'Request an audit. It will reduce corruption when completed',
         icon: '🕵️‍♂️',
         duration: 10,
@@ -103,17 +103,17 @@ export const actionOptions = {
     },
     raid: {
         name: 'Raid',
-        cost: 500,
+        cost: 600, //450 after discount
         description: 'The raid will damage reputation, but significantly reduce corruption',
         icon: '🚨',
         duration: 30,
-        reputationEffect: -15,
+        reputationEffect: -20,
         corruptionEffect: 0.2,
         techRequirement: 'special_operations'
     },
     international_task_force: {
         name: 'International Task Force',
-        cost: 1000,
+        cost: 1200,
         description: 'Removes corruption',//'Target multiple connected nodes to reduce corruption across a network segment',
         icon: '🌍',
         duration: 15,
@@ -269,7 +269,7 @@ export const techTree = {
             prerequisites: [],
             description: 'Reduces Enforcement cost.',
             effects: {
-                enforcementCost: 0.8,
+                enforcementCost: 0.75,
                 // unlockActions: ['audit'],
             },
             icon: '👮',
@@ -311,7 +311,7 @@ export const techTree = {
         {
             id: 'public_relations',
             name: 'Public Relations Department',
-            cost: 550,
+            cost: 750,
             prerequisites: ['basic_enforcement'],
             description: 'Strongly reduces reputation damage.',
             effects: {
@@ -347,7 +347,7 @@ export const techTree = {
         {
             id: 'secure_tunneling',
             name: 'Secure Tunneling Protocols',
-            cost: 250,
+            cost: 350,
             prerequisites: ['basic_network'],
             description: 'Reduces transaction drop probability.',
             effects: {
@@ -358,7 +358,7 @@ export const techTree = {
         {
             id: 'high_speed_processing',
             name: 'High-Speed Processing',
-            cost: 300,
+            cost: 400,
             prerequisites: ['basic_network'],
             description: 'Greatly improves transaction speed and reduces future maintenace costs',
             effects: {
@@ -370,7 +370,7 @@ export const techTree = {
         {
             id: 'distributed_architecture',
             name: 'Distributed Systems Architecture',
-            cost: 1400,
+            cost: 1600,
             prerequisites: ['secure_tunneling'],
             description: 'Minimizes transaction drops.',// and speeds up node activation.',
             effects: {
