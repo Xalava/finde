@@ -1,6 +1,9 @@
 import * as Camera from './js/camera.js'
 import * as UI from './js/ui-manager.js'
-import { towerOptions, legalityOptions, txSizeOptions, nodeTypes, actionOptions, userTypes, CORRUPTION_THRESHOLD } from './js/config.js'
+// import { towerOptions, legalityOptions, txSizeOptions, nodeTypes, actionOptions, userTypes, CORRUPTION_THRESHOLD } from './js/config.js'
+import * as config from './js/config.js'
+Object.assign(window, config);
+
 import * as tech from './js/tech.js'
 import * as techUI from './js/tech-ui.js'
 // == UI == 
@@ -32,7 +35,8 @@ document.addEventListener('DOMContentLoaded', () => {
     debugBtn.addEventListener('click', () => {
         debug = !debug
         debugBtn.style.backgroundColor = debug ? 'rgba(255, 0, 0, 0.2)' : ''
-        tech.addResearchPoints(1000)
+        tech.addResearchPoints(8000)
+        budget += 20000
     })
     canvas.addEventListener('mousedown', (e) => {
         const rect = canvas.getBoundingClientRect()
@@ -252,9 +256,11 @@ function spawnTransaction() {
 
     // Illegal tx depends on the corruption of the source user (avg 2) and its bank (0 then increase)
     // If corruption is 2, 10% chance of being illegal, 5% chance of being questionable. Increase quickly with bank corruption
-    const dice10 = Math.random() * 30 / (sourceUser.corruption + sourceBank.corruption * 5 + 1)
+    const multi = Math.max(200 / (sourceUser.corruption + sourceBank.corruption * 5 + 1), 20) // 20 to 200 
+    const dice100 = Math.random() * multi
     // console.log("factor", 30 / (sourceUser.corruption + sourceBank.corruption * 5 + 1))
-    const legality = legalityOptions[dice10 < 1 ? 2 : dice10 < 1.5 ? 1 : 0]
+    console.log(multi, sourceUser.corruption, sourceBank.corruption)
+    const legality = legalityOptions[dice100 < 10 ? 2 : dice100 < 15 ? 1 : 0]
     const dice3 = Math.floor(Math.random() * 3)
     const size = ['small', 'medium', 'large'][dice3]
 
@@ -337,6 +343,7 @@ function moveTransaction(tx) {
         // remaining distance to next node is less than the speed of the transaction
         tx.index++
         // we check for detection when we reach a node. If detected, there will be no income
+        next.receivedAmount += tx.amount
         if (detect(tx)) {
             dailyDetectedTransactions++
             tx.active = false
@@ -344,7 +351,6 @@ function moveTransaction(tx) {
         }
         if (tx.index == tx.path.length - 2) {
             // We have reached the end of the path
-            next.receivedAmount += tx.amount
             // in the future, inspection could cost to budget
             // Also, these effect could happen to all nodes, except taxes
             // const isAudited = auditedNodes.some(a => a.id === next.id)
@@ -428,17 +434,38 @@ function placeTower(node, towerType) {
     UI.showNodeDetails(node, budget, placeTower, enforceAction)
 }
 
+function findConnectedNodes(nodeId) {
+    const connectedNodes = []
+    for (const [a, b] of edges) {
+        if (a === nodeId || b === nodeId) {
+            const neighbor = (a === nodeId ? b : a)
+            if (nodes[neighbor].active) {
+                connectedNodes.push(nodes[neighbor])
+            }
+        }
+    }
+    return connectedNodes
+}
 
-function enforceAction(node, action) {
-    const actionCost = actionOptions[action].cost * tech.bonus.enforcementCost
+function enforceAction(node, actionType, free = false) {
+    let action = actionOptions[actionType]
+    const actionCost = free ? 0 : action.cost * tech.bonus.enforcementCost
     if (budget < actionCost) {
         UI.showToast('Insufficient budget', `You need 💰${actionCost} to perform this action`, 'error')
         return
     } else {
         budget -= actionCost
-        node.reputation += actionOptions[action].reputationEffect * tech.bonus.reputationDamage//negative
-        node.enforcementAction = action
-        node.enforcementEnd = Date.now() + actionOptions[action].duration * 1000
+        node.reputation += action.reputationEffect * tech.bonus.reputationDamage//negative
+        node.enforcementAction = actionType
+        node.enforcementEnd = Date.now() + action.duration * 1000
+        if (action.affectsConnected) {
+            // identify connected nodes
+            let connectedNodes = findConnectedNodes(node.id)
+            console.log(`Enforcing ${action.name} on connected nodes:`, connectedNodes)
+            connectedNodes.forEach(n => {
+                enforceAction(n, 'raid', true)
+            })
+        }
     }
 }
 
@@ -880,7 +907,7 @@ function removeExpiredEnforcementActions(now) {
         .forEach(node => {
             if (node.enforcementEnd <= now) {
                 let endingAction = actionOptions[node.enforcementAction]
-                node.corruption = node.corruption / endingAction.corruptionEffect
+                node.corruption = Math.round(node.corruption * endingAction.corruptionEffect * tech.bonus.enforcementEfficiency)
                 node.enforcementAction = null
                 node.enforcementEnd = null
                 UI.showToast(`${endingAction.icon} ${endingAction.name} ended`, `Corruption reduced at ${node.name}`, 'info')
@@ -899,7 +926,7 @@ function calculateCorruptionSpread() {
     // Corruption spread (on all nodes, giving more margin at the begining of the game)
     const totalActors = nodes.length
     const totalCorruption = nodes.reduce((sum, n) => sum + n.corruption, 0)
-    return Math.round((totalCorruption / (CORRUPTION_THRESHOLD * totalActors)) * 100)
+    return Math.floor((totalCorruption / (CORRUPTION_THRESHOLD * totalActors)) * 100)
 }
 
 function increaseAIaccuracy() {

@@ -98,7 +98,7 @@ export const actionOptions = {
         icon: '🕵️‍♂️',
         duration: 10,
         reputationEffect: -5,
-        corruptionEffect: 0.5,
+        corruptionEffect: 0.6,
         techRequirement: null
     },
     raid: {
@@ -106,21 +106,21 @@ export const actionOptions = {
         cost: 600, //450 after discount
         description: 'The raid will damage reputation, but significantly reduce corruption',
         icon: '🚨',
-        duration: 30,
+        duration: 20,
         reputationEffect: -20,
         corruptionEffect: 0.2,
         techRequirement: 'special_operations'
     },
     international_task_force: {
         name: 'International Task Force',
-        cost: 1200,
-        description: 'Removes corruption',//'Target multiple connected nodes to reduce corruption across a network segment',
+        cost: 1600,
+        description: 'Removes corruption and launches a raid in neghbouring institutions',
         icon: '🌍',
-        duration: 15,
+        duration: 25,
         reputationEffect: -10,
         corruptionEffect: 0,
         techRequirement: 'international_cooperation',
-        // affectsConnected: true, TODO
+        affectsConnected: true, //TODO
     },
 }
 
@@ -263,33 +263,33 @@ export const techTree = {
     ],
     enforcement: [
         {
-            id: 'basic_enforcement',
-            name: 'Organised Procedures',
+            id: 'investigation_methods',
+            name: 'Investigation Methods',
             cost: 90,
             prerequisites: [],
+            description: 'Augments enforcement efficiency.',
+            effects: {
+                enforcementEfficiency: 0.6,
+            },
+            icon: '👮',
+        },
+        {
+            id: 'organised_procedures',
+            name: 'Organised Procedures',
+            cost: 350,
+            prerequisites: ['investigation_methods'],
             description: 'Reduces Enforcement cost.',
             effects: {
                 enforcementCost: 0.75,
                 // unlockActions: ['audit'],
             },
-            icon: '👮',
-        },
-        {
-            id: 'enhanced_investigation',
-            name: 'Investigation Methods',
-            cost: 500,
-            prerequisites: ['basic_enforcement'],
-            description: 'Reduces reputation damage from enforcement actions.',
-            effects: {
-                reputationDamage: 0.5,
-            },
-            icon: '🔍',
+            icon: '🗃️',
         },
         {
             id: 'special_operations',
             name: 'Special Operations Unit',
-            cost: 400,
-            prerequisites: ['enhanced_investigation'],
+            cost: 500,
+            prerequisites: ['organised_procedures'],
             description: 'Unlocks Raid action.',
             effects: {
                 unlockActions: ['raid'],
@@ -301,7 +301,7 @@ export const techTree = {
         //     id: 'digital_forensics',
         //     name: 'Digital Forensics',
         //     cost: 600,
-        //     prerequisites: ['enhanced_investigation'],
+        //     prerequisites: ['special_operations'],
         //     description: 'Unlock Forensic Analysis action.',
         //     effects: {
         //         unlockActions: ['forensic_analysis'],
@@ -312,8 +312,8 @@ export const techTree = {
             id: 'public_relations',
             name: 'Public Relations Department',
             cost: 750,
-            prerequisites: ['basic_enforcement'],
-            description: 'Strongly reduces reputation damage.',
+            prerequisites: ['organised_procedures'],
+            description: 'Strongly reduces reputational damage from enforcement actions.',
             effects: {
                 reputationDamage: 0.3,
             },
@@ -335,7 +335,7 @@ export const techTree = {
     network: [
         {
             id: 'basic_network',
-            name: 'Basic Network Upgrades',
+            name: 'Standardised Messaging',
             cost: 80,
             prerequisites: [],
             description: 'Improves transaction speed.',
@@ -360,7 +360,7 @@ export const techTree = {
             name: 'High-Speed Processing',
             cost: 400,
             prerequisites: ['basic_network'],
-            description: 'Greatly improves transaction speed and reduces future maintenace costs',
+            description: 'Greatly improves transaction speed and reduces maintenance costs',
             effects: {
                 transactionSpeed: 2,
                 maintenance: 0.5,

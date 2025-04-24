@@ -16,6 +16,7 @@ export let bonus = {
     transactionDrop: 1, // reverse
     reputationDamage: 1, // reverse
     enforcementCost: 1, // reveres
+    enforcementEfficiency: 1 // reverse
 }
 
 export function getResearchPoints() {

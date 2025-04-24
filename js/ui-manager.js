@@ -49,7 +49,7 @@ export function updateIndicators(budget, gdp, maintenance) {
 
 export function updateDate(day, holiday) {
     indicators.day.textContent = day;
-    indicators.holiday.textContent = holiday ? '🎉' : '';
+    indicators.holiday.textContent = holiday ? ' 🎉' : '';
 }
 
 export function showToast(title, message, type = 'info') {
