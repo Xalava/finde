@@ -8,7 +8,7 @@ import * as tech from './js/tech.js'
 import * as techUI from './js/tech-ui.js'
 // == UI == 
 let debug = false
-const debugAvailable = ['localhost', '127.0.0.1'].includes(location.hostname);
+const debugAvailable = ['localhost', '127.0.0.1'].includes(location.hostname)
 
 const canvas = document.getElementById('game')
 const ctx = canvas.getContext('2d')
@@ -37,6 +37,9 @@ document.addEventListener('DOMContentLoaded', () => {
         debugBtn.style.backgroundColor = debug ? 'rgba(255, 0, 0, 0.2)' : ''
         tech.addResearchPoints(8000)
         budget += 20000
+        nodes[5].reputation = 0
+        BASE_SPAWN_RATE = 0.02
+        speedControl = 0.5
     })
     canvas.addEventListener('mousedown', (e) => {
         const rect = canvas.getBoundingClientRect()
@@ -95,10 +98,12 @@ let gdp = 0
 // let globalReputation = 100 // Todo
 let holiday = false
 let dropProbability = 0.00001
+let speedControl = 1
 
-
+// Game constants
 let BASE_SPAWN_RATE = 0.002
 let HOLIDAY_SPAWN_BONUS = 10
+const MAX_DISTANCE_USERTONODE = 150
 
 // Game internal data 
 const gdpLog = []
@@ -106,43 +111,44 @@ let transactions = []
 const startTime = Date.now()
 let currentDay = 0
 const users = []
-const userEdges = []
+let userEdges = []
 
 
 const nodes = [
-    { id: 0, x: 250, y: 200, corruption: 0, type: 'processor', name: 'PayFlow', active: true },
-    { id: 1, x: 300, y: 600, corruption: 0, type: 'processor', name: 'TransactPro' },
-    { id: 2, x: 400, y: 350, corruption: 0, type: 'processor', name: 'SecurePay' },
-    { id: 3, x: 600, y: 650, corruption: 0, type: 'processor', name: 'FastFunds' },
-    { id: 4, x: 750, y: 300, corruption: 0, type: 'processor', name: 'QuickTransfer' },
+    { id: 0, x: 490, y: 400, corruption: 0, type: 'processor', name: 'PayFlow', active: true },
+    { id: 1, x: 500, y: 800, corruption: 0, type: 'processor', name: 'TransactPro' },
+    { id: 2, x: 590, y: 640, corruption: 0, type: 'processor', name: 'SecurePay' },
+    { id: 3, x: 800, y: 850, corruption: 0, type: 'processor', name: 'FastFunds' },
+    { id: 4, x: 950, y: 500, corruption: 0, type: 'processor', name: 'QuickTransfer' },
 
-    { id: 5, x: 400, y: 200, corruption: 0, type: 'bank', name: 'Global Bank', active: true },
-    { id: 6, x: 200, y: 250, corruption: 0, type: 'bank', name: 'Trust Bank', active: true },
-    { id: 7, x: 150, y: 350, corruption: 3, type: 'bank', name: 'Safe Savings', active: true },
-    { id: 8, x: 950, y: 50, corruption: 0, type: 'bank', name: 'Prime Bank' },
-    { id: 9, x: 900, y: 200, corruption: 0, type: 'bank', name: 'Capital Trust' },
-    { id: 10, x: 100, y: 150, corruption: 0, type: 'bank', name: 'Union Bank', active: true },
-    { id: 11, x: 300, y: 50, corruption: 0, type: 'bank', name: 'Metro Bank', active: true },
-    { id: 12, x: 900, y: 550, corruption: 0, type: 'bank', name: 'Pioneer Bank' },
-    { id: 13, x: 800, y: 100, corruption: 0, type: 'bank', name: 'Elite Bank' },
-    { id: 14, x: 600, y: 250, corruption: 0, type: 'bank', name: 'Summit Bank' },
-    { id: 15, x: 700, y: 700, corruption: 0, type: 'bank', name: 'Horizon Bank' },
-    { id: 16, x: 200, y: 500, corruption: 0, type: 'bank', name: 'Anchor Bank' },
-    { id: 17, x: 800, y: 450, corruption: 4, type: 'bank', name: 'Crest Bank' },
-    { id: 18, x: 200, y: 730, corruption: 0, type: 'bank', name: 'Fortune Bank' },
-    { id: 19, x: 400, y: 600, corruption: 0, type: 'bank', name: 'Legacy Bank' },
+    { id: 5, x: 600, y: 400, corruption: 0, type: 'bank', name: 'Global Bank', active: true },
+    { id: 6, x: 400, y: 450, corruption: 0, type: 'bank', name: 'Trust Bank', active: true },
+    { id: 7, x: 350, y: 550, corruption: 3, type: 'bank', name: 'Safe Savings', active: true },
+    { id: 8, x: 1050, y: 250, corruption: 0, type: 'bank', name: 'Prime Bank' },
+    { id: 9, x: 1100, y: 400, corruption: 0, type: 'bank', name: 'Capital Trust' },
+    { id: 10, x: 330, y: 350, corruption: 0, type: 'bank', name: 'Union Bank', active: true },
+    { id: 11, x: 540, y: 250, corruption: 0, type: 'bank', name: 'Metro Bank', active: true },
+    { id: 12, x: 1100, y: 750, corruption: 0, type: 'bank', name: 'Pioneer Bank' },
+    { id: 13, x: 900, y: 300, corruption: 0, type: 'bank', name: 'Elite Bank' },
+    { id: 14, x: 800, y: 350, corruption: 0, type: 'bank', name: 'Summit Bank' },
+    { id: 15, x: 900, y: 900, corruption: 0, type: 'bank', name: 'Horizon Bank' },
+    { id: 16, x: 400, y: 700, corruption: 0, type: 'bank', name: 'Anchor Bank' },
+    { id: 17, x: 1000, y: 650, corruption: 4, type: 'bank', name: 'Crest Bank' },
+    { id: 18, x: 400, y: 930, corruption: 0, type: 'bank', name: 'Fortune Bank' },
+    { id: 19, x: 600, y: 800, corruption: 0, type: 'bank', name: 'Legacy Bank' },
+    { id: 20, x: 300, y: 280, corruption: 0, type: 'bank', name: 'Prestige Bank' },
 
-    // New 🚀 Fintech nodes
-    { id: 20, x: 550, y: 140, corruption: 0, type: 'fintech', name: 'Rocket Pay' },
-    { id: 21, x: 650, y: 160, corruption: 0, type: 'fintech', name: 'Astro Finance' },
-    { id: 22, x: 950, y: 200, corruption: 0, type: 'fintech', name: 'Lunar Pay' },
-    { id: 23, x: 500, y: 800, corruption: 0, type: 'fintech', name: 'Orbit Funds' },
-    { id: 24, x: 850, y: 300, corruption: 0, type: 'fintech', name: 'Stellar Bank' },
+    // New  Fintech nodes
+    { id: 21, x: 710, y: 500, corruption: 0, type: 'fintech', name: 'Rocket Pay' },
+    { id: 22, x: 810, y: 460, corruption: 0, type: 'fintech', name: 'Astro Finance' },
+    { id: 23, x: 1150, y: 400, corruption: 0, type: 'fintech', name: 'Lunar Pay' },
+    { id: 24, x: 700, y: 1000, corruption: 0, type: 'fintech', name: 'Orbit Funds' },
+    { id: 25, x: 1050, y: 500, corruption: 0, type: 'fintech', name: 'Stellar Bank' },
 
     // New  Crypto Exchange nodes
-    { id: 25, x: 100, y: 550, corruption: 0, type: 'cryptoExchange', name: 'CryptoX' },
-    { id: 26, x: 630, y: 550, corruption: 0, type: 'cryptoExchange', name: 'BitMarket' },
-    { id: 27, x: 950, y: 750, corruption: 0, type: 'cryptoExchange', name: 'CoinTrade' },
+    { id: 26, x: 300, y: 750, corruption: 0, type: 'cryptoExchange', name: 'CryptoX' },
+    { id: 27, x: 1030, y: 850, corruption: 0, type: 'cryptoExchange', name: 'BitMarket' },
+    { id: 28, x: 980, y: 1050, corruption: 0, type: 'cryptoExchange', name: 'CoinTrade' },
 
 ]
 
@@ -154,19 +160,40 @@ nodes.forEach(node => {
     node.reputation = 80 // Default node reputation
     node.accuracy = 0
     // node.active = true
+    // node.reputation = 0
+    node.changeReputation = (amount) => {
+        console.log(`${node.name} reputation changed by ${amount}`)
+        node.reputation = Math.min(100, node.reputation + amount)
+        if (node.reputation < 0) {
+            node.reputation = 50 // Magical number for post-bankruptcy
+
+            UI.showToast('Bankruptcy', `Due to its plummeting reputation ${node.name} closes its doors`, 'errors')
+            node.active = false
+            node.tower = null
+            userEdges = userEdges.filter(e => e[1] !== node.id)
+            const usersToUpdate = users.filter(u => u.bankId === node.id)
+            console.log("Users to update", usersToUpdate)
+            // usersToUpdate.forEach(u => u.active = false)
+            usersToUpdate.forEach(u => {
+                u.bankId = null
+                assignNearestBank(u)
+            }
+            )
+        }
+    }
 })
 
 const edges = [
     // processor to processor
     [0, 2], [1, 2], [2, 4],
     // processor to banks
-    [0, 10], [0, 11], [0, 6], [1, 16], [1, 18], [1, 19], [2, 16], [3, 19], [3, 15], [4, 9], [4, 14], [4, 17], [5, 0],
+    [0, 10], [0, 11], [0, 6], [1, 16], [1, 18], [1, 19], [2, 16], [2, 17], [3, 19], [3, 15], [4, 9], [4, 14], [4, 17], [5, 0],
     // banks to banks
-    [6, 7], [8, 13], [9, 13], [10, 11], [11, 13], [11, 14], [12, 17], [13, 14], [15, 17], [16, 17], [16, 18], [17, 19],
+    [6, 7], [8, 13], [9, 13], [10, 11], [10, 20], [11, 13], [11, 14], [12, 17], [13, 14], [15, 17], [16, 18], [17, 19],
     // fintech connections
-    [20, 21], [14, 21], [8, 22], [9, 22], [15, 23], [3, 23], [13, 24], [17, 24],
+    [21, 22], [14, 22], [8, 23], [9, 23], [15, 24], [3, 24], [17, 25],
     // crypto exchange connections
-    [16, 25], [12, 27], [3, 26],
+    [16, 26], [12, 27], [15, 28],
 ]
 function generateUsers(target = false) {
     const activeNodes = nodes.filter(n => n.type !== 'processor' && n.active)
@@ -213,7 +240,6 @@ function generateUsers(target = false) {
     })
 }
 
-// Not used in the current design
 function assignNearestBank(user) {
     let activeNodes = []
     if (user.type === 'government') {
@@ -222,13 +248,14 @@ function assignNearestBank(user) {
         activeNodes = nodes.filter(n => n.type !== 'processor' && n.active)
     }
     const nearest = activeNodes.sort((a, b) => Math.hypot(user.x - a.x, user.y - a.y) - Math.hypot(user.x - b.x, user.y - b.y))[0]
-    if (nearest) {
-        user.bankId = nearest.id
-        userEdges.push([user.id, nearest.id])
+    if (nearest && Math.hypot(user.x - nearest.x, user.y - nearest.y) < MAX_DISTANCE_USERTONODE) {
+        user.bankId = nearest.id;
+        userEdges = userEdges.filter(e => e[0] !== user.id);
+        userEdges.push([user.id, user.bankId]);
     }
 }
 
-function realignUserBanks() {
+function realignUsersBanks() {
     users.forEach(user => {
         const prevBank = user.bankId
         assignNearestBank(user)
@@ -251,29 +278,38 @@ function spawnTransaction() {
     // const activeNodes = nodes.filter(n => n.active && n.type !== 'processor')
     // const targetNode = activeNodes[Math.floor(Math.random() * activeNodes.length)]
     const targetUser = activeUsers[Math.floor(Math.random() * activeUsers.length)]
+    if (!sourceUser || !targetUser) {
+        // Should never happen
+        console.error("Error spawning transaction: missing user.");
+        return;
+    }
     const sourceBank = nodes[sourceUser.bankId]
     const targetBank = nodes[targetUser.bankId]
 
-    // Illegal tx depends on the corruption of the source user (avg 2) and its bank (0 then increase)
-    // If corruption is 2, 10% chance of being illegal, 5% chance of being questionable. Increase quickly with bank corruption
-    const multi = Math.max(200 / (sourceUser.corruption + sourceBank.corruption * 5 + 1), 20) // 20 to 200 
+    let multi = 1
+    let txPath = []
+    if (!sourceBank || !targetBank) {
+        // we have no bank connecting users, they will do a P2P transaction. it is more likely to be illegal
+        // Multi is 20 to 100, 25
+        multi = Math.max(100 / (sourceUser.corruption + targetUser.corruption + 1), 20)
+        txPath = [sourceUser.id, targetUser.id]
+    } else {
+
+        // Illegal tx depends on the corruption of the source user (avg 2) and its bank (0 then increase)
+        // If corruption is 2, 10% chance of being illegal, 5% chance of being questionable. Increase quickly with bank corruption
+        multi = Math.max(200 / (sourceUser.corruption + sourceBank.corruption * 5 + 1), 20) // 20 to 200 
+        // console.log("factor", 30 / (sourceUser.corruption + sourceBank.corruption * 5 + 1))
+        // console.log(multi, sourceUser.corruption, sourceBank.corruption)
+        const innerPath = getPathFrom(sourceBank.id, targetBank.id)
+        if (!innerPath || innerPath.length < 2) return
+
+        txPath = [sourceUser.id, ...innerPath, targetUser.id]
+    }
+
     const dice100 = Math.random() * multi
-    // console.log("factor", 30 / (sourceUser.corruption + sourceBank.corruption * 5 + 1))
-    console.log(multi, sourceUser.corruption, sourceBank.corruption)
     const legality = legalityOptions[dice100 < 10 ? 2 : dice100 < 15 ? 1 : 0]
     const dice3 = Math.floor(Math.random() * 3)
     const size = ['small', 'medium', 'large'][dice3]
-
-
-    if (!sourceUser || !targetUser || !sourceBank) {
-        console.log("Error spawning transaction: missing user, bank, or target.");
-        return;
-    }
-
-    const innerPath = getPathFrom(sourceBank.id, targetBank.id)
-    if (!innerPath || innerPath.length < 2) return
-
-    const txPath = [sourceUser.id, ...innerPath, targetUser.id]
 
     const newTx = {
         path: txPath,
@@ -320,7 +356,17 @@ function getPathFrom(startId, targetId = null) {
     return null;
 }
 
-let firstLostTransaction = false
+let lostTransactions = 0
+function loseTransaction(tx, message = '') {
+    tx.active = false
+    tx.end = "lost"
+    console.log("Transaction lost!")
+    addEffect(tx.x - 2, tx.y, "∅", "insitus")
+    if (lostTransactions < 2 || lostTransactions % 10 === 0) {
+        UI.showToast('∅ Lost transaction', message, 'error')
+    }
+    lostTransactions++
+}
 function moveTransaction(tx) {
     const prec = nodes[tx.path[tx.index]]
     let next
@@ -335,12 +381,16 @@ function moveTransaction(tx) {
 
     const dx = next.x - tx.x
     const dy = next.y - tx.y
-    let speed = debug ? tx.speed / 3 : tx.speed * tech.bonus.transactionSpeed
+    let speed = tx.speed * tech.bonus.transactionSpeed * speedControl
 
     const dist = Math.hypot(dx, dy)
 
     if (dist < speed) {
         // remaining distance to next node is less than the speed of the transaction
+        if (!next.active) {
+            loseTransaction(tx, `Due to ${next.name} closure`)
+            return
+        }
         tx.index++
         // we check for detection when we reach a node. If detected, there will be no income
         next.receivedAmount += tx.amount
@@ -362,19 +412,20 @@ function moveTransaction(tx) {
             addEffect(next.x, next.y, "+" + income, 'budget')
 
             if (tx.legality === 'illegal') {
+
                 addEffect(next.x, next.y, '', 'pulseNode', 'rgba(255, 0, 0, 0.2)')
 
                 next.corruption++
                 // addEffect(next.x, next.y, '💥')
-                next.reputation = Math.max(0, next.reputation - 5) // Reputation decreases when illegal transactions go through
+                next.changeReputation(-5) // Reputation decrease when illegal transactions go through
                 // UI.showToast('Illegal transaction completed', 'Corruption increased at ' + next.name, 'error')
                 console.log(`💥 Breach at node ${next.id}, from ${tx.path[0]}`)
             } else if (tx.legality === 'questionable') {
                 // addEffect(next.x, next.y, '', 'pulseNode', 'rgba(255, 187, 0, 0.2)')
-
+                if (debug) console.log(`Questionable transaction at node ${next.id}, from ${tx.path[0]}`)
                 // no particular effect
             } else {
-                next.reputation = Math.min(100, next.reputation + 1) // Small reputation gain for legitimate transactions
+                next.changeReputation(1)// Small reputation gain for legitimate transactions
                 // addEffect(next.x, next.y, '', 'pulseNode', 'rgba(0, 255, 0, 0.2)')
 
             }
@@ -389,19 +440,11 @@ function moveTransaction(tx) {
             addEffect(next.x, next.y, '', 'pulse')
             tx.active = false
             tx.end = 'success'
-
-
         }
     } else {
         if (Math.random() < dropProbability) {
-            tx.active = false
-            tx.end = "lost"
-            console.log("Transaction lost!")
-            addEffect(tx.x - 2, tx.y, "∅", "insitus")
-            if (!firstLostTransaction) {
-                UI.showToast('∅ Lost transaction', `Develop the appropriate Technology to reduce errors`, 'error')
-                firstLostTransaction = true
-            }
+            loseTransaction(tx, `Due to poor tranmissions. Develop the appropriate technologies.`)
+
         }
         tx.x += (dx / dist) * speed
         tx.y += (dy / dist) * speed
@@ -455,7 +498,7 @@ function enforceAction(node, actionType, free = false) {
         return
     } else {
         budget -= actionCost
-        node.reputation += action.reputationEffect * tech.bonus.reputationDamage//negative
+        node.changeReputation(action.reputationEffect * tech.bonus.reputationDamage)//negative
         node.enforcementAction = actionType
         node.enforcementEnd = Date.now() + action.duration * 1000
         if (action.affectsConnected) {
@@ -489,7 +532,7 @@ function detect(tx) {
             tx.active = false
             tx.end = "FalsePositive"
             console.log(`🛑 False postive at `, node.name)
-            node.reputation -= 5 // harmful for reputation, but not for corruption. Also the transaction ends when it shouldn't have
+            node.changeReputation(-5) // harmful for reputation, but not for corruption. Also the transaction ends when it shouldn't have, reducing income
             if (!firstFalsePositive) {
                 UI.showToast(`🛑 First false postive at`, `Reputation damaged at ${node.name}`, 'error')
                 firstFalsePositive = true
@@ -523,7 +566,7 @@ function detect(tx) {
         addEffect(node.x, node.y, income, 'budget')
 
         // Gain reputation for successful detection
-        node.reputation += 3
+        node.changeReputation(3)
 
         // Update panel if the detection happens at the selected node
         if (UI.getSelectedNode() && UI.getSelectedNode().id === node.id) {
@@ -659,6 +702,9 @@ function drawUser(user) {
     if (debug) {
         ctx.font = '6px sans-serif'
         ctx.fillText(user.id, user.x + 5, user.y - 2)
+
+        ctx.fillStyle = 'red'
+        ctx.fillText(user.corruption, user.x + 5, user.y + 4)
     }
 
     ctx.restore();
@@ -982,8 +1028,11 @@ function gameLoop() {
                 console.log(`🌟 New node activated: ${newNode.name}`);
                 UI.showToast('🌟 A new actor has emerged', `Welcome ${newNode.name}`, 'info');
 
-                generateUsers(newNode)
-                // realignUserBanks()
+                if (newNode.reputation !== 50) {
+                    generateUsers(newNode)
+                } else {
+                    realignUsersBanks()
+                }
             }
         }
         const researchPointsGain = tech.calculateResearchPointsGain(gdp, dailyDetectedTransactions)
