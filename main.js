@@ -17,6 +17,9 @@ window.addEventListener('resize', Camera.resizeCanvas.bind(null, ctx))
 
 const centerBtn = document.getElementById('center-view')
 const debugBtn = document.getElementById('toggle-debug')
+const slowBtn = document.getElementById('slow')
+const normalBtn = document.getElementById('normal')
+const fastBtn = document.getElementById('fast')
 
 let effects = []
 const uiFont = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
@@ -29,7 +32,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // Set initial canvas size and enable touch/mouse camera actions
     Camera.resizeCanvas(ctx)
     Camera.setCameraActions()
-    if (!debugAvailable) document.getElementById('toggle-debug').style.display = "none"
+    if (!debugAvailable) {
+        document.getElementById('debug-controls').style.display = "none"
+    }
 
     centerBtn.addEventListener('click', Camera.centerView.bind(null, nodes))
     debugBtn.addEventListener('click', () => {
@@ -38,9 +43,22 @@ document.addEventListener('DOMContentLoaded', () => {
         tech.addResearchPoints(8000)
         budget += 20000
         nodes[5].reputation = 0
-        BASE_SPAWN_RATE = 0.02
         speedControl = 0.5
     })
+    slowBtn.addEventListener('click', () => {
+        speedControl = 0.5
+        spawnControl = 0.5
+
+    })
+    normalBtn.addEventListener('click', () => {
+        speedControl = 1
+        spawnControl = 1
+    })
+    fastBtn.addEventListener('click', () => {
+        speedControl = 2
+        spawnControl = 2
+    })
+
     canvas.addEventListener('mousedown', (e) => {
         const rect = canvas.getBoundingClientRect()
         const mouseX = e.clientX - rect.left
@@ -99,10 +117,11 @@ let gdp = 0
 let holiday = false
 let dropProbability = 0.00001
 let speedControl = 1
+let spawnControl = 1
 
 // Game constants
-let BASE_SPAWN_RATE = 0.002
-let HOLIDAY_SPAWN_BONUS = 10
+const BASE_SPAWN_RATE = 0.002
+const HOLIDAY_SPAWN_BONUS = 10
 const MAX_DISTANCE_USERTONODE = 150
 
 // Game internal data 
@@ -1019,7 +1038,7 @@ function gameLoop() {
         }
         // We perform the following tasks once a day
         UI.updateDate(currentDay, holiday)
-        if (currentDay % 60 === 0) {
+        if (currentDay % Math.round(60 / spawnControl) === 0) {
             // Every 60 days, a new node is added
             const inactiveNodes = nodes.filter(n => !n.active && edges.some(([a, b]) => (a === n.id && nodes[b].active) || (b === n.id && nodes[a].active)));
             if (inactiveNodes.length > 0) {
@@ -1054,7 +1073,7 @@ function gameLoop() {
     } else {
         const nbActiveNodes = nodes.filter(n => n.active).length
         const holidayBonus = holiday ? HOLIDAY_SPAWN_BONUS : 1
-        const spawnRate = nbActiveNodes * holidayBonus * Math.log10(currentDay + 1) * BASE_SPAWN_RATE
+        const spawnRate = nbActiveNodes * holidayBonus * Math.log10(currentDay + 1) * BASE_SPAWN_RATE * spawnControl
         if (Math.random() < spawnRate) {
             spawnTransaction()
         }
