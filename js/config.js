@@ -61,7 +61,7 @@ export const towerOptions = {
         accuracy: 0.6,
         maintenance: 1,
         icon: '🧠',
-        description: '60% accuracy detection that learns and improves by 0.5% per day, up to 80%.',
+        description: '60% accuracy detection that learns and improves by 0.5% per day, up to 80%. Costs maintenance',
         depend: 'basic',
         errors: 1,
         techRequirement: 'ai_research'

@@ -22,8 +22,13 @@
             </div>
 
             <div>
-                <button id="research-button" class="stat-item research-button hidden" data-tooltip="Technology Tree">
+                <button id="research-button" class="stat-item command-button hidden" data-tooltip="Technology Tree">
                     🧪 <strong>Research</strong> <span id="research-points">0</span>
+                </button>
+            </div>
+            <div>
+                <button id="policy-button" class="stat-item command-button hidden" data-tooltip="Policy">
+                    📝 <strong>Policy</strong>
                 </button>
             </div>
 
@@ -124,7 +129,7 @@
                 </ul>
             </div>
         </div>
-        <div id="research-panel" class="panel hidden">
+        <div id="research-panel" class="panel command-panel hidden">
             <div class="panel-header">
                 <h2>Research</h2>
                 <button id="close-research" class="close-button">×</button>
@@ -136,6 +141,44 @@
             </div>
             <div class="panel-content">
                 <div id="tech-tree-container"></div>
+            </div>
+        </div>
+        <div id="policy-panel" class="panel command-panel hidden">
+            <div class="panel-header">
+                <h2>Policy</h2><button id="close-policy">×</button>
+            </div>
+            <div class="panel-content">
+                <div class="policy-row">
+                    <label class="policy-option">
+                        <span class="policy-icon">🌿</span>
+                        <span><b>Lenient</b></span>
+                        <span class="policy-hint">Fewer false positives, but less detection </span>
+                        <input type="radio" name="reg" value="lenient">
+                    </label>
+                    <label class="policy-option">
+
+                        <span class="policy-icon">⚖️</span>
+                        <span><b>Balanced</b></span>
+                        <span class="policy-hint">Default</span>
+                        <input type="radio" name="reg" value="balanced" checked>
+                    </label>
+                    <label class="policy-option">
+                        <span class="policy-icon">🔒</span>
+                        <span><b>Stringent</b></span>
+                        <span class="policy-hint">More detection, but also more false positives</span>
+                        <input type="radio" name="reg" value="stringent">
+                    </label>
+                </div>
+                <br>
+                <div data-tooltip="Manual approval for new nodes; more control, slower expansion">
+                    <label class="policy-checkbox">
+                        <input type="checkbox" id="approvals-policy">
+                        <span><b>Mandatory Approvals</b></span>
+                        <span class="policy-hint">Gate new actors</span>
+                    </label>
+                </div>
+                <br><br>
+                <div id="approvals"></div>
             </div>
         </div>
     </div>

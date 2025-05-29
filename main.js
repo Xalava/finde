@@ -6,6 +6,8 @@ Object.assign(window, config);
 
 import * as tech from './js/tech.js'
 import * as techUI from './js/tech-ui.js'
+
+import * as policy from './js/policy.js'
 // == UI == 
 let debug = false
 const debugAvailable = ['localhost', '127.0.0.1'].includes(location.hostname)
@@ -36,6 +38,16 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('debug-controls').style.display = "none"
     }
 
+    // Handle node approval
+    window.addEventListener('approveNode', (e) => {
+        const node = e.detail;
+        if (node) {
+            node.active = true; // Ensure the node is marked as active
+            activateNode(node);
+            policy.removePendingNode(node); // Remove from pending after activation
+        }
+    });
+
     centerBtn.addEventListener('click', Camera.centerView.bind(null, nodes))
     debugBtn.addEventListener('click', () => {
         debug = !debug
@@ -44,6 +56,7 @@ document.addEventListener('DOMContentLoaded', () => {
         budget += 20000
         nodes[5].reputation = 0
         speedControl = 0.5
+        NEW_NODE_FREQUENCY = 20
     })
     slowBtn.addEventListener('click', () => {
         speedControl = 0.5
@@ -97,6 +110,21 @@ document.addEventListener('DOMContentLoaded', () => {
     //     Camera.moveCamera(e)
     // })
 
+    // Add event listener// Handle node approval
+    document.addEventListener('approveNode', (e) => {
+        const node = e.detail;
+        if (node) {
+            activateNode(node);
+            policy.removePendingNode(node); // Remove from pending after activation
+        }
+    });
+
+    setTimeout(() => {
+        document.getElementById('policy-button').style.display = 'block'
+    }, 120000)
+
+
+
     Camera.centerView(nodes)
     // Zoom in slightly when the game starts
     Camera.cinematicZoom(window.innerWidth < 600 ? 1.1 : 1.8)
@@ -123,6 +151,7 @@ let spawnControl = 1
 const BASE_SPAWN_RATE = 0.002
 const HOLIDAY_SPAWN_BONUS = 10
 const MAX_DISTANCE_USERTONODE = 150
+let NEW_NODE_FREQUENCY = 60
 
 // Game internal data 
 const gdpLog = []
@@ -538,7 +567,10 @@ function detect(tx) {
 
     if (!node || !node.tower) return false
 
-    let detectionChance = node.accuracy // towerOptions[node.tower].accuracy
+
+    const { detectMod, fpMod } = regulationLevels[policy.state.current]
+
+    let detectionChance = node.accuracy * detectMod // towerOptions[node.tower].accuracy
 
     if (node.tower === 'basic' && tx.size === 'small') {
         detectionChance *= 0.5; // Reduce accuracy for small transactions
@@ -546,7 +578,7 @@ function detect(tx) {
     if (tx.legality === 'legit') {
         // console.log("We check a legit tx with chance ", detectionChance)
         // small chance of false flag, inversely proportional to accuracy, then 10% unless robust tech
-        if (Math.random() > detectionChance && Math.random() < towerOptions[node.tower].errors * 0.01 * tech.bonus.falsePositive) {
+        if (Math.random() > detectionChance && Math.random() < towerOptions[node.tower].errors * 0.01 * tech.bonus.falsePositive * fpMod) {
             addEffect(node.x, node.y, '🛑')
             tx.active = false
             tx.end = "FalsePositive"
@@ -1005,9 +1037,21 @@ function increaseAIaccuracy() {
         })
 }
 
+function activateNode(node) {
+    node.active = true
+    console.log(`🌟 New node activated: ${node.name}`);
+    UI.showToast('🌟 A new actor has emerged', `Welcome ${node.name}`, 'info');
+    if (node.reputation !== 50) {
+        generateUsers(node)
+    } else {
+        realignUsersBanks()
+    }
+}
+
 let priorNow = Date.now()
 let deltaTime = 0
 let dailyDetectedTransactions = 0
+
 
 
 function gameLoop() {
@@ -1038,19 +1082,16 @@ function gameLoop() {
         }
         // We perform the following tasks once a day
         UI.updateDate(currentDay, holiday)
-        if (currentDay % Math.round(60 / spawnControl) === 0) {
+        if (currentDay % Math.round(NEW_NODE_FREQUENCY / spawnControl) === 0) {
             // Every 60 days, a new node is added
             const inactiveNodes = nodes.filter(n => !n.active && edges.some(([a, b]) => (a === n.id && nodes[b].active) || (b === n.id && nodes[a].active)));
             if (inactiveNodes.length > 0) {
                 const newNode = inactiveNodes[Math.floor(Math.random() * inactiveNodes.length)];
-                newNode.active = true;
-                console.log(`🌟 New node activated: ${newNode.name}`);
-                UI.showToast('🌟 A new actor has emerged', `Welcome ${newNode.name}`, 'info');
-
-                if (newNode.reputation !== 50) {
-                    generateUsers(newNode)
+                if (policy.state.requireValidation) {
+                    policy.addPendingNode(newNode);
+                    UI.showToast('⚖️  Approval needed', `${newNode.name} awaits regulatory clearance`, 'info');
                 } else {
-                    realignUsersBanks()
+                    activateNode(newNode);
                 }
             }
         }
