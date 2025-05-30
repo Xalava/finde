@@ -87,8 +87,11 @@ const policyUI = {
     close: document.getElementById('close-policy')
 }
 
-function togglePolicyPanel() {
-    policyUI.panel.classList.toggle('hidden')
+function togglePolicyPanel(e) {
+    if (e) e.stopPropagation();
+    const panel = document.getElementById('policy-panel');
+    closeAllPanels(panel);
+    panel.classList.toggle('hidden');
 }
 
 // Initialize event listeners

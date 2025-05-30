@@ -17,30 +17,30 @@
             </div>
             <div class="stats">
                 <div class="stat-item" data-tooltip="Current game day">
-                    🗓️ <strong>Day</strong> <span id="day">0</span><span id="holiday"></span>
+                    🗓️ <strong class="name">Day</strong> <span id="day">0</span><span id="holiday"></span>
                 </div>
             </div>
 
             <div>
                 <button id="research-button" class="stat-item command-button hidden" data-tooltip="Technology Tree">
-                    🧪 <strong>Research</strong> <span id="research-points">0</span>
+                    🧪 <strong class="name">Research</strong> <span id="research-points">0</span>
                 </button>
             </div>
             <div>
                 <button id="policy-button" class="stat-item command-button hidden" data-tooltip="Policy">
-                    📝 <strong>Policy</strong>
+                    📝 <strong class="name">Policy <span id="policy-points"></span></strong>
                 </button>
             </div>
 
             <div class="indicators">
-                <div class="stat-item" data-tooltip="GDP from financial transactions (past quarter)">
-                    📊 <strong>GDP </strong><span id="gdp">0</span>
+                <div id="gdp-stat-item" class="stat-item" data-tooltip="GDP from financial transactions (past quarter)">
+                    📊 <strong class="name">GDP </strong><span id="gdp">0</span>
                 </div>
                 <div class="stat-item" data-tooltip="Available operational budget">
-                    💰 <strong>Budget</strong> <span id="budget">150</span>
+                    💰 <strong class="name">Budget</strong> <span id="budget">150</span>
                 </div>
                 <div class="stat-item" data-tooltip="Ongoing system maintenance costs per second">
-                    🛠️ <strong>Upkeep</strong> <span id="maintenance">0</span>
+                    🛠️ <strong class="name">Upkeep</strong> <span id="maintenance">0</span>
                 </div>
                 <!-- 
                 <div class="stat-item pulse-animation" data-tooltip="Your public trust rating">

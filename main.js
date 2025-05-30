@@ -48,6 +48,86 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    canvas.addEventListener('mousedown', (e) => {
+        const rect = canvas.getBoundingClientRect();
+        const worldPos = Camera.getWorldPosition(e.clientX, e.clientY);
+        let clickedNode = nodes.find(node => {
+            const dx = node.x - worldPos.x;
+            const dy = node.y - worldPos.y;
+            return Math.hypot(dx, dy) < 20;
+        });
+        if (clickedNode) {
+            UI.showNodeDetails(clickedNode, budget, placeTower, enforceAction);
+        } else {
+            Camera.startDrag(e);
+        }
+    });
+    canvas.addEventListener('touchend', (e) => {
+        const touch = e.changedTouches[0];
+        const worldPos = Camera.getWorldPosition(touch.clientX, touch.clientY);
+        let clickedNode = nodes.find(node => {
+            const dx = node.x - worldPos.x;
+            const dy = node.y - worldPos.y;
+            return Math.hypot(dx, dy) < 20;
+        });
+        if (clickedNode) {
+            UI.showNodeDetails(clickedNode, budget, placeTower, enforceAction);
+        }
+    });
+
+
+    // --- Global panel closing logic ---
+    function handlePanelClose(e) {
+        setTimeout(() => {
+            let clientX, clientY
+            if (e.type.startsWith('touch')) {
+                const touch = e.touches && e.touches[0] ? e.touches[0] : (e.changedTouches ? e.changedTouches[0] : null)
+                if (!touch) return
+                clientX = touch.clientX
+                clientY = touch.clientY
+            } else {
+                clientX = e.clientX
+                clientY = e.clientY
+            }
+            const panels = [
+                document.getElementById('node-details-panel'),
+                document.getElementById('policy-panel'),
+                document.getElementById('research-panel'),
+                document.getElementById('instructions')
+            ]
+            const isInsideAnyPanel = panels.some(panel => {
+                if (!panel || panel.classList.contains('hidden')) return false
+                const rect = panel.getBoundingClientRect()
+                return (
+                    clientX >= rect.left && clientX <= rect.right &&
+                    clientY >= rect.top && clientY <= rect.bottom
+                )
+            })
+
+            // Check if clicked/touched on a node
+            let clickedNode = null;
+            if (typeof Camera !== 'undefined' && typeof Camera.getWorldPosition === 'function' && Array.isArray(nodes)) {
+                const worldPos = Camera.getWorldPosition(clientX, clientY);
+                clickedNode = nodes.find(node => {
+                    const dx = node.x - worldPos.x;
+                    const dy = node.y - worldPos.y;
+                    return Math.hypot(dx, dy) < 20;
+                });
+            }
+
+            if (clickedNode) {
+                // If clicked node, close all except node-details-panel
+                UI.closeAllPanels(document.getElementById('node-details-panel'));
+            } else if (!isInsideAnyPanel) {
+                // If not on a panel or node, close all panels
+                UI.closeAllPanels();
+            }
+        }, 0)
+    }
+    document.addEventListener('click', handlePanelClose)
+    document.addEventListener('touchstart', handlePanelClose, { passive: false })
+
+
     centerBtn.addEventListener('click', Camera.centerView.bind(null, nodes))
     debugBtn.addEventListener('click', () => {
         debug = !debug
@@ -72,37 +152,7 @@ document.addEventListener('DOMContentLoaded', () => {
         spawnControl = 2
     })
 
-    canvas.addEventListener('mousedown', (e) => {
-        const rect = canvas.getBoundingClientRect()
-        const mouseX = e.clientX - rect.left
-        const mouseY = e.clientY - rect.top
 
-        // Check if clicked on a node
-        const worldPos = Camera.getWorldPosition(e.clientX, e.clientY)
-        let clickedNode = nodes.find(node => {
-            const dx = node.x - worldPos.x
-            const dy = node.y - worldPos.y
-            return Math.hypot(dx, dy) < 20
-        })
-
-        if (clickedNode) {
-            UI.showNodeDetails(clickedNode, budget, placeTower, enforceAction)
-        } else {
-            Camera.startDrag(e)
-        }
-    })
-    // Handle touch taps for mobile: show node details
-    canvas.addEventListener('touchend', (e) => {
-        e.preventDefault()
-        const touch = e.changedTouches[0]
-        const worldPos = Camera.getWorldPosition(touch.clientX, touch.clientY)
-        let clickedNode = nodes.find(node => {
-            const dx = node.x - worldPos.x
-            const dy = node.y - worldPos.y
-            return Math.hypot(dx, dy) < 20
-        })
-        if (clickedNode) UI.showNodeDetails(clickedNode, budget, placeTower, enforceAction)
-    })
     // canvas.addEventListener('mousemove', (e) => {
     //     const rect = canvas.getBoundingClientRect();
     //     lastMouseX = e.clientX - rect.left;
@@ -568,7 +618,7 @@ function detect(tx) {
     if (!node || !node.tower) return false
 
 
-    const { detectMod, fpMod } = regulationLevels[policy.state.current]
+    const { detectMod, fpMod } = policy.regulationLevels[policy.state.current]
 
     let detectionChance = node.accuracy * detectMod // towerOptions[node.tower].accuracy
 

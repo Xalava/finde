@@ -41,6 +41,29 @@ export function initUI() {
     nodeDetails.close.addEventListener('click', hideNodeDetails)
 }
 
+export function closeAllPanels(exceptPanel) {
+    const exceptId = exceptPanel && exceptPanel.id ? exceptPanel.id : null;
+    console.log("UI: Closing all panels except id:", exceptId);
+    const panels = [
+        document.getElementById('node-details-panel'),
+        document.getElementById('policy-panel'),
+        document.getElementById('research-panel'),
+        document.getElementById('instructions')
+    ];
+    panels.forEach(panel => {
+        if (panel && !panel.classList.contains('hidden') && panel.id !== exceptId) {
+            console.log("UI: Closing panel:", panel.id);
+            if (panel.id === 'node-details-panel') {
+                selectedNode = null;
+                hideNodeDetails();
+            } else {
+                panel.classList.add('hidden');
+
+            }
+        }
+    });
+}
+
 export function updateIndicators(budget, gdp, maintenance) {
     indicators.budget.textContent = budget.toFixed(0);
     indicators.gdp.textContent = gdp.toFixed(0);
@@ -79,8 +102,11 @@ export function showToast(title, message, type = 'info') {
     }, 4000)
 }
 
-export function toggleInstructions() {
-    instructions.panel.classList.toggle('hidden')
+export function toggleInstructions(e) {
+    if (e) e.stopPropagation()
+    const panel = instructions.panel
+    closeAllPanels(panel)
+    panel.classList.toggle('hidden')
 }
 
 export function showNodeDetails(node, budget, placeTower, enforceAction) {

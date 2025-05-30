@@ -124,11 +124,15 @@ canvas {
 
 @media (max-width: 600px) {
     #topbar {
-        padding: 8px 12px;
+        padding: 8px;
     }
 
     .logo .icon {
         display: none;
+    }
+
+    .logo .title {
+        max-width: 8rem;
     }
 
     .indicators {
@@ -136,9 +140,25 @@ canvas {
     }
 
     .stat-item {
-        padding: 5px 6px;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 2px 4px;
+        gap: 0;
     }
 
+    .stat-item .name {
+        font-size: 9px;
+        margin-top: 4px;
+        margin-bottom: 2px;
+        display: block;
+        width: 100%;
+    }
+
+    #gdp-stat-item,
+    #holiday {
+        display: none;
+    }
 }
 
 /* Node Details Panel */
