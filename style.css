@@ -828,3 +828,40 @@ button:disabled {
 small {
     font-size: 6px;
 }
+
+#policy-status {
+    background-color: rgba(0, 0, 0, 0.267);
+    display: inline-block;
+    font-size: 0.8em;
+    border-radius: 70%;
+    padding: 0.3em 0.3em;
+
+    position: relative;
+    top: -0.2em;
+}
+
+@media (max-width: 600px) {
+    #policy-status {
+
+        display: block;
+
+    }
+}
+
+/* Sentiment Bar */
+#sentiment-wrap {
+    position: relative;
+    height: 4px;
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+    margin: 12px 32px;
+    background: rgba(0, 0, 0, 0.1);
+}
+
+#sentiment-bar {
+    height: 100%;
+    width: 100%;
+    transition: width 0.3s ease, background-color 0.3s ease;
+    background: #2ecc71;
+}

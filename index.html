@@ -28,7 +28,7 @@
             </div>
             <div>
                 <button id="policy-button" class="stat-item command-button hidden" data-tooltip="Policy">
-                    📜 <strong class="ui-name">Policies <span id="policy-points">0</span></strong>
+                    📜 <strong class="ui-name">Policies <span id="policy-status">⚖️</span></strong>
                 </button>
             </div>
 
@@ -185,6 +185,15 @@
                     </label>
                 </div>
                 <br>
+                <h3>🗳️ Ecosystem Sentiment </h3>
+                <br>
+                <div id="sentiment-wrap" data-tooltip="Updates regularly based on policy level and changes">
+                    <div id="sentiment-bar"></div>
+                </div>
+                <div style="text-align: center;">
+                    <i>Δ <span id="policy-points">0</span> per quarter</i>
+                </div>
+                <br><br>
                 <div data-tooltip="Manual approval for new nodes; more control, slower expansion">
                     <label class="policy-checkbox">
                         <input type="checkbox" id="approvals-policy">

@@ -1,12 +1,49 @@
-// policy.js
 export const regulationLevels = {
-    lenient: { detectMod: 0.9, fpMod: 2 },
-    balanced: { detectMod: 1.0, fpMod: 1.0 },
-    stringent: { detectMod: 1.3, fpMod: 0.5 }
+    lenient: { detectMod: 0.9, fpMod: 2, icon: '🌿' },
+    balanced: { detectMod: 1.0, fpMod: 1.0, icon: '⚖️' },
+    stringent: { detectMod: 1.3, fpMod: 0.5, icon: '🔒' }
 }
 
 import { showToast } from './ui-manager.js'
 
+
+const policyPoints = document.getElementById('policy-points')
+
+const SENTIMENT_MAX = 100
+export let sentiment = 100                          // starts full
+
+// +3 lenient, +1 balanced, –1 stringent, –1 if approvals ON
+function sentimentDelta() {
+    let d
+    switch (state.current) {
+        case 'lenient':
+            d = 3
+            break
+        case 'balanced':
+            d = 0
+            break
+        case 'stringent':
+            d = -2
+            break
+    }
+    if (state.requireValidation) d -= 1
+
+
+    const deltaText = d > 0 ? `+${d}` : d < 0 ? `${d}` : ''
+    policyPoints.innerText = deltaText
+    return d
+}
+
+function changeSentiment(delta) {
+    sentiment = Math.max(0, Math.min(SENTIMENT_MAX, sentiment + delta))
+    displayPolicyStatus()
+    displayPolicyPoints()
+    displaySentimentBar()
+}
+
+export function tickSentiment() {
+    changeSentiment(sentimentDelta())
+}
 // Policy state management
 export const state = {
     current: 'balanced',
@@ -61,23 +98,25 @@ export function updateApprovalsUI() {
     // Add event listeners to new buttons
     document.querySelectorAll('.approve-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
-            const nodeId = parseInt(e.target.dataset.id, 10);
-            const node = pendingNodes.find(n => n.id === nodeId);
+            const nodeId = parseInt(e.target.dataset.id, 10)
+            const node = pendingNodes.find(n => n.id === nodeId)
+            changeSentiment(1)
             if (node) {
-                window.dispatchEvent(new CustomEvent('approveNode', { detail: node }));
+                window.dispatchEvent(new CustomEvent('approveNode', { detail: node }))
             }
-        });
-    });
+        })
+    })
 
     document.querySelectorAll('.reject-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
-            const nodeId = parseInt(e.target.dataset.id, 10);
-            const node = pendingNodes.find(n => n.id === nodeId);
+            const nodeId = parseInt(e.target.dataset.id, 10)
+            const node = pendingNodes.find(n => n.id === nodeId)
+            changeSentiment(-10)
             if (node) {
-                removePendingNode(node);
+                removePendingNode(node)
             }
-        });
-    });
+        })
+    })
 }
 
 // UI Event Handlers
@@ -90,7 +129,7 @@ const policyUI = {
 function togglePolicyPanel(e) {
     if (e) e.stopPropagation();
     const panel = document.getElementById('policy-panel');
-    closeAllPanels(panel);
+    // closeAllPanels(panel);
     panel.classList.toggle('hidden');
 }
 
@@ -104,6 +143,7 @@ if (policyUI.button) policyUI.button.style.display = 'none'
 document.getElementById('approvals-policy')?.addEventListener('change', e => {
     state.requireValidation = e.target.checked
     showToast('Policy updated', `Approvals policy is now ${state.requireValidation ? 'on' : 'off'}`, 'info')
+    changeSentiment(-1)
     // Todo: Policy point/reputation
     // if (policyPoints) policyPoints.textContent = state.requireValidation ? '2' : '1'
 
@@ -112,7 +152,28 @@ document.getElementById('approvals-policy')?.addEventListener('change', e => {
 document.querySelectorAll('input[name="reg"]').forEach(el => {
     el.addEventListener('change', e => {
         state.current = e.target.value
+        changeSentiment(-1)
         showToast('Policy updated', `Policy level is now ${state.current}`, 'info')
     })
 })
 
+function displaySentimentBar() {
+    const bar = document.getElementById('sentiment-bar')
+    bar.style.width = sentiment + '%'
+    const colours = ['#c0392b', '#e67e22', '#f1c40f', '#2ecc71']
+    bar.style.background = colours[Math.floor(sentiment / 25)]
+}
+
+function displayPolicyPoints() {
+    const d = sentimentDelta() * 2
+    const deltaText = d > 0 ? `+${d}` : d < 0 ? `${d}` : '+0'
+    policyPoints.innerText = deltaText
+}
+
+function displayPolicyStatus() {
+    const statusElement = document.getElementById('policy-status')
+    statusElement.innerText = regulationLevels[state.current].icon
+    if (state.requireValidation) {
+        statusElement.style.backgroundColor = 'rgba(165, 25, 25, 0.5)'
+    } else { statusElement.style.backgroundColor = 'rgba(34,37,51,0.9)' }
+}

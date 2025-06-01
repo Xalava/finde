@@ -205,7 +205,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     setTimeout(() => {
         document.getElementById('policy-button').style.display = 'block'
-    }, 120000)
+        document.getElementById('policy-button').classList.remove('hidden')
+    }, debugAvailable ? 120 : 120000)
 
 
 
@@ -1191,6 +1192,7 @@ function gameLoop() {
                     activateNode(newNode);
                 }
             }
+            policy.tickSentiment()
         }
         const researchPointsGain = tech.calculateResearchPointsGain(gdp, dailyDetectedTransactions)
         tech.addResearchPoints(researchPointsGain)
@@ -1271,6 +1273,11 @@ function gameLoop() {
 
     if (budget < -100) {
         drawEndGame('The country is bankrupt!')
+        return
+    }
+
+    if (policy.sentiment <= 0) {
+        drawEndGame('The ecoystem disaproves you!')
         return
     }
 
