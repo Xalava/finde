@@ -147,7 +147,7 @@ canvas {
         gap: 0;
     }
 
-    .stat-item .name {
+    .ui-name {
         font-size: 9px;
         margin-top: 4px;
         margin-bottom: 2px;
@@ -163,7 +163,7 @@ canvas {
 
 /* Node Details Panel */
 #node-details-panel {
-    position: absolute;
+    position: fixed;
     top: 50px;
     right: 20px;
     width: 320px;
@@ -211,7 +211,7 @@ canvas {
     border-bottom: 1px solid var(--border);
 }
 
-#panel-title {
+.panel-title {
     font-size: 18px;
     font-weight: 600;
     margin: 0;
@@ -289,13 +289,18 @@ canvas {
     margin-top: 20px;
 }
 
-.panel-section h3 {
+.panel-section h3,
+.reputation-container h3 {
     font-size: 15px;
     font-weight: 600;
     color: var(--text-dim);
     margin-bottom: 12px;
     text-transform: uppercase;
     letter-spacing: 0.5px;
+}
+
+details {
+    color: var(--text-dim);
 }
 
 .options-section {
@@ -355,6 +360,124 @@ canvas {
     margin-top: 5px;
 }
 
+/* Tutorial */
+#tutorial {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 40vw;
+    max-width: 90vw;
+    background: var(--panel-bg);
+    border-radius: var(--radius);
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.4);
+    border: 1px solid var(--border);
+    z-index: 10000;
+    transition: all 0.3s ease;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    padding: 10px;
+    place-content: center;
+}
+
+@media (max-width: 600px) {
+    #tutorial {
+        width: 100vw;
+    }
+}
+
+#tutorial-header {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+#tutorial:not(.hidden) {
+    display: grid;
+}
+
+#tutorial .panel-content {
+    background: var(--panel-bg);
+    padding: 20px;
+    overflow-y: auto;
+    border-radius: 6px;
+    line-height: 1.4;
+
+
+}
+
+#tutorial-buttons {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+    justify-content: flex-end;
+}
+
+/* Glowing dot indicators */
+.glow {
+    --size: 0.3em;
+    --color: currentColor;
+
+    display: inline-block;
+    width: var(--size);
+    height: var(--size);
+    border-radius: 50%;
+    margin: 2px 8px;
+    background: rgba(255, 255, 255, 0.733);
+    box-shadow:
+        0 0 5px 1px rgba(255, 255, 255, 1.0),
+        0 0 8px 2px var(--color),
+        0 0 15px 4px var(--color);
+    position: relative;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.2);
+    }
+
+    100% {
+        transform: scale(1);
+    }
+}
+
+.glow-green {
+    --color: #2bff00;
+}
+
+.glow-orange {
+    --color: #ffa500;
+}
+
+.glow-red {
+    --color: #ff0000;
+}
+
+/* Tutorial progress bar */
+#tutorial-progress-container {
+    height: 1px;
+    background: rgba(255, 255, 255, 0.08);
+    margin: 8px 64px;
+    border-radius: 2px;
+    overflow: hidden;
+    position: relative;
+}
+
+#tutorial-progress {
+    height: 100%;
+    background: color-mix(in srgb, var(--accent), transparent 50%);
+    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    width: 0;
+    position: relative;
+}
+
+
 /* Unified button styles */
 button {
     background: rgba(35, 35, 50, 0.8);
@@ -373,7 +496,6 @@ button {
         padding: 10px 10px;
     }
 }
-
 
 button:hover:not(:disabled) {
     background: rgba(58, 123, 213, 0.2);
@@ -397,8 +519,8 @@ button:disabled {
     border-radius: var(--radius);
 }
 
-#instructions.hidden {
-    display: none;
+.hidden {
+    display: none !important;
 }
 
 .instruction-header {
@@ -701,4 +823,8 @@ button:disabled {
     align-items: center;
     gap: 8px;
     justify-content: space-between;
+}
+
+small {
+    font-size: 6px;
 }

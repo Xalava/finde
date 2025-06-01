@@ -131,6 +131,8 @@ export function showNodeDetails(node, budget, placeTower, enforceAction) {
 
     updateTowerOptions(node, budget, placeTower)
     updateActionOptions(node, budget, enforceAction)
+    // Todo: harmonize display
+    nodeDetails.panel.classList.remove('hidden')
     nodeDetails.panel.classList.add('visible')
     return selectedNode
 }

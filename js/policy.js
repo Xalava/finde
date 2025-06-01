@@ -47,7 +47,7 @@ export function updateApprovalsUI() {
     if (!approvalsDiv) return
 
     approvalsDiv.innerHTML = pendingNodes.length
-        ? "<h3>Pending Approval:</h3>" + pendingNodes.map(node => `
+        ? "<h3>📂 Pending Approval:</h3>" + pendingNodes.map(node => `
             <div class="approval-item">
                 <div><b>${node.name}</b> ${node.type}</div>
                 <div>
@@ -99,10 +99,14 @@ if (policyUI.button) policyUI.button.addEventListener('click', togglePolicyPanel
 if (policyUI.close) policyUI.close.addEventListener('click', togglePolicyPanel)
 if (policyUI.button) policyUI.button.style.display = 'none'
 
+// const policyPoints = document.getElementById('policy-points')
 // Policy change handlers
 document.getElementById('approvals-policy')?.addEventListener('change', e => {
     state.requireValidation = e.target.checked
     showToast('Policy updated', `Approvals policy is now ${state.requireValidation ? 'on' : 'off'}`, 'info')
+    // Todo: Policy point/reputation
+    // if (policyPoints) policyPoints.textContent = state.requireValidation ? '2' : '1'
+
 })
 
 document.querySelectorAll('input[name="reg"]').forEach(el => {

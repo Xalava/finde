@@ -6,6 +6,7 @@ Object.assign(window, config);
 
 import * as tech from './js/tech.js'
 import * as techUI from './js/tech-ui.js'
+import { showTutorial, isFirstPlay } from './js/tutorial.js'
 
 import * as policy from './js/policy.js'
 // == UI == 
@@ -27,6 +28,17 @@ let effects = []
 const uiFont = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
 let animationFrameId
 
+// Helper function to find a node at screen coordinates
+function findNodeAt(screenX, screenY) {
+    const worldPos = Camera.getWorldPosition(screenX, screenY)
+    return nodes.find(node => {
+        const dx = node.x - worldPos.x
+        const dy = node.y - worldPos.y
+
+        return node.active && Math.hypot(dx, dy) < 20
+    })
+}
+
 // Initialization of UI elements, waiting for the DOM (and actually the game data)
 document.addEventListener('DOMContentLoaded', () => {
     // Initialize UI panels 
@@ -34,50 +46,67 @@ document.addEventListener('DOMContentLoaded', () => {
     // Set initial canvas size and enable touch/mouse camera actions
     Camera.resizeCanvas(ctx)
     Camera.setCameraActions()
+
+    // First-time setup
+    if (isFirstPlay()) {
+        document.getElementById('gdp-stat-item').style.display = 'none'
+        document.getElementById('maintenance-stat-item').style.display = 'none'
+    }
     if (!debugAvailable) {
         document.getElementById('debug-controls').style.display = "none"
     }
 
+    // Track drag state
+    let isDragging = false
+
+    // Handle node interactions
+    canvas.addEventListener('mousedown', (e) => {
+        isDragging = false
+        const node = findNodeAt(e.clientX, e.clientY)
+
+        if (node) {
+            UI.showNodeDetails(node, budget, placeTower, enforceAction)
+        } else {
+            Camera.startDrag(e)
+            isDragging = true
+        }
+    })
+
+    // Handle node deselection on click (when not dragging)
+    canvas.addEventListener('click', (e) => {
+        if (!isDragging) {
+            const node = findNodeAt(e.clientX, e.clientY)
+            if (!node) UI.hideNodeDetails()
+        }
+    })
+
     // Handle node approval
     window.addEventListener('approveNode', (e) => {
-        const node = e.detail;
+        const node = e.detail
         if (node) {
-            node.active = true; // Ensure the node is marked as active
-            activateNode(node);
-            policy.removePendingNode(node); // Remove from pending after activation
+            node.active = true // Ensure the node is marked as active
+            activateNode(node)
+            policy.removePendingNode(node) // Remove from pending after activation
         }
-    });
+    })
 
-    canvas.addEventListener('mousedown', (e) => {
-        const rect = canvas.getBoundingClientRect();
-        const worldPos = Camera.getWorldPosition(e.clientX, e.clientY);
-        let clickedNode = nodes.find(node => {
-            const dx = node.x - worldPos.x;
-            const dy = node.y - worldPos.y;
-            return Math.hypot(dx, dy) < 20;
-        });
-        if (clickedNode) {
-            UI.showNodeDetails(clickedNode, budget, placeTower, enforceAction);
-        } else {
-            Camera.startDrag(e);
-        }
-    });
+    // Handle touch interactions
     canvas.addEventListener('touchend', (e) => {
-        const touch = e.changedTouches[0];
-        const worldPos = Camera.getWorldPosition(touch.clientX, touch.clientY);
-        let clickedNode = nodes.find(node => {
-            const dx = node.x - worldPos.x;
-            const dy = node.y - worldPos.y;
-            return Math.hypot(dx, dy) < 20;
-        });
-        if (clickedNode) {
-            UI.showNodeDetails(clickedNode, budget, placeTower, enforceAction);
+        const touch = e.changedTouches[0]
+        const node = findNodeAt(touch.clientX, touch.clientY)
+        if (node) {
+            UI.showNodeDetails(node, budget, placeTower, enforceAction)
         }
-    });
+    })
 
 
     // --- Global panel closing logic ---
     function handlePanelClose(e) {
+        // Don't handle the event if it's a click on a panel toggle button
+        if (e.target.closest('.panel-toggle, .panel-close, .option-button')) {
+            return
+        }
+
         setTimeout(() => {
             let clientX, clientY
             if (e.type.startsWith('touch')) {
@@ -104,25 +133,30 @@ document.addEventListener('DOMContentLoaded', () => {
                 )
             })
 
-            // Check if clicked/touched on a node
-            let clickedNode = null;
-            if (typeof Camera !== 'undefined' && typeof Camera.getWorldPosition === 'function' && Array.isArray(nodes)) {
-                const worldPos = Camera.getWorldPosition(clientX, clientY);
-                clickedNode = nodes.find(node => {
-                    const dx = node.x - worldPos.x;
-                    const dy = node.y - worldPos.y;
-                    return Math.hypot(dx, dy) < 20;
-                });
+            // If click was inside a panel, don't close anything
+            if (isInsideAnyPanel) {
+                return
             }
 
-            if (clickedNode) {
-                // If clicked node, close all except node-details-panel
-                UI.closeAllPanels(document.getElementById('node-details-panel'));
-            } else if (!isInsideAnyPanel) {
-                // If not on a panel or node, close all panels
-                UI.closeAllPanels();
+            // Check if clicked on a node
+            let clickedNode = null
+            if (typeof Camera !== 'undefined' && typeof Camera.getWorldPosition === 'function' && Array.isArray(nodes)) {
+                const worldPos = Camera.getWorldPosition(clientX, clientY)
+                clickedNode = nodes.find(node => {
+                    const dx = node.x - worldPos.x
+                    const dy = node.y - worldPos.y
+                    return Math.hypot(dx, dy) < 20
+                })
             }
-        }, 0)
+
+            // If clicked on a node, only close other panels
+            if (clickedNode) {
+                UI.closeAllPanels(document.getElementById('node-details-panel'))
+            } else {
+                // If clicked outside any panel and not on a node, close all panels
+                UI.closeAllPanels()
+            }
+        }, 50) // Small delay to allow panel toggles to work
     }
     document.addEventListener('click', handlePanelClose)
     document.addEventListener('touchstart', handlePanelClose, { passive: false })
@@ -175,12 +209,32 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
-    Camera.centerView(nodes)
-    // Zoom in slightly when the game starts
-    Camera.cinematicZoom(window.innerWidth < 600 ? 1.1 : 1.8)
     // Initialize the game
     tech.initTechTree()
     techUI.initTechUI()
+    initNodes()
+    generateUsers()
+
+    Camera.centerView(nodes)
+    // Zoom in slightly when the game starts
+    Camera.cinematicZoom(window.innerWidth < 600 ? 1.1 : 1.8)
+
+    if (isFirstPlay()) {
+        speedControl = 0.5
+        spawnControl = 0.5
+        // Restauring default after a while
+        setTimeout(() => {
+            spawnControl = 1
+        }, 10000)
+        setTimeout(() => {
+            speedControl = 1
+        }, 20000)
+        setTimeout(() => {
+            document.getElementById('gdp-stat-item').style.display = 'block'
+            document.getElementById('maintenance-stat-item').style.display = 'block'
+        }, 100000)
+        showTutorial()
+    }
     gameLoop()
 })
 
@@ -251,35 +305,40 @@ const nodes = [
 ]
 
 // for each node, we add empty variables tower:null, detectedAmount:0, receivedAmount:0, reputation:80
-nodes.forEach(node => {
-    node.tower = null
-    node.detectedAmount = 0
-    node.receivedAmount = 0
-    node.reputation = 80 // Default node reputation
-    node.accuracy = 0
-    // node.active = true
-    // node.reputation = 0
-    node.changeReputation = (amount) => {
-        console.log(`${node.name} reputation changed by ${amount}`)
-        node.reputation = Math.min(100, node.reputation + amount)
-        if (node.reputation < 0) {
-            node.reputation = 50 // Magical number for post-bankruptcy
-
-            UI.showToast('Bankruptcy', `Due to its plummeting reputation ${node.name} closes its doors`, 'errors')
+function initNodes() {
+    nodes.forEach(node => {
+        node.tower = null
+        node.detectedAmount = 0
+        node.receivedAmount = 0
+        node.reputation = 80 // Default node reputation
+        node.accuracy = 0
+        if (isFirstPlay() && node.id != 10 && node.id != 11) {
             node.active = false
-            node.tower = null
-            userEdges = userEdges.filter(e => e[1] !== node.id)
-            const usersToUpdate = users.filter(u => u.bankId === node.id)
-            console.log("Users to update", usersToUpdate)
-            // usersToUpdate.forEach(u => u.active = false)
-            usersToUpdate.forEach(u => {
-                u.bankId = null
-                assignNearestBank(u)
-            }
-            )
         }
-    }
-})
+        // node.active = true
+        // node.reputation = 0
+        node.changeReputation = (amount) => {
+            console.log(`${node.name} reputation changed by ${amount}`)
+            node.reputation = Math.min(100, node.reputation + amount)
+            if (node.reputation < 0) {
+                node.reputation = 50 // Magical number for post-bankruptcy
+
+                UI.showToast('Bankruptcy', `Due to its plummeting reputation ${node.name} closes its doors`, 'errors')
+                node.active = false
+                node.tower = null
+                userEdges = userEdges.filter(e => e[1] !== node.id)
+                const usersToUpdate = users.filter(u => u.bankId === node.id)
+                console.log("Users to update", usersToUpdate)
+                // usersToUpdate.forEach(u => u.active = false)
+                usersToUpdate.forEach(u => {
+                    u.bankId = null
+                    assignNearestBank(u)
+                }
+                )
+            }
+        }
+    })
+}
 
 const edges = [
     // processor to processor
@@ -364,7 +423,6 @@ function realignUsersBanks() {
     })
 }
 
-generateUsers();
 
 // == Canvas drawing functions == 
 
@@ -629,7 +687,7 @@ function detect(tx) {
         // console.log("We check a legit tx with chance ", detectionChance)
         // small chance of false flag, inversely proportional to accuracy, then 10% unless robust tech
         if (Math.random() > detectionChance && Math.random() < towerOptions[node.tower].errors * 0.01 * tech.bonus.falsePositive * fpMod) {
-            addEffect(node.x, node.y, '🛑')
+            addEffect(node.x, node.y, '🛑', "tower")
             tx.active = false
             tx.end = "FalsePositive"
             console.log(`🛑 False postive at `, node.name)
@@ -652,7 +710,7 @@ function detect(tx) {
     if (Math.random() < detectionChance) {
         tx.active = false
         tx.end = "detected"
-        addEffect(node.x, node.y, '✔️')
+        addEffect(node.x, node.y, '✔️', "tower")
         if (!firstDetection) {
             UI.showToast('First illegal transaction blocked!', `Detected at ${node.name} (${towerOptions[node.tower].name})`, 'success')
             firstDetection = true
@@ -749,6 +807,11 @@ function drawEffects() {
                 ctx.lineWidth = 4
                 ctx.stroke()
                 break
+            case 'tower':
+                ctx.font = `12px ${uiFont}`
+                ctx.fillStyle = 'black'
+                ctx.fillText(e.emoji, e.x + 5, e.y + 30)
+                break
             default:
                 ctx.font = `24px ${uiFont}`
                 ctx.fillStyle = 'black'
@@ -762,27 +825,7 @@ function drawEffects() {
     })
 }
 
-// Handle mouse click to select nodes
-canvas.addEventListener('click', (e) => {
-    const worldPos = Camera.getWorldPosition(e.clientX, e.clientY)
-    let clickedOnNode = false
 
-    for (let node of nodes) {
-        const dx = node.x - worldPos.x
-        const dy = node.y - worldPos.y
-        if (Math.hypot(dx, dy) < 20) {
-            UI.showNodeDetails(node, budget, placeTower, enforceAction)
-            clickedOnNode = true
-            break
-        }
-    }
-
-    if (!clickedOnNode) {
-        UI.hideNodeDetails()
-    }
-})
-
-// Handle mouse hover to show tooltips
 let hoverNode = null
 let hoverTimeout = null
 function drawUser(user) {
@@ -830,7 +873,7 @@ function drawUserEdge([userId, bankId]) {
 function drawNode(node) {
     const isSelected = node === UI.getSelectedNode()
     const nodeRadius = 20
-    ctx.save()  // Save canvas stated
+    ctx.save()  // Save canvas state
 
     // Draw outer ring
     ctx.beginPath()
@@ -1113,22 +1156,26 @@ function gameLoop() {
         currentDay = newCurrentDay
         const dayOfYear = currentDay % 365 + 1
         // const year = Math.floor(currentDay / 365)
+        // After the first drawing, we slow the game to ask for the tutorial 
+        if (!isFirstPlay()) {
+            // No holidway while first play
+            holiday = false
+            // Check for specific holidays
+            switch (dayOfYear) {
+                case 15: // Lunar New Year
+                    holiday = true
+                    UI.showToast('🎆 Holiday!', 'Happy Lunar New Year!', 'info')
+                    break
+                case 85: // Eid
+                    holiday = true
+                    UI.showToast('🫖 Holiday!', 'Happy Eid!', 'info')
+                    break
+                case 356: // Christmas
+                    holiday = true
+                    UI.showToast('🎁 Holiday!', 'Merry Christmas!', 'info')
+                    break
+            }
 
-        holiday = false
-        // Check for specific holidays
-        switch (dayOfYear) {
-            case 15: // Lunar New Year
-                holiday = true
-                UI.showToast('🎆 Holiday!', 'Happy Lunar New Year!', 'info')
-                break
-            case 85: // Eid
-                holiday = true
-                UI.showToast('🫖 Holiday!', 'Happy Eid!', 'info')
-                break
-            case 356: // Christmas
-                holiday = true
-                UI.showToast('🎁 Holiday!', 'Merry Christmas!', 'info')
-                break
         }
         // We perform the following tasks once a day
         UI.updateDate(currentDay, holiday)
@@ -1212,7 +1259,9 @@ function gameLoop() {
     }
 
     const spread = calculateCorruptionSpread()
-    drawCorruptionMeter(spread)
+    if (!isFirstPlay()) {
+        drawCorruptionMeter(spread)
+    }
 
     // Game end conditions
     if (spread >= 100) {

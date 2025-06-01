@@ -54,6 +54,7 @@ function updateResearchPointsDisplay() {
 
         setTimeout(() => {
             resUI.button.style.display = ''
+            resUI.button.classList.remove('hidden')
             showToast(`🧪 Research Enabled!`, `Research Points are collected when blocking transactions.`, 'info')
         }, 1000)
 
@@ -160,12 +161,12 @@ function createTechElement(tech) {
 
     techElement.innerHTML = `
       <div class="tech-icon">${tech.icon}</div>
-      <div class="tech-info">
-        <div class="tech-name">${tech.name}</div>
-        <div class="tech-cost">🧪 ${tech.cost} RP</div>
-        <div class="tech-desc">${tech.description}</div>
+        <div class="tech-info">
+            <div class="tech-name">${tech.name}</div>
+            <div class="tech-cost">🧪 ${tech.cost} RP</div>
+            <div class="tech-desc">${tech.description}</div>
         ${prereqsText}
-      </div>
+        </div>
     `
 
     // Only add click handler if available but not researched
