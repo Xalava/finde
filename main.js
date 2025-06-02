@@ -102,8 +102,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Global panel closing logic ---
     function handlePanelClose(e) {
-        // Don't handle the event if it's a click on a panel toggle button
-        if (e.target.closest('.panel-toggle, .panel-close, .option-button')) {
+        // Don't handle the event if it's a click on or inside a panel toggle button
+        if (e.target.closest('.panel-toggle, .panel-close, .option-button, button, [role="button"]')) {
             return
         }
 
@@ -206,7 +206,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setTimeout(() => {
         document.getElementById('policy-button').style.display = 'block'
         document.getElementById('policy-button').classList.remove('hidden')
-    }, debugAvailable ? 120 : 120000)
+    }, debugAvailable ? 120 : 100000)
 
 
 
@@ -216,9 +216,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initNodes()
     generateUsers()
 
-    Camera.centerView(nodes)
     // Zoom in slightly when the game starts
-    Camera.cinematicZoom(window.innerWidth < 600 ? 1.1 : 1.8)
 
     if (isFirstPlay()) {
         speedControl = 0.5
@@ -235,7 +233,13 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('maintenance-stat-item').style.display = 'block'
         }, 100000)
         showTutorial()
+        Camera.centerView(nodes, -50)
+
+    } else {
+        Camera.centerView(nodes, 0)
+
     }
+    Camera.cinematicZoom(window.innerWidth < 600 ? 1.1 : 1.8)
     gameLoop()
 })
 

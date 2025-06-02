@@ -69,8 +69,12 @@ export function resizeCanvas(ctx) {
     ctx.setTransform(1, 0, 0, 1, 0, 0)
 }
 
-export function centerView(nodes = []) {
+export function centerView(nodes = [], offset = 0) {
     if (!canvas || nodes.length === 0) return
+
+    // Reset any ongoing drag state
+    camera.dragging = false
+
     let totalX = 0, totalY = 0
     let activeNodes = nodes.filter(node => node.active)
     if (activeNodes.length === 0) return
@@ -82,7 +86,7 @@ export function centerView(nodes = []) {
     const centerY = totalY / activeNodes.length
 
     camera.x = canvas.width / 2 - centerX * camera.zoom
-    camera.y = canvas.height / 2 - centerY * camera.zoom
+    camera.y = canvas.height / 2 - centerY * camera.zoom + (offset * window.devicePixelRatio || 0)
     // Todo: 
     // - animate movement toward center 
     // - adjust zoom to current needs

@@ -133,7 +133,6 @@ export function showNodeDetails(node, budget, placeTower, enforceAction) {
     updateActionOptions(node, budget, enforceAction)
     // Todo: harmonize display
     nodeDetails.panel.classList.remove('hidden')
-    nodeDetails.panel.classList.add('visible')
     return selectedNode
 }
 
@@ -239,7 +238,7 @@ function createTowerButton(towerType, node, budget, placeTower) {
 }
 
 export function hideNodeDetails() {
-    nodeDetails.panel.classList.remove('visible')
+    nodeDetails.panel.classList.add('hidden')
     selectedNode = null
     return selectedNode
 }
