@@ -24,7 +24,7 @@ export const towerOptions = {
     },
     robust: {
         name: 'Robust Filter',
-        cost: 75,
+        cost: 125,
         accuracy: 0.8,
         maintenance: 1,
         icon: '🔧',
@@ -35,7 +35,7 @@ export const towerOptions = {
     },
     superRobust: {
         name: 'Super Robust Filter',
-        cost: 175,
+        cost: 375,
         accuracy: 0.9,
         maintenance: 3,
         icon: '🔩',
@@ -46,7 +46,7 @@ export const towerOptions = {
     },
     advanced: {
         name: 'Advanced Filter',
-        cost: 250,
+        cost: 350,
         accuracy: 0.85,
         maintenance: 1,
         icon: '🔭',
@@ -57,7 +57,7 @@ export const towerOptions = {
     },
     ai: {
         name: 'AI System',
-        cost: 200,
+        cost: 299,
         accuracy: 0.6,
         maintenance: 1,
         icon: '🧠',
@@ -68,7 +68,7 @@ export const towerOptions = {
     },
     super: {
         name: 'Supra AI System',
-        cost: 275,
+        cost: 1475,
         accuracy: 0.8,
         maintenance: 5,
         icon: '🤖',
@@ -79,7 +79,7 @@ export const towerOptions = {
     },
     quantum: {
         name: 'Quantum Filter',
-        cost: 1200,
+        cost: 2400,
         accuracy: 0.95,
         maintenance: 8,
         icon: '⚛️',
@@ -120,7 +120,7 @@ export const actionOptions = {
         reputationEffect: -10,
         corruptionEffect: 0,
         techRequirement: 'international_cooperation',
-        affectsConnected: true, //TODO
+        affectsConnected: true,
     },
 }
 

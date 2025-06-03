@@ -19,7 +19,7 @@ function nextStep() {
     currentStep++;
 
     // Shorter delay between steps for better flow
-    setTimeout(showTutorialStep, 1000);
+    setTimeout(showTutorialStep, 600);
 }
 export function showTutorial() {
 
@@ -57,56 +57,39 @@ export function showTutorial() {
     tutorialContainer.classList.remove('hidden')
 }
 
-
 const TUTORIAL_STEPS = [
     {
         title: '<small>⚪️⚫️🔵</small> 🏦 <small>⚪️⚫️🔵</small>',
-        content: `
-            <p>Banks process payments between users.</p>
-        `
+        content: '<p>Banks process payments between users.</p>',
     },
     {
-        title: '🔍 Transaction Types',
+        title: 'Transactions',
         content: `
-            <p>Every transaction has a legality status:</p>
-            <div>
-                <p><span class="glow glow-green"></span> <strong>Legitimate</strong> - Probably safe and legal</p>
-                <p><span class="glow glow-orange"></span> <strong>Questionable</strong> - May require investigation</p>
-                <p><span class="glow glow-red"></span> <strong>Illegal</strong> - Must be stopped</p>
-            </div>
-        `
+        <p>Every transaction has a legality status:</p>
+        <p><span class="glow glow-green"></span> <strong>Legitimate</strong> - Probably safe</p>
+        <p><span class="glow glow-orange"></span> <strong>Suspicious</strong> - Could be reviewed</p>
+        <p><span class="glow glow-red"></span> <strong>Illegal</strong> - Must be stopped</p>
+      `,
     },
     {
         title: '<span class="glow glow-green"></span>  <span class="glow glow-orange"></span>',
-        content: `
-            <p>Successful transactions move money between users and generate revenue for you.</p>
-        `
+        content: '<p>Successful transactions move money between users and generate revenue for you.</p>',
     },
     {
         title: '<span class="glow glow-red"></span>',
-        content: `
-                        <p>Illegal transactions move money too, but they damage bank reputation and increase corruption.</p>
-  
-        `
+        content: '<p>Illegal transactions money too, but they damage banks\' reputation and increase corruption.</p>',
     },
     {
-        title: '👆 Your turn',
-        content: `
-            <p>Click on any bank to place a Basic Filter.</p>
-        `
+        title: 'Your turn',
+        content: '<p>👆 Click on any bank to place a Basic Filter.</p>',
     },
     {
         title: '🔍 Basic Filter',
-        content: `
-            <p>This filter catches 50% of illegal transactions.</p>
-            <p>Each catch grants you research points for upgrades.</p>
-        `
+        content: '<p>This filter catches 50% of illegal transactions. Each catch grants research points for upgrades.</p>',
     },
     {
         title: '🎉 et voila!',
-        content: `
-            <p>The rest is your history. You will soon discover policy and other features. Good luck!</p>
-        `
+        content: `<p>The rest is your history. You will soon discover policy and other features. Good luck!</p>`
     }
 ];
 

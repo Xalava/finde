@@ -569,8 +569,13 @@ function moveTransaction(tx) {
             gdpLog.push({ amount: tx.amount, timestamp: Date.now() })
             let income = tx.amount * taxRate
             budget += income
-            // addEffect(next.x, next.y, "+" + tx.amount * taxRate, 'bonus')
-            addEffect(next.x, next.y, "+" + income, 'budget')
+
+
+            // Budget effect. Only if zoomed to reduce load
+            if (Camera.getZoom() > 4) {
+                addEffect(next.x, next.y, "+" + income, 'budget')
+            }
+
 
             if (tx.legality === 'illegal') {
 

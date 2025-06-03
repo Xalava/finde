@@ -1,5 +1,7 @@
 let canvas, ctx // ctx is local to this module
 
+const MAX_ZOOM = 5
+const MIN_ZOOM = 0.5
 const camera = {
     x: 0,
     y: 0,
@@ -170,7 +172,7 @@ export function adjustZoom(e, zoomFactor) {
     camera.zoom *= zoomFactor
 
     // Limit zoom range
-    camera.zoom = Math.min(Math.max(0.5, camera.zoom), 5)
+    camera.zoom = Math.min(Math.max(MIN_ZOOM, camera.zoom), MAX_ZOOM)
     // Adjust camera position to zoom toward mouse cursor position
     camera.x = mouseX - worldX * camera.zoom;
     camera.y = mouseY - worldY * camera.zoom;
@@ -213,4 +215,8 @@ export function drawDebugGrid(ctx) {
     }
 
     ctx.restore()
+}
+
+export function getZoom() {
+    return camera.zoom
 }
