@@ -27,6 +27,7 @@ function sentimentDelta() {
             break
     }
     if (state.requireValidation) d -= 1
+    d -= Math.round(getTaxRate() * 10 - 2)
 
 
     const deltaText = d > 0 ? `+${d}` : d < 0 ? `${d}` : ''
@@ -75,6 +76,18 @@ export function removePendingNode(node) {
 
 export function getPendingNodes() {
     return [...pendingNodes]
+}
+
+let taxRate = 0.2
+function setTaxRate(value) {
+
+    taxRate = value
+
+}
+
+
+export function getTaxRate() {
+    return taxRate
 }
 
 // UI Management
@@ -153,9 +166,25 @@ document.querySelectorAll('input[name="reg"]').forEach(el => {
     el.addEventListener('change', e => {
         state.current = e.target.value
         changeSentiment(-1)
-        showToast('Policy updated', `Policy level is now ${state.current}`, 'info')
     })
 })
+
+
+const taxSlider = document.getElementById('taxation-slider');
+const taxValueDisplay = document.getElementById('taxation-value');
+
+taxSlider.value = getTaxRate() * 100
+taxValueDisplay.textContent = taxSlider.value
+
+taxSlider.addEventListener('input', (event) => {
+    taxValueDisplay.textContent = event.target.value
+    setTaxRate(event.target.value / 100)
+    changeSentiment(-0.1)
+
+
+
+});
+
 
 function displaySentimentBar() {
     const bar = document.getElementById('sentiment-bar')
@@ -166,7 +195,7 @@ function displaySentimentBar() {
 
 function displayPolicyPoints() {
     const d = sentimentDelta() * 2
-    const deltaText = d > 0 ? `+${d}` : d < 0 ? `${d}` : '+0'
+    const deltaText = d > 0 ? `+${d}` : d < 0 ? `${d}` : '0'
     policyPoints.innerText = deltaText
 }
 

@@ -141,7 +141,7 @@
                     <li>Holidays result in more transactions</li>
                     <li>Entities with higher corruption produce more illegal transactions</li>
                 </ul>
-            </aside>
+        </aside>
         </aside>
         <aside id="research-panel" class="panel command-panel hidden">
             <div class="panel-header">
@@ -193,6 +193,15 @@
                     </div>
                 </section>
 
+
+                <section class="panel-section" data-tooltip="Set the national taxation level.">
+                    <h3>💰️ Taxation Level</h3>
+                    <div class="tax-slider-wrapper">
+                        <label for="taxation-slider">Rate: <span id="taxation-value">20</span>%</label>
+                        <input type="range" id="taxation-slider" name="taxation" min="0" max="50" value="20"
+                            class="policy-slider">
+                    </div>
+                </section>
                 <section class="panel-section"
                     data-tooltip="Manual approval for new nodes; more control, slower expansion">
                     <label class="policy-checkbox">

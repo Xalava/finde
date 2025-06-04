@@ -754,6 +754,27 @@ button:disabled {
     text-align: center;
 }
 
+.tax-slider-wrapper {
+    padding: 0 2rem;
+    margin: 1rem 0;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+label[for="taxation-slider"] {
+    display: flex;
+    gap: 0.5rem;
+    color: var(--text-dim);
+}
+
+.policy-slider {
+    width: 100%;
+    height: 4px;
+}
+
+
+
 .approval-item {
     display: flex;
     flex-direction: row;

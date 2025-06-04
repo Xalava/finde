@@ -248,7 +248,6 @@ document.addEventListener('DOMContentLoaded', () => {
 // Economics & Game play
 let budget = 100
 let maintenance = 0
-let taxRate = 0.2 // 20% tax rate
 let gdp = 0
 // let globalReputation = 100 // Todo
 let holiday = false
@@ -567,7 +566,7 @@ function moveTransaction(tx) {
             // const isAudited = auditedNodes.some(a => a.id === next.id)
             // if (isAudited) baseIncome = Math.floor(tx.amount / 2)
             gdpLog.push({ amount: tx.amount, timestamp: Date.now() })
-            let income = tx.amount * taxRate
+            let income = tx.amount * policy.getTaxRate()
             budget += income
 
 
@@ -730,7 +729,7 @@ function detect(tx) {
         node.receivedAmount += tx.amount
 
         // To be refined, a percentage of the amount could still reach the budget 
-        let income = tx.amount * taxRate
+        let income = tx.amount * policy.getTaxRate()
         budget += income
         addEffect(node.x, node.y, income, 'budget')
 
