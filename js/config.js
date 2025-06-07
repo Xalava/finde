@@ -62,7 +62,7 @@ export const towerOptions = {
         maintenance: 1,
         icon: '🧠',
         description: '60% accuracy detection that learns and improves by 0.5% per day, up to 80%. Costs maintenance',
-        depend: 'basic',
+        depend: 'medium',
         errors: 1,
         techRequirement: 'ai_research'
     },
@@ -381,3 +381,58 @@ export const techTree = {
         }
     ],
 };
+
+export const countries = {
+    kosi: {
+        name: "Kosi Republic",
+        x: 455, y: 330,
+        color: "#2E86AB", // Deep blue
+        flag: "🌊",
+        corruptionRisk: 1,
+        secrecy: 3,
+        activity: 3,
+        description: "A developed democracy with strong institutions and pioneering digital transparency initiatives."
+    },
+    tafada: {
+        name: "Tafada Federation",
+        x: 980, y: 410,
+        color: "#8E44AD", // *Royal purple*
+        flag: "🏜️",
+        corruptionRisk: 6,
+        secrecy: 5,
+        activity: 7,
+        description: "A trading hub undergoing significant economic modernization."
+    },
+    valerian: {
+        name: "Valerian Islands",
+        x: 1140, y: 690,
+        color: "#20B2AA", // Light sea green
+        flag: "🏝️",
+        corruptionRisk: 9,
+        secrecy: 4,
+        activity: 2,
+        description: "An island nation transitioning from traditional banking toward international standards."
+    },
+    drakmoor: {
+        name: "Drakmoor",
+        x: 290, y: 850,
+        color: "#7B68EE", // Medium slate blue
+        flag: "🏰",
+        corruptionRisk: 5,
+        secrecy: 9,
+        activity: 4,
+        description: "A mountainous nation that maintains financial privacy laws rooted in centuries-old principles."
+    },
+    ustah: {
+        name: "Ustah Kingdom",
+        x: 700, y: 880,
+        color: "#F4A261", // Warm amber
+        flag: "🏗️",
+        corruptionRisk: 4,
+        secrecy: 6,
+        activity: 9,
+        description: "A manufacturing powerhouse combining informal economy activity and developed financial sector."
+    }
+}
+
+export const countryKeys = Object.keys(countries)    

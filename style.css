@@ -183,6 +183,12 @@ canvas {
     border-bottom: 1px solid var(--border);
 }
 
+/* .flag {
+    margin-left: auto;
+
+} */
+
+
 .panel-title {
     font-size: 18px;
     font-weight: 600;
@@ -221,6 +227,19 @@ canvas {
 
 .detail-value {
     font-weight: 500;
+}
+
+#country-name {
+    /* cursor: help; */
+    cursor: default;
+    /* text-decoration: underline;
+    text-decoration-style: dotted; */
+    /* color: var(--accent); */
+    transition: color 0.1s ease;
+}
+
+#country-name:hover {
+    color: var(--text);
 }
 
 

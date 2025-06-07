@@ -11,6 +11,7 @@ import { showTutorial, isFirstPlay } from './js/tutorial.js'
 import * as policy from './js/policy.js'
 // == UI == 
 let debug = false
+let displayCountries = false
 const debugAvailable = ['localhost', '127.0.0.1'].includes(location.hostname)
 
 const canvas = document.getElementById('game')
@@ -20,6 +21,7 @@ window.addEventListener('resize', Camera.resizeCanvas.bind(null, ctx))
 
 const centerBtn = document.getElementById('center-view')
 const debugBtn = document.getElementById('toggle-debug')
+const countriesBtn = document.getElementById('toggle-countries')
 const slowBtn = document.getElementById('slow')
 const normalBtn = document.getElementById('normal')
 const fastBtn = document.getElementById('fast')
@@ -172,6 +174,10 @@ document.addEventListener('DOMContentLoaded', () => {
         speedControl = 0.5
         NEW_NODE_FREQUENCY = 20
     })
+    countriesBtn.addEventListener('click', () => {
+        displayCountries = true
+    })
+
     slowBtn.addEventListener('click', () => {
         speedControl = 0.5
         spawnControl = 0.5
@@ -281,7 +287,7 @@ const nodes = [
     { id: 6, x: 400, y: 450, corruption: 0, type: 'bank', name: 'Trust Bank', active: true },
     { id: 7, x: 350, y: 550, corruption: 3, type: 'bank', name: 'Safe Savings', active: true },
     { id: 8, x: 1050, y: 250, corruption: 0, type: 'bank', name: 'Prime Bank' },
-    { id: 9, x: 1100, y: 400, corruption: 0, type: 'bank', name: 'Capital Trust' },
+    { id: 9, x: 1130, y: 400, corruption: 0, type: 'bank', name: 'Capital Trust' },
     { id: 10, x: 330, y: 350, corruption: 0, type: 'bank', name: 'Union Bank', active: true },
     { id: 11, x: 540, y: 250, corruption: 0, type: 'bank', name: 'Metro Bank', active: true },
     { id: 12, x: 1100, y: 750, corruption: 0, type: 'bank', name: 'Pioneer Bank' },
@@ -295,11 +301,11 @@ const nodes = [
     { id: 20, x: 300, y: 280, corruption: 0, type: 'bank', name: 'Prestige Bank' },
 
     // New  Fintech nodes
-    { id: 21, x: 710, y: 500, corruption: 0, type: 'fintech', name: 'Rocket Pay' },
+    { id: 21, x: 710, y: 510, corruption: 0, type: 'fintech', name: 'Rocket Pay' },
     { id: 22, x: 810, y: 460, corruption: 0, type: 'fintech', name: 'Astro Finance' },
-    { id: 23, x: 1150, y: 400, corruption: 0, type: 'fintech', name: 'Lunar Pay' },
+    { id: 23, x: 1190, y: 400, corruption: 0, type: 'fintech', name: 'Lunar Pay' },
     { id: 24, x: 700, y: 1000, corruption: 0, type: 'fintech', name: 'Orbit Funds' },
-    { id: 25, x: 1050, y: 500, corruption: 0, type: 'fintech', name: 'Stellar Bank' },
+    { id: 25, x: 1050, y: 550, corruption: 0, type: 'fintech', name: 'Stellar Bank' },
 
     // New  Crypto Exchange nodes
     { id: 26, x: 300, y: 750, corruption: 0, type: 'cryptoExchange', name: 'CryptoX' },
@@ -307,6 +313,36 @@ const nodes = [
     { id: 28, x: 980, y: 1050, corruption: 0, type: 'cryptoExchange', name: 'CoinTrade' },
 
 ]
+
+// Assigns a country to a node based on proximity to country coordinates
+function assignCountryToNode(node) {
+    let closestCountryKey = null;
+    let minDistanceSq = Infinity;
+
+    if (!config.countries || !config.countryKeys) {
+        console.error('Country data is not loaded correctly from config.');
+        return;
+    }
+
+    for (const countryKey of config.countryKeys) {
+        const country = config.countries[countryKey]
+
+        if (typeof country.x !== 'number' || typeof country.y !== 'number') {
+            console.warn(`Country ${countryKey} in config.js is missing x or y coordinates.`)
+            continue;
+        }
+
+        const dx = node.x - country.x;
+        const dy = node.y - country.y;
+        const distanceSq = dx * dx + dy * dy
+
+        if (distanceSq < minDistanceSq) {
+            minDistanceSq = distanceSq;
+            closestCountryKey = countryKey;
+        }
+    }
+    node.country = closestCountryKey;
+}
 
 // for each node, we add empty variables tower:null, detectedAmount:0, receivedAmount:0, reputation:80
 function initNodes() {
@@ -316,6 +352,7 @@ function initNodes() {
         node.receivedAmount = 0
         node.reputation = 80 // Default node reputation
         node.accuracy = 0
+        assignCountryToNode(node); // Assign country based on proximity
         if (isFirstPlay() && node.id != 10 && node.id != 11) {
             node.active = false
         }
@@ -372,6 +409,7 @@ function generateUsers(target = false) {
                 type = random < 0.7 ? 'person' : 'business'
             let user = null;
             let tries = 0;
+            let country = nodes[t.id].country
             do {
                 const x = t.x + (Math.random() - 0.5) * 150;
                 const y = t.y + (Math.random() - 0.5) * 150;
@@ -382,8 +420,9 @@ function generateUsers(target = false) {
                         x,
                         y,
                         type: type,
-                        corruption: Math.floor(Math.random() * 5), // 0 to 4
-                        activity: Math.random(),
+                        country,
+                        corruption: Math.floor(Math.random() * countries[country].corruptionRisk), // 0 to 8
+                        activity: Math.floor(Math.random() * countries[country].activity),
                         active: true
                     }
                 }
@@ -391,11 +430,11 @@ function generateUsers(target = false) {
             } while (!user && tries < 10)
 
             if (user) {
-                users.push(user)
                 // assignNearestBank(user)
                 // As we generate around a platform, we don't need to look for the nearest for the moment
                 user.bankId = t.id
                 userEdges.push([user.id, t.id])
+                users.push(user)
             }
         }
     })
@@ -428,16 +467,17 @@ function realignUsersBanks() {
 }
 
 
+function selectRandomly(array) {
+    return array[Math.floor(Math.random() * array.length)];
+}
 // == Canvas drawing functions == 
 
 function spawnTransaction() {
     const activeUsers = users.filter(u => u.active)
     if (activeUsers.length === 0) return
 
-    const sourceUser = activeUsers[Math.floor(Math.random() * activeUsers.length)]
-    // const activeNodes = nodes.filter(n => n.active && n.type !== 'processor')
-    // const targetNode = activeNodes[Math.floor(Math.random() * activeNodes.length)]
-    const targetUser = activeUsers[Math.floor(Math.random() * activeUsers.length)]
+    const sourceUser = selectRandomly(activeUsers)
+    const targetUser = selectRandomly(activeUsers.filter(u => u.country !== sourceUser.country))
     if (!sourceUser || !targetUser) {
         // Should never happen
         console.error("Error spawning transaction: missing user.");
@@ -468,8 +508,8 @@ function spawnTransaction() {
 
     const dice100 = Math.random() * multi
     const legality = legalityOptions[dice100 < 10 ? 2 : dice100 < 15 ? 1 : 0]
-    const dice3 = Math.floor(Math.random() * 3)
-    const size = ['small', 'medium', 'large'][dice3]
+    const amount = Math.round(Math.exp(Math.random() * 4.2)) // 15 in average with a log normal distribution
+    const size = amount < 9 ? 'small' : amount < 30 ? 'medium' : 'large'
 
     const newTx = {
         path: txPath,
@@ -478,10 +518,10 @@ function spawnTransaction() {
         terminationDate: null,
         x: sourceUser.x,
         y: sourceUser.y,
-        speed: 0.5 + Math.random() * (dice3 + 1) / 2,
+        speed: 0.5 + Math.random() * Math.min(15 / amount, 1),
         legality,
-        size,
-        amount: txSizeOptions[size].amount,
+        size, // kept for comptaibility, in the future, we could use directly amount
+        amount,
         sourceUser,
         active: true,
     }
@@ -839,12 +879,25 @@ let hoverNode = null
 let hoverTimeout = null
 function drawUser(user) {
     ctx.save();
+    if (user.corruption > 1) {
+        ctx.shadowColor = 'rgba(255,0,0,0.5)'
+        ctx.shadowBlur = 10
+        // ctx.fillStyle = 'rgba(255,0,0,0.05)'
+        // ctx.beginPath()
+        // ctx.arc(user.x, user.y, user.corruption / 2, 0, Math.PI * 2)
+        // ctx.fill()
+        // ctx.shadowBlur = 0
+    }
     ctx.beginPath();
-    ctx.arc(user.x, user.y, 1 + user.activity * 2, 0, Math.PI * 2);
+    ctx.arc(user.x, user.y, 1 + user.activity / 2, 0, Math.PI * 2);
 
     ctx.fillStyle = userTypes[user.type].color;
 
-    ctx.shadowColor = '#0e0e14' // from background color in CSS
+    if (user.corruption > 1) {
+        ctx.shadowColor = `rgba(255,0,0,${0.1 * user.corruption})`
+    } else {
+        ctx.shadowColor = '#0e0e14' // from background color in CSS
+    }
     ctx.shadowBlur = 10
 
     // Fun fact : the filder belwo destroys perforamnce
@@ -1033,6 +1086,131 @@ function drawCorruptionMeter(spread) {
 
     ctx.restore();
 }
+
+function drawCountryFlags() {
+    config.countryKeys.forEach(countryKey => {
+        const country = config.countries[countryKey];
+        if (typeof country.x === 'number' && typeof country.y === 'number') {
+            // Draw country shape
+            drawCountryShape(countryKey, country);
+
+            // Draw flag
+            ctx.font = `32px ${uiFont}`;
+            ctx.fillText(country.flag, country.x - 16, country.y + 12);
+
+            // Draw name
+            ctx.font = `12px ${uiFont}`;
+            ctx.fillStyle = 'white';
+            ctx.textAlign = 'center';
+            ctx.fillText(country.name, country.x, country.y + 35);
+            ctx.textAlign = 'left'; // Reset alignment
+        }
+    });
+}
+
+function drawCountryShape(countryKey, country) {
+    // Get all nodes and users belonging to this country
+    const countryNodes = nodes.filter(node => node.country === countryKey && node.active);
+    const countryUsers = users.filter(user => user.country === countryKey && user.active);
+
+    if (countryNodes.length === 0 && countryUsers.length === 0) return;
+
+    // Get all points including country center
+    const points = [
+        ...countryNodes.map(n => ({ x: n.x, y: n.y })),
+        ...countryUsers.map(u => ({ x: u.x, y: u.y })),
+        { x: country.x, y: country.y }
+    ];
+
+    if (points.length < 3) return;
+
+    // Get expanded convex hull
+    const expandedHull = getExpandedConvexHull(points, 20);
+
+    // Draw the shape
+    ctx.save();
+    ctx.globalAlpha = 0.15;
+    ctx.fillStyle = country.color;
+
+    ctx.beginPath();
+    ctx.moveTo(expandedHull[0].x, expandedHull[0].y);
+    for (let i = 1; i < expandedHull.length; i++) {
+        ctx.lineTo(expandedHull[i].x, expandedHull[i].y);
+    }
+    ctx.closePath();
+    ctx.fill();
+
+    // Draw border
+    ctx.globalAlpha = 0.4;
+    ctx.strokeStyle = country.color;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    ctx.restore();
+}
+
+function getExpandedConvexHull(points, distance) {
+    if (points.length < 3) return points;
+
+    // Find leftmost point
+    let leftmost = points[0];
+    for (let p of points) {
+        if (p.x < leftmost.x || (p.x === leftmost.x && p.y < leftmost.y)) {
+            leftmost = p;
+        }
+    }
+
+    // Build convex hull
+    const hull = [];
+    let current = leftmost;
+
+    do {
+        hull.push(current);
+        let next = points[0];
+
+        for (let p of points) {
+            if (p === current) continue;
+
+            const cross = (next.x - current.x) * (p.y - current.y) - (next.y - current.y) * (p.x - current.x);
+            if (next === current || cross > 0 || (cross === 0 &&
+                Math.hypot(p.x - current.x, p.y - current.y) > Math.hypot(next.x - current.x, next.y - current.y))) {
+                next = p;
+            }
+        }
+        current = next;
+    } while (current !== leftmost);
+
+    // Expand hull outward by distance
+    const expanded = [];
+    for (let i = 0; i < hull.length; i++) {
+        const prev = hull[(i - 1 + hull.length) % hull.length];
+        const curr = hull[i];
+        const next = hull[(i + 1) % hull.length];
+
+        // Calculate edge normals
+        const v1 = { x: curr.x - prev.x, y: curr.y - prev.y };
+        const v2 = { x: next.x - curr.x, y: next.y - curr.y };
+
+        const len1 = Math.hypot(v1.x, v1.y);
+        const len2 = Math.hypot(v2.x, v2.y);
+
+        const n1 = { x: -v1.y / len1, y: v1.x / len1 };
+        const n2 = { x: -v2.y / len2, y: v2.x / len2 };
+
+        // Average normal and expand
+        const nx = (n1.x + n2.x) / 2;
+        const ny = (n1.y + n2.y) / 2;
+        const nlen = Math.hypot(nx, ny) || 1;
+
+        expanded.push({
+            x: curr.x + (nx / nlen) * distance,
+            y: curr.y + (ny / nlen) * distance
+        });
+    }
+
+    return expanded;
+}
+
 
 function drawTooltip(hoverNode) {
     const tooltip = [
@@ -1254,6 +1432,7 @@ function gameLoop() {
         drawTransaction(tx)
     })
     drawEffects()
+    if (displayCountries) drawCountryFlags()
 
     Camera.restoreCamera(ctx)
 

@@ -1,5 +1,5 @@
 // Module for pure UI management. 
-import { towerOptions, actionOptions } from './config.js'
+import { towerOptions, actionOptions, countries } from './config.js'
 import * as tech from './tech.js'
 let indicators = null;
 let instructions = null;
@@ -27,6 +27,7 @@ export function initUI() {
     nodeDetails = {
         panel: document.getElementById('node-details-panel'),
         title: document.getElementById('panel-title'),
+        countryName: document.getElementById('country-name'),
         type: document.getElementById('panel-type'),
         corruption: document.getElementById('panel-corruption'),
         received: document.getElementById('panel-received'),
@@ -128,6 +129,8 @@ export function showNodeDetails(node, budget, placeTower, enforceAction) {
     } else {
         nodeDetails.reputationBar.className = 'bar-fill poor'
     }
+    nodeDetails.countryName.textContent = countries[node.country].name + ' ' + countries[node.country].flag
+    nodeDetails.countryName.title = countries[node.country].description
 
     updateTowerOptions(node, budget, placeTower)
     updateActionOptions(node, budget, enforceAction)
