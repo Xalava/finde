@@ -1,7 +1,7 @@
 // tech-ui.js - Simplified tech tree with fixed grid layout
 import { getResearchPoints, getResearchProgress, canResearch, researchTechnology } from './tech.js'
 import { techTree } from './config.js'
-import { showToast, closeAllPanels } from './ui-manager.js' // Import the existing toast function
+import { showToast, togglePanel } from './ui-manager.js'
 
 let currentTab = 'compliance'
 
@@ -14,8 +14,12 @@ const resUI = {
 
 export function initTechUI() {
     // Add event listeners for the research panel
-    resUI.button.addEventListener('click', toggleResearchPanel)
-    resUI.close.addEventListener('click', toggleResearchPanel)
+    const toggleResearch = togglePanel('research-panel', () => {
+        updateResearchPointsDisplay()
+        renderTechTree()
+    })
+    resUI.button.addEventListener('click', toggleResearch)
+    resUI.close.addEventListener('click', toggleResearch)
 
     resUI.button.style.display = 'none'
 
@@ -34,17 +38,6 @@ export function initTechUI() {
     updateResearchPointsDisplay()
 }
 
-function toggleResearchPanel(e) {
-    if (e) e.stopPropagation()
-    const panel = document.getElementById('research-panel')
-    closeAllPanels(panel)
-
-    panel.classList.toggle('hidden')
-    if (!panel.classList.contains('hidden')) {
-        updateResearchPointsDisplay()
-        renderTechTree()
-    }
-}
 
 let firstResearchPoint = false
 function updateResearchPointsDisplay() {

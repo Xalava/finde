@@ -29,7 +29,7 @@ const fastBtn = document.getElementById('fast')
 let effects = []
 let animationFrameId
 
-// Helper function to find a node at screen coordinates
+// == UI/GAME helper functions ==
 function findNodeAt(screenX, screenY) {
     const worldPos = Camera.getWorldPosition(screenX, screenY)
     return nodes.find(node => {
@@ -38,6 +38,35 @@ function findNodeAt(screenX, screenY) {
 
         return node.active && Math.hypot(dx, dy) < 20
     })
+}
+
+function getEventCoordinates(e) {
+    if (e.type.startsWith('touch')) {
+        const touch = e.touches?.[0] || e.changedTouches?.[0]
+        return touch ? { clientX: touch.clientX, clientY: touch.clientY } : null
+    }
+    return { clientX: e.clientX, clientY: e.clientY }
+}
+
+function handlePanelClose(e) {
+    // Don't handle the event if it's a click on or inside a panel toggle button
+    if (e.target.closest('.panel-toggle, .panel-close, .option-button, .game-controls button, .command-button, [role="button"]')) {
+        return
+    }
+
+    setTimeout(() => {
+        const coords = getEventCoordinates(e)
+        if (!coords) return
+
+        if (UI.isClickInsideAnyPanel(coords)) return
+
+        const clickedNode = findNodeAt(coords.clientX, coords.clientY)
+        if (clickedNode) {
+            UI.closeAllPanels(document.getElementById('node-details-panel'))
+        } else {
+            UI.closeAllPanels()
+        }
+    }, 50)
 }
 
 // Initialization of UI elements, waiting for the DOM (and actually the game data)
@@ -100,65 +129,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     })
 
-
-    // --- Global panel closing logic ---
-    function handlePanelClose(e) {
-        // Don't handle the event if it's a click on or inside a panel toggle button
-        if (e.target.closest('.panel-toggle, .panel-close, .option-button, button, [role="button"]')) {
-            return
-        }
-
-        setTimeout(() => {
-            let clientX, clientY
-            if (e.type.startsWith('touch')) {
-                const touch = e.touches && e.touches[0] ? e.touches[0] : (e.changedTouches ? e.changedTouches[0] : null)
-                if (!touch) return
-                clientX = touch.clientX
-                clientY = touch.clientY
-            } else {
-                clientX = e.clientX
-                clientY = e.clientY
-            }
-            const panels = [
-                document.getElementById('node-details-panel'),
-                document.getElementById('policy-panel'),
-                document.getElementById('research-panel'),
-                document.getElementById('instructions')
-            ]
-            const isInsideAnyPanel = panels.some(panel => {
-                if (!panel || panel.classList.contains('hidden')) return false
-                const rect = panel.getBoundingClientRect()
-                return (
-                    clientX >= rect.left && clientX <= rect.right &&
-                    clientY >= rect.top && clientY <= rect.bottom
-                )
-            })
-
-            // If click was inside a panel, don't close anything
-            if (isInsideAnyPanel) {
-                return
-            }
-
-            // Check if clicked on a node
-            let clickedNode = null
-            if (typeof Camera !== 'undefined' && typeof Camera.getWorldPosition === 'function' && Array.isArray(nodes)) {
-                const worldPos = Camera.getWorldPosition(clientX, clientY)
-                clickedNode = nodes.find(node => {
-                    const dx = node.x - worldPos.x
-                    const dy = node.y - worldPos.y
-                    return Math.hypot(dx, dy) < 20
-                })
-            }
-
-            // If clicked on a node, only close other panels
-            if (clickedNode) {
-                UI.closeAllPanels(document.getElementById('node-details-panel'))
-            } else {
-                // If clicked outside any panel and not on a node, close all panels
-                UI.closeAllPanels()
-            }
-        }, 50) // Small delay to allow panel toggles to work
-    }
     document.addEventListener('click', handlePanelClose)
     document.addEventListener('touchstart', handlePanelClose, { passive: false })
 
@@ -169,12 +139,13 @@ document.addEventListener('DOMContentLoaded', () => {
         debugBtn.style.backgroundColor = debug ? 'rgba(255, 0, 0, 0.2)' : ''
         tech.addResearchPoints(8000)
         budget += 20000
-        nodes[5].reputation = 0
+        if (nodes[5]) nodes[5].reputation = 0
         speedControl = 0.5
         NEW_NODE_FREQUENCY = 20
     })
     countriesBtn.addEventListener('click', () => {
-        displayCountries = true
+        displayCountries = !displayCountries
+        countriesBtn.style.backgroundColor = displayCountries ? 'rgba(0, 255, 0, 0.2)' : ''
     })
 
     slowBtn.addEventListener('click', () => {
@@ -191,7 +162,6 @@ document.addEventListener('DOMContentLoaded', () => {
         spawnControl = 2
     })
 
-
     // canvas.addEventListener('mousemove', (e) => {
     //     const rect = canvas.getBoundingClientRect();
     //     lastMouseX = e.clientX - rect.left;
@@ -199,21 +169,10 @@ document.addEventListener('DOMContentLoaded', () => {
     //     Camera.moveCamera(e)
     // })
 
-    // Add event listener// Handle node approval
-    document.addEventListener('approveNode', (e) => {
-        const node = e.detail;
-        if (node) {
-            activateNode(node);
-            policy.removePendingNode(node); // Remove from pending after activation
-        }
-    });
-
     setTimeout(() => {
         document.getElementById('policy-button').style.display = 'block'
         document.getElementById('policy-button').classList.remove('hidden')
     }, debugAvailable ? 120 : 100000)
-
-
 
     // Initialize the game
     tech.initTechTree()
@@ -222,7 +181,6 @@ document.addEventListener('DOMContentLoaded', () => {
     generateUsers()
 
     // Zoom in slightly when the game starts
-
     if (isFirstPlay()) {
         speedControl = 0.5
         spawnControl = 0.5
@@ -825,8 +783,8 @@ function calculateIndicators() {
     budget += maintenance / (60 * 7) * tech.bonus.maintenance// maintenance is per week for balance   
 
     // If budget crosses a tower cost threshold, update UI
-    const thresholds = [50, 75, 100, 150] // tower costs
-    if (thresholds.some(cost =>
+    const towerCosts = Object.values(towerOptions).map(tower => tower.cost)
+    if (towerCosts.some(cost =>
         (oldBudget < cost && budget >= cost) ||
         (oldBudget >= cost && budget < cost)
     )) {
@@ -968,7 +926,7 @@ function gameLoop() {
     if (debug) {
         const newDeltaTime = now - priorNow
         priorNow = now
-        ctx.font = `18px ${uiFont}`
+        ctx.font = '18px sans-serif'
         ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
         ctx.fillText(`FPS: ${Math.round(1000 / ((deltaTime + newDeltaTime) / 2))}`, 10, 70)
         deltaTime = newDeltaTime

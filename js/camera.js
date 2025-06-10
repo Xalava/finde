@@ -32,23 +32,23 @@ export function setCameraActions() {
         e.preventDefault()
         const touch = e.touches[0]
         startDrag(touch)
-    })
+    }, { passive: false })
 
     canvas.addEventListener('touchmove', (e) => {
         e.preventDefault()
         const touch = e.touches[0]
         moveCamera(touch)
-    })
+    }, { passive: false })
 
     canvas.addEventListener('touchend', () => {
         endDrag()
-    })
+    }, { passive: true })
 
     canvas.addEventListener('wheel', (e) => {
         e.preventDefault()
         const zoomFactor = e.deltaY < 0 ? 1.1 : 0.9
         adjustZoom(e, zoomFactor)
-    })
+    }, { passive: false })
 
     // Prevent context menu on right click
     canvas.addEventListener('contextmenu', (e) => e.preventDefault())

@@ -1,10 +1,15 @@
 // Module for pure UI management. 
 import { towerOptions, actionOptions, countries } from './config.js'
 import * as tech from './tech.js'
-let indicators = null;
-let instructions = null;
-let nodeDetails = null;
-let selectedNode = null;
+
+let indicators = null
+let instructions = null
+let nodeDetails = null
+let policy = null
+let research = null
+
+let selectedNode = null
+let panels = null
 
 export function initUI() {
     indicators = {
@@ -21,8 +26,8 @@ export function initUI() {
         close: document.getElementById('close-instructions')
     }
 
-    instructions.toggle.addEventListener('click', toggleInstructions)
-    instructions.close.addEventListener('click', toggleInstructions)
+    instructions.toggle.addEventListener('click', togglePanel('instructions'))
+    instructions.close.addEventListener('click', togglePanel('instructions'))
 
     nodeDetails = {
         panel: document.getElementById('node-details-panel'),
@@ -40,26 +45,40 @@ export function initUI() {
     }
 
     nodeDetails.close.addEventListener('click', hideNodeDetails)
+
+    policy = {
+        panel: document.getElementById('policy-panel'),
+
+    }
+    research = {
+        panel: document.getElementById('research-panel'),
+    }
+    // helper array for iterations on panels
+    panels = [
+        nodeDetails.panel,
+        instructions.panel,
+        policy.panel,
+        research.panel,
+    ]
+}
+
+export function isClickInsideAnyPanel({ clientX, clientY }) {
+    return panels.some(panel => {
+        if (!panel || panel.classList.contains('hidden')) return false
+        const rect = panel.getBoundingClientRect()
+        return clientX >= rect.left && clientX <= rect.right &&
+            clientY >= rect.top && clientY <= rect.bottom
+    })
 }
 
 export function closeAllPanels(exceptPanel) {
-    const exceptId = exceptPanel && exceptPanel.id ? exceptPanel.id : null;
-    console.log("UI: Closing all panels except id:", exceptId);
-    const panels = [
-        document.getElementById('node-details-panel'),
-        document.getElementById('policy-panel'),
-        document.getElementById('research-panel'),
-        document.getElementById('instructions')
-    ];
+    const exceptId = exceptPanel?.id || null;
     panels.forEach(panel => {
         if (panel && !panel.classList.contains('hidden') && panel.id !== exceptId) {
-            console.log("UI: Closing panel:", panel.id);
             if (panel.id === 'node-details-panel') {
-                selectedNode = null;
                 hideNodeDetails();
             } else {
                 panel.classList.add('hidden');
-
             }
         }
     });
@@ -103,12 +122,19 @@ export function showToast(title, message, type = 'info') {
     }, 4000)
 }
 
-export function toggleInstructions(e) {
-    if (e) e.stopPropagation()
-    const panel = instructions.panel
-    closeAllPanels(panel)
-    panel.classList.toggle('hidden')
+export function togglePanel(panelId, updateCallback = null) {
+    return function (e) {
+        if (e) e.stopPropagation()
+        const panel = document.getElementById(panelId)
+        closeAllPanels(panel)
+        panel.classList.toggle('hidden')
+
+        if (!panel.classList.contains('hidden') && updateCallback) {
+            updateCallback()
+        }
+    }
 }
+
 
 export function showNodeDetails(node, budget, placeTower, enforceAction) {
     selectedNode = node
@@ -165,26 +191,33 @@ function updateActionOptions(node, budget, enforceAction) {
     }
 }
 
-function createButtonTemplate(icon, name, cost, maintenance, duration, description) {
-    return `
-    <span class="option-icon">${icon}</span>
-    <div class="option-info">   
-        <div class="option-name">${name} (💰${cost}${maintenance ? ", 🛠️ -" + maintenance : ''}${duration ? ", ⏱️ " + duration : ''})</div>
-        <div class="option-desc">${description}</div>
-    </div>
+function createButtonTemplate(icon, name, cost, maintenance, duration, description, disabled) {
+    const costText = `💰${cost}`
+    const maintenanceText = maintenance ? `, 🛠️ -${maintenance}` : ''
+    const durationText = duration ? `, ⏱️ ${duration}` : ''
+
+    const button = document.createElement('button')
+    button.disabled = disabled
+    button.innerHTML = `
+        <span class="option-icon">${icon}</span>
+        <div class="option-info">   
+            <div class="option-name">${name} (${costText}${maintenanceText}${durationText})</div>
+            <div class="option-desc">${description}</div>
+        </div>
     `
+    return button
 }
 
 function createActionButton(actionType, node, budget, enforceAction) {
-    let action = actionOptions[actionType];
+    const action = actionOptions[actionType]
     // compute effective enforcement cost based on tech bonus
     const effectiveCost = Math.ceil(action.cost * tech.bonus.enforcementCost)
-    const button = document.createElement('button')
-    button.className = 'option-button'; // Use same class as tower buttons
-    button.disabled = (budget < effectiveCost) || node.enforcementAction;
-    button.innerHTML = createButtonTemplate(
-        action.icon, action.name, effectiveCost, null, action.duration, action.description
-    );
+    const disabled = (budget < effectiveCost) || node.enforcementAction
+
+    const button = createButtonTemplate(
+        action.icon, action.name, effectiveCost, null, action.duration, action.description, disabled
+    )
+    button.className = 'option-button'
     button.onclick = (e) => {
         if (budget >= effectiveCost) {
             enforceAction(node, actionType)
@@ -192,6 +225,7 @@ function createActionButton(actionType, node, budget, enforceAction) {
             e.currentTarget.disabled = true
         }
     }
+
     nodeDetails.actionOptions.appendChild(button)
 }
 
@@ -225,18 +259,18 @@ function updateTowerOptions(node, budget, placeTower) {
 
 function createTowerButton(towerType, node, budget, placeTower) {
     const tower = towerOptions[towerType]
-    const button = document.createElement('button')
-    button.className = 'option-button'
-    button.disabled = budget < tower.cost
-    button.innerHTML = createButtonTemplate(
-        tower.icon, tower.name, tower.cost, tower.maintenance, null, tower.description
+    const disabled = budget < tower.cost
+
+    const button = createButtonTemplate(
+        tower.icon, tower.name, tower.cost, tower.maintenance, null, tower.description, disabled
     )
+    button.className = 'option-button'
     button.onclick = () => {
         if (budget >= tower.cost) {
             placeTower(node, towerType)
-            // showToast(tower.name + ' deployed', 'Installation complete at ' + node.name, 'success')
         }
     }
+
     nodeDetails.towerOptions.appendChild(button)
 }
 
