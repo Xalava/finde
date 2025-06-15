@@ -832,6 +832,10 @@ small {
     background: #2ecc71;
 }
 
+#restart-game {
+    background-color: var(--accent);
+}
+
 @media (max-width: 699px) {
     #toast-container {
         bottom: 10px;

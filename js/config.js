@@ -22,28 +22,28 @@ export const towerOptions = {
         errors: 1,
         techRequirement: 'basic_compliance'
     },
-    robust: {
-        name: 'Robust Filter',
-        cost: 125,
-        accuracy: 0.8,
-        maintenance: 1,
-        icon: '🔧',
-        description: 'Robust detection with 80% accuracy. Reduces false positives by 50%',
-        depend: 'medium',
-        errors: 0.5,
-        techRequirement: 'false_positive_reduction'
-    },
-    superRobust: {
-        name: 'Super Robust Filter',
-        cost: 375,
-        accuracy: 0.9,
-        maintenance: 3,
-        icon: '🔩',
-        description: 'Super robust detection with 90% accuracy. Reduces false positives by 99%',
-        depend: 'robust',
-        errors: 0.01,
-        techRequirement: 'false_positive_reduction'
-    },
+    // robust: {
+    //     name: 'Robust Filter',
+    //     cost: 125,
+    //     accuracy: 0.8,
+    //     maintenance: 1,
+    //     icon: '🔧',
+    //     description: 'Robust detection with 80% accuracy. Reduces false positives by 50%',
+    //     depend: 'medium',
+    //     errors: 0.5,
+    //     techRequirement: 'false_positive_reduction'
+    // },
+    // superRobust: {
+    //     name: 'Super Robust Filter',
+    //     cost: 375,
+    //     accuracy: 0.9,
+    //     maintenance: 3,
+    //     icon: '🔩',
+    //     description: 'Super robust detection with 90% accuracy. Reduces false positives by 99%',
+    //     depend: 'robust',
+    //     errors: 0.01,
+    //     techRequirement: 'false_positive_reduction'
+    // },
     advanced: {
         name: 'Advanced Filter',
         cost: 350,
@@ -59,7 +59,7 @@ export const towerOptions = {
         name: 'AI System',
         cost: 299,
         accuracy: 0.6,
-        maintenance: 1,
+        maintenance: 2,
         icon: '🧠',
         description: '60% accuracy detection that learns and improves by 0.5% per day, up to 80%. Costs maintenance',
         depend: 'medium',
@@ -70,7 +70,7 @@ export const towerOptions = {
         name: 'Supra AI System',
         cost: 1475,
         accuracy: 0.8,
-        maintenance: 5,
+        maintenance: 6,
         icon: '🤖',
         description: 'High-end system with 80% accuracy that improves by 1% per day, up to 98%!.',
         depend: 'ai',
@@ -93,7 +93,7 @@ export const towerOptions = {
 export const actionOptions = {
     audit: {
         name: 'Audit',
-        cost: 120, // will be 90
+        cost: 160,
         description: 'Request an audit. It will reduce corruption when completed',
         icon: '🕵️‍♂️',
         duration: 10,
@@ -113,7 +113,7 @@ export const actionOptions = {
     },
     international_task_force: {
         name: 'International Task Force',
-        cost: 1600,
+        cost: 1900,
         description: 'Removes corruption and launches a raid in neghbouring institutions',
         icon: '🌍',
         duration: 25,
@@ -124,7 +124,7 @@ export const actionOptions = {
     },
 }
 
-export const CORRUPTION_THRESHOLD = 4;
+export const HIGH_CORRUPTION_THRESHOLD = 4;
 
 export const txSizeOptions = {
     small: { name: 'small', amount: 5 },
@@ -241,7 +241,7 @@ export const techTree = {
             name: 'Robust Technologies',
             cost: 350,
             prerequisites: ['advanced_compliance'],
-            description: 'Reduces false positives by 10% and unlock robust filters.',
+            description: 'Reduces false positives by 20%.',
             effects: {
                 unlockTowers: ['robust', 'superRobust'],
                 falsePositive: 0.8,

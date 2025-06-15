@@ -1,3 +1,4 @@
+// Returns yes once the tutorial is completed
 export const isFirstPlay = () => !localStorage.getItem('hasPlayedBefore')
 
 const tutorialContainer = document.getElementById('tutorial')
@@ -85,11 +86,15 @@ const TUTORIAL_STEPS = [
     },
     {
         title: '🔍 Basic Filter',
-        content: '<p>This filter catches 50% of illegal transactions. Each catch grants research points for upgrades.</p>',
+        content: '<p>This filter catches 50% of illegal transactions. Each catch provides intelligence that can be spend as research.</p>',
+    },
+    {
+        title: '🧪 Research',
+        content: '<p>Research allows you to improve compliance filters, enforcement actions, and the network.</p>',
     },
     {
         title: '🎉 et voila!',
-        content: `<p>The rest is your history. You will soon discover policy and other features. Good luck!</p>`
+        content: `<p>The rest is your history. You will win if corruption stays below 1% or if the economy booms. Good luck!</p>`
     }
 ];
 

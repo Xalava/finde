@@ -25,6 +25,7 @@ const countriesBtn = document.getElementById('toggle-countries')
 const slowBtn = document.getElementById('slow')
 const normalBtn = document.getElementById('normal')
 const fastBtn = document.getElementById('fast')
+const restartBtn = document.getElementById('restart-game')
 
 let effects = []
 let animationFrameId
@@ -162,6 +163,10 @@ document.addEventListener('DOMContentLoaded', () => {
         spawnControl = 2
     })
 
+    restartBtn.addEventListener('click', () => {
+        window.location.reload()
+    })
+
     // canvas.addEventListener('mousemove', (e) => {
     //     const rect = canvas.getBoundingClientRect();
     //     lastMouseX = e.clientX - rect.left;
@@ -217,6 +222,9 @@ let holiday = false
 let dropProbability = 0.00001
 let speedControl = 1
 let spawnControl = 1
+let almostWon = 0
+let spread = 5
+let lastWarningTime = 0
 
 // Game constants
 const BASE_SPAWN_RATE = 0.002
@@ -245,9 +253,9 @@ const nodes = [
     { id: 7, x: 350, y: 550, corruption: 3, type: 'bank', name: 'Safe Savings', active: true },
     { id: 8, x: 1050, y: 250, corruption: 0, type: 'bank', name: 'Prime Bank' },
     { id: 9, x: 1130, y: 400, corruption: 0, type: 'bank', name: 'Capital Trust' },
-    { id: 10, x: 330, y: 350, corruption: 0, type: 'bank', name: 'Union Bank', active: true },
+    { id: 10, x: 330, y: 350, corruption: 1, type: 'bank', name: 'Union Bank', active: true },
     { id: 11, x: 540, y: 250, corruption: 0, type: 'bank', name: 'Metro Bank', active: true },
-    { id: 12, x: 1100, y: 750, corruption: 0, type: 'bank', name: 'Pioneer Bank' },
+    { id: 12, x: 1100, y: 750, corruption: 5, type: 'bank', name: 'Pioneer Bank' },
     { id: 13, x: 900, y: 300, corruption: 0, type: 'bank', name: 'Elite Bank' },
     { id: 14, x: 800, y: 350, corruption: 0, type: 'bank', name: 'Summit Bank' },
     { id: 15, x: 900, y: 900, corruption: 0, type: 'bank', name: 'Horizon Bank' },
@@ -258,16 +266,16 @@ const nodes = [
     { id: 20, x: 300, y: 280, corruption: 0, type: 'bank', name: 'Prestige Bank' },
 
     // New  Fintech nodes
-    { id: 21, x: 710, y: 510, corruption: 0, type: 'fintech', name: 'Rocket Pay' },
+    { id: 21, x: 710, y: 510, corruption: 1, type: 'fintech', name: 'Rocket Pay' },
     { id: 22, x: 810, y: 460, corruption: 0, type: 'fintech', name: 'Astro Finance' },
     { id: 23, x: 1190, y: 400, corruption: 0, type: 'fintech', name: 'Lunar Pay' },
-    { id: 24, x: 700, y: 1000, corruption: 0, type: 'fintech', name: 'Orbit Funds' },
-    { id: 25, x: 1050, y: 550, corruption: 0, type: 'fintech', name: 'Stellar Bank' },
+    { id: 24, x: 700, y: 1000, corruption: 1, type: 'fintech', name: 'Orbit Funds' },
+    { id: 25, x: 1050, y: 550, corruption: 3, type: 'fintech', name: 'Stellar Bank' },
 
     // New  Crypto Exchange nodes
-    { id: 26, x: 300, y: 750, corruption: 0, type: 'cryptoExchange', name: 'CryptoX' },
+    { id: 26, x: 300, y: 750, corruption: 2, type: 'cryptoExchange', name: 'CryptoX' },
     { id: 27, x: 1030, y: 850, corruption: 0, type: 'cryptoExchange', name: 'BitMarket' },
-    { id: 28, x: 980, y: 1050, corruption: 0, type: 'cryptoExchange', name: 'CoinTrade' },
+    { id: 28, x: 980, y: 1050, corruption: 6, type: 'cryptoExchange', name: 'CoinTrade' },
 
 ]
 
@@ -813,10 +821,9 @@ function removeExpiredEnforcementActions(now) {
 }
 
 function calculateCorruptionSpread() {
-    // Corruption spread (on all nodes, giving more margin at the begining of the game)
-    const totalActors = nodes.length
-    const totalCorruption = nodes.reduce((sum, n) => sum + n.corruption, 0)
-    return Math.floor((totalCorruption / (CORRUPTION_THRESHOLD * totalActors)) * 100)
+    let activeNodes = nodes.filter(n => n.active)
+    const totalCorruption = activeNodes.reduce((sum, n) => sum + n.corruption, 0)
+    return Math.floor((totalCorruption / (HIGH_CORRUPTION_THRESHOLD * activeNodes.length + 2)) * 100)
 }
 
 function increaseAIaccuracy() {
@@ -846,6 +853,64 @@ let deltaTime = 0
 let dailyDetectedTransactions = 0
 
 
+function checkEndGame() {
+
+    const now = Date.now();
+
+    // Warning states
+    if (now - lastWarningTime > 30000) {
+        if (spread >= 80 && spread < 100) {
+            UI.showToast('⚠️ Critical Warning', 'Corruption is dangerously high!', 'error');
+            lastWarningTime = now;
+        } else if (budget < -50 && budget >= -100) {
+            UI.showToast('💰 Financial Warning', 'Budget is critically low!', 'error');
+            lastWarningTime = now;
+        } else if (policy.sentiment <= 20 && policy.sentiment > 0) {
+            UI.showToast('😡 Sentiment Warning', 'Public sentiment is very low!', 'error');
+            lastWarningTime = now;
+        }
+    }
+
+    // Loosing cases
+    if (spread >= 100) {
+        graphics.drawEndGame('Corruption has reached critical levels!')
+        restartBtn.classList.remove('hidden')
+        return true
+    }
+
+    if (budget < -100) {
+        graphics.drawEndGame('The country is bankrupt!')
+        restartBtn.classList.remove('hidden')
+        return true
+    }
+
+    if (policy.sentiment <= 0) {
+        graphics.drawEndGame('The ecosystem disapproves of your policies!')
+        restartBtn.classList.remove('hidden')
+        return true
+    }
+
+    // Victory condition Low corruption maintained
+    if (spread < 2) {
+        if (almostWon > 7) {
+            graphics.drawEndGame('You maintained corruption below 2%!', true)
+            return true
+        } else {
+            almostWon++
+            if (almostWon === 5) {
+                UI.showToast('🎯 Victory Approaching', 'Maintain low corruption for 3 more days to win!', 'success');
+            }
+        }
+    } else {
+        almostWon = 0
+    }
+
+    // Victory condition Economic prosperity
+    if (gdp > 1000000) {
+        graphics.drawEndGame('You built a thriving financial ecosystem!', true)
+        return true
+    }
+}
 
 function gameLoop() {
 
@@ -905,6 +970,10 @@ function gameLoop() {
         increaseAIaccuracy()
 
         removeExpiredEnforcementActions(now)
+        spread = calculateCorruptionSpread()
+        if (!isFirstPlay()) {
+            if (checkEndGame()) return
+        }
     }
     if (transactions.filter(t => t.active).length === 0) {
         // ensure there is always a transaction going
@@ -965,25 +1034,8 @@ function gameLoop() {
         // if (hoveredUser) drawUserTooltip(hoveredUser)
     }
 
-    const spread = calculateCorruptionSpread()
     if (!isFirstPlay()) {
         graphics.drawCorruptionMeter(spread)
-    }
-
-    // Game end conditions
-    if (spread >= 100) {
-        graphics.drawEndGame('Corruption has reached critical levels!')
-        return
-    }
-
-    if (budget < -100) {
-        graphics.drawEndGame('The country is bankrupt!')
-        return
-    }
-
-    if (policy.sentiment <= 0) {
-        graphics.drawEndGame('The ecoystem disaproves you!')
-        return
     }
 
     animationFrameId = requestAnimationFrame(gameLoop)

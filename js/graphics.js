@@ -138,11 +138,11 @@ export function drawNode(node, debug = false) {
     let color = config.nodeTypes[node.type].color
 
     // Add corruption glow
-    if (node.corruption > config.CORRUPTION_THRESHOLD) {
+    if (node.corruption > config.HIGH_CORRUPTION_THRESHOLD) {
         ctx.shadowColor = 'red'
         ctx.shadowBlur = 15
         color = '#ffdddd'
-    } else if (node.corruption > 1) {
+    } else if (node.corruption > Math.floor(config.HIGH_CORRUPTION_THRESHOLD / 2)) { // Should be 2 currently
         ctx.shadowColor = 'orange'
         ctx.shadowBlur = 10
         color = '#fff0dd'
@@ -426,13 +426,18 @@ export function drawTooltip(hoverNode) {
     })
 }
 
-export function drawEndGame(condition) {
+export function drawEndGame(condition, win = false) {
     ctx.fillStyle = 'rgba(0, 0, 0, 0.7)'
     ctx.fillRect(0, 0, canvas.width, canvas.height)
     ctx.fillStyle = 'red'
     ctx.font = `48px ${uiFont}`
     ctx.textAlign = 'center'
-    ctx.fillText('You have lost', canvas.width / 2, canvas.height / 2 - 20)
+    if (!win) {
+        ctx.fillText('You have lost', canvas.width / 2, canvas.height / 2 - 20)
+
+    } else {
+        ctx.fillText('Congratulations! 🥳', canvas.width / 2, canvas.height / 2 - 20)
+    }
     ctx.font = `24px ${uiFont}`
     ctx.fillStyle = 'white'
     ctx.fillText(condition, canvas.width / 2, canvas.height / 2 + 20)
