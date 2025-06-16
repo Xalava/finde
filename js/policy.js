@@ -13,6 +13,7 @@ const SENTIMENT_MAX = 100
 export let sentiment = 100                          // starts full
 
 // +3 lenient, +1 balanced, –1 stringent, –1 if approvals ON
+// TODO Delta could be udated via change sentiment
 function sentimentDelta() {
     let d
     switch (state.current) {
@@ -35,7 +36,7 @@ function sentimentDelta() {
     return d
 }
 
-function changeSentiment(delta) {
+export function changeSentiment(delta) {
     sentiment = Math.max(0, Math.min(SENTIMENT_MAX, sentiment + delta))
     displayPolicyStatus()
     displayPolicyPoints()
@@ -48,7 +49,8 @@ export function tickSentiment() {
 // Policy state management
 export const state = {
     current: 'balanced',
-    requireValidation: false
+    requireValidation: false,
+    minCompliance: 0
 }
 
 // Pending nodes management
@@ -180,10 +182,18 @@ taxSlider.addEventListener('input', (event) => {
     taxValueDisplay.textContent = event.target.value
     setTaxRate(event.target.value / 100)
     changeSentiment(-0.1)
-
-
-
 });
+
+// Compliance policy handlers
+export const complianceLevels = ['None', 'Basic', 'Medium', 'High']
+
+document.getElementById('compliance-select')?.addEventListener('change', e => {
+    const level = parseInt(e.target.value)
+    state.minCompliance = level
+    const levelName = complianceLevels[level]
+    showToast('Policy updated', `Minimum compliance set to ${levelName}`, 'info')
+    changeSentiment(level > 0 ? -1 : 0)
+})
 
 
 function displaySentimentBar() {

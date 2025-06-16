@@ -837,6 +837,59 @@ function increaseAIaccuracy() {
         })
 }
 
+function getTowerLevel(tower) {
+    if (!tower) return 0
+    if (tower === 'basic') return 1
+    if (tower === 'medium') return 2
+    return 3
+}
+
+function checkNodesCompliance() {
+    if (policy.state.minCompliance === 0) {
+        return
+    }
+
+    // We check 10% of the time 
+    if (Math.random() > 0.1) {
+        return
+    }
+
+    const nonCompliantNodes = nodes.filter(node =>
+        node.active && getTowerLevel(node.tower) < policy.state.minCompliance
+    )
+
+    if (nonCompliantNodes.length > 0) {
+        const node = selectRandomly(nonCompliantNodes)
+        const targetTower = ['basic', 'medium'][policy.state.minCompliance - 1]
+
+        let cost = config.towerOptions[targetTower].cost
+        if (targetTower === 'medium' && !node.tower) {
+            cost += config.towerOptions.basic.cost
+        }
+
+        if (budget >= cost) {
+            node.tower = targetTower
+            node.accuracy = config.towerOptions[targetTower].accuracy
+            budget -= cost
+
+            UI.showToast('🏛️ Automated Compliance',
+                `${node.name} required to install ${config.towerOptions[targetTower].name} (-${cost})`,
+                'warning')
+
+            // Update UI if this node is selected
+            if (UI.getSelectedNode() && UI.getSelectedNode().id === node.id) {
+                UI.showNodeDetails(node, budget, placeTower, enforceAction)
+            }
+        } else {
+            UI.showToast(`🏛️ Automated Compliance Failure`,
+                `Insufficient funds for compliance at ${node.name}. Reputation and sentiment penalty`,
+                `error`)
+            node.reputation -= 10
+            policy.changeSentiment(-10)
+        }
+    }
+}
+
 function activateNode(node) {
     node.active = true
     console.log(`🌟 New node activated: ${node.name}`);
@@ -968,6 +1021,7 @@ function gameLoop() {
 
 
         increaseAIaccuracy()
+        checkNodesCompliance()
 
         removeExpiredEnforcementActions(now)
         spread = calculateCorruptionSpread()

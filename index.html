@@ -208,6 +208,18 @@
                     </div>
                 </section>
                 <section class="panel-section"
+                    data-tooltip="Require minimum filter compliance for banks. Non-compliant banks trigger automated tower placement.">
+                    <h3>🏦 Minmal Compliance</h3>
+                    <span class="policy-hint">Banks will be required to install compliant
+                        filters automatically.</span>
+                    <select id="compliance-select" class="compliance-select">
+                        <option value="0">None - No requirements</option>
+                        <option value="1">Basic filter required</option>
+                        <option value="2">Medium filter required</option>
+                        <!-- <option value="3">High level filter required</option> -->
+                    </select>
+                </section>
+                <section class="panel-section"
                     data-tooltip="Manual approval for new nodes; more control, slower expansion">
                     <label class="policy-checkbox">
                         <input type="checkbox" id="approvals-policy">
