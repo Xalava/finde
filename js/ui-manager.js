@@ -289,3 +289,31 @@ export function updateCurrentNodeDetails(budget, placeTower, enforceAction) {
         showNodeDetails(selectedNode, budget, placeTower, enforceAction)
     }
 }
+
+// Keyboard shortcuts for towers (numbers) and actions (letters)
+window.addEventListener('keydown', (e) => {
+    if (!getSelectedNode()) return
+    
+    const key = e.key.toLowerCase()
+    
+    // Numbers 1-9 for towers (in UI order)
+    if (/^[1-9]$/.test(key)) {
+        const towerButtons = document.querySelectorAll('#tower-options .option-button')
+        const index = parseInt(key) - 1
+        if (towerButtons[index] && !towerButtons[index].disabled) {
+            towerButtons[index].click()
+        }
+    }
+    
+    // Letters for actions (a, r, i)
+    const actionMap = { 'a': 'audit', 'r': 'raid', 'i': 'international_task_force' }
+    if (actionMap[key]) {
+        const actionButtons = document.querySelectorAll('#action-options .option-button')
+        const actionButton = Array.from(actionButtons).find(btn => 
+            btn.textContent.toLowerCase().includes(actionMap[key].replace('_', ' ').split(' ')[0])
+        )
+        if (actionButton && !actionButton.disabled) {
+            actionButton.click()
+        }
+    }
+})

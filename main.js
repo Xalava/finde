@@ -214,7 +214,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // == Game data ==
 // Economics & Game play
-let budget = 100
+let budget = 120
 let maintenance = 0
 let gdp = 0
 // let globalReputation = 100 // Todo
@@ -787,17 +787,8 @@ function calculateIndicators() {
     }
     gdp = gdpLog.reduce((sum, tx) => sum + tx.amount, 0)
 
-    const oldBudget = budget
     budget += maintenance / (60 * 7) * tech.bonus.maintenance// maintenance is per week for balance   
 
-    // If budget crosses a tower cost threshold, update UI
-    const towerCosts = Object.values(towerOptions).map(tower => tower.cost)
-    if (towerCosts.some(cost =>
-        (oldBudget < cost && budget >= cost) ||
-        (oldBudget >= cost && budget < cost)
-    )) {
-        UI.updateCurrentNodeDetails(budget, placeTower, enforceAction)
-    }
 }
 
 function removeExpiredEnforcementActions(now) {
@@ -873,7 +864,7 @@ function checkNodesCompliance() {
             budget -= cost
 
             UI.showToast('🏛️ Automated Compliance',
-                `${node.name} required to install ${config.towerOptions[targetTower].name} (-${cost})`,
+                `${node.name} installed ${config.towerOptions[targetTower].name} (-${cost})`,
                 'warning')
 
             // Update UI if this node is selected
@@ -882,7 +873,7 @@ function checkNodesCompliance() {
             }
         } else {
             UI.showToast(`🏛️ Automated Compliance Failure`,
-                `Insufficient funds for compliance at ${node.name}. Reputation and sentiment penalty`,
+                `Insufficient funds for compliance at ${node.name}. Reputation and sentiment penalty.`,
                 `error`)
             node.reputation -= 10
             policy.changeSentiment(-10)
@@ -1022,6 +1013,9 @@ function gameLoop() {
 
         increaseAIaccuracy()
         checkNodesCompliance()
+        if (UI.getSelectedNode()) {
+            UI.updateCurrentNodeDetails(budget, placeTower, enforceAction)
+        }
 
         removeExpiredEnforcementActions(now)
         spread = calculateCorruptionSpread()

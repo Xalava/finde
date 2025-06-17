@@ -50,7 +50,7 @@ export const towerOptions = {
         accuracy: 0.85,
         maintenance: 1,
         icon: '🔭',
-        description: 'Advanced detection with 85% accuracy. Not compatible with AI',
+        description: 'Advanced detection with 85% accuracy. Not compatible with AI.',
         depend: 'medium',
         errors: 1,
         techRequirement: 'advanced_compliance'
@@ -61,7 +61,7 @@ export const towerOptions = {
         accuracy: 0.6,
         maintenance: 2,
         icon: '🧠',
-        description: '60% accuracy detection that learns and improves by 0.5% per day, up to 80%. Costs maintenance',
+        description: '60% accuracy detection that learns and improves by 0.5% per day, up to 80%. maintenance cost is 2.',
         depend: 'medium',
         errors: 1,
         techRequirement: 'ai_research'
@@ -72,7 +72,7 @@ export const towerOptions = {
         accuracy: 0.8,
         maintenance: 6,
         icon: '🤖',
-        description: 'High-end system with 80% accuracy that improves by 1% per day, up to 98%!.',
+        description: 'High-end system with 80% accuracy that improves by 1% per day, up to 98%!',
         depend: 'ai',
         errors: 1,
         techRequirement: 'behavioral_analysis'
@@ -83,7 +83,7 @@ export const towerOptions = {
         accuracy: 0.95,
         maintenance: 8,
         icon: '⚛️',
-        description: 'State-of-the-art quantum system with 95% accuracy and low errors ',
+        description: 'State-of-the-art quantum system with 95% accuracy and low errors.',
         depend: 'advanced',
         errors: 0.3,
         techRequirement: 'quantum_computing'
@@ -94,7 +94,7 @@ export const actionOptions = {
     audit: {
         name: 'Audit',
         cost: 160,
-        description: 'Request an audit. It will reduce corruption when completed',
+        description: 'Request an audit. It will reduce corruption in an institution when completed.',
         icon: '🕵️‍♂️',
         duration: 10,
         reputationEffect: -5,
@@ -104,7 +104,7 @@ export const actionOptions = {
     raid: {
         name: 'Raid',
         cost: 600, //450 after discount
-        description: 'The raid will damage reputation, but significantly reduce corruption',
+        description: 'Raids damage reputation but significantly reduce corruption.',
         icon: '🚨',
         duration: 20,
         reputationEffect: -20,
@@ -114,7 +114,7 @@ export const actionOptions = {
     international_task_force: {
         name: 'International Task Force',
         cost: 1900,
-        description: 'Removes corruption and launches a raid in neghbouring institutions',
+        description: 'Removes corruption and launches a raid in neghbouring institutions.',
         icon: '🌍',
         duration: 25,
         reputationEffect: -10,

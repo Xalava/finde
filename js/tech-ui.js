@@ -1,5 +1,5 @@
 // tech-ui.js - Simplified tech tree with fixed grid layout
-import { getResearchPoints, getResearchProgress, canResearch, researchTechnology } from './tech.js'
+import { getResearchPoints, addResearchPoints, getResearchProgress, canResearch, researchTechnology } from './tech.js'
 import { techTree } from './config.js'
 import { showToast, togglePanel } from './ui-manager.js'
 
@@ -44,7 +44,7 @@ function updateResearchPointsDisplay() {
     const pts = getResearchPoints()
     resUI.points.textContent = pts
     if (pts >= 1 && !firstResearchPoint) {
-
+        addResearchPoints(10)// one time bonus for the early game
         setTimeout(() => {
             resUI.button.style.display = ''
             resUI.button.classList.remove('hidden')
