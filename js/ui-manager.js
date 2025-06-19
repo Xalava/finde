@@ -7,6 +7,7 @@ let instructions = null
 let nodeDetails = null
 let policy = null
 let research = null
+let userDetails = null
 
 let selectedNode = null
 let panels = null
@@ -46,6 +47,18 @@ export function initUI() {
 
     nodeDetails.close.addEventListener('click', hideNodeDetails)
 
+    // User details panel
+    userDetails = {
+        panel: document.getElementById('user-details-panel'),
+        name: document.getElementById('user-name'),
+        country: document.getElementById('user-country'),
+        type: document.getElementById('user-type'),
+        userTransactions: document.getElementById('user-transactions'),
+        close: document.getElementById('close-user-panel')
+    }
+
+    userDetails.close.addEventListener('click', hideUserDetails)
+
     policy = {
         panel: document.getElementById('policy-panel'),
 
@@ -59,6 +72,7 @@ export function initUI() {
         instructions.panel,
         policy.panel,
         research.panel,
+        userDetails.panel
     ]
 }
 
@@ -280,6 +294,53 @@ export function hideNodeDetails() {
     return selectedNode
 }
 
+export function showUserDetails(user) {
+
+    userDetails.name.textContent = user.name || 'John Doe'
+    userDetails.country.textContent = countries[user.country].flag
+    userDetails.type.textContent = user.type
+
+    const userTransactions = window.transactions.filter(tx =>
+        tx.active && tx.path && tx.path[0] === user.id || tx.path[tx.path.length - 1] === user.id
+    )
+
+    // Update sent transactions list
+    if (userTransactions.length > 0) {
+        userDetails.userTransactions.innerHTML = userTransactions.map(tx => {
+            const statusColor = tx.legality === 'illegal' ? '#ff3e3e' : tx.legality === 'questionable' ? '#ffaa00' : '#00cc66'
+            let counterparty, arrow
+            if (tx.path[0] === user.id) {
+                //sending transaction
+                counterparty = window.users?.find(u => u.id === tx.path[tx.path.length - 1])
+                arrow = '→'
+            } else {
+                counterparty = window.users?.find(u => u.id === tx.path[0])
+                arrow = '←'
+            }
+            return `
+            <div class="transaction-item">
+                <div class="transaction-amount"  style="color: ${statusColor}">$${tx.amount}</div>
+                <div class="transaction-counterparty">${arrow}  ${counterparty?.name} </div>
+            </div>
+            `
+            //${countries[counterparty?.country].flag}
+            // <div class="transaction-progress">${tx.index + 1}/${tx.path.length}</div>
+
+        }).join('')
+
+    } else {
+        userDetails.userTransactions.innerHTML = '<div class="no-transactions">No pending transaction</div>'
+    }
+
+    userDetails.panel.classList.remove('hidden')
+}
+
+export function hideUserDetails() {
+    userDetails.panel.classList.add('hidden')
+}
+
+
+
 export function getSelectedNode() {
     return selectedNode
 }
@@ -293,9 +354,9 @@ export function updateCurrentNodeDetails(budget, placeTower, enforceAction) {
 // Keyboard shortcuts for towers (numbers) and actions (letters)
 window.addEventListener('keydown', (e) => {
     if (!getSelectedNode()) return
-    
+
     const key = e.key.toLowerCase()
-    
+
     // Numbers 1-9 for towers (in UI order)
     if (/^[1-9]$/.test(key)) {
         const towerButtons = document.querySelectorAll('#tower-options .option-button')
@@ -304,12 +365,12 @@ window.addEventListener('keydown', (e) => {
             towerButtons[index].click()
         }
     }
-    
+
     // Letters for actions (a, r, i)
     const actionMap = { 'a': 'audit', 'r': 'raid', 'i': 'international_task_force' }
     if (actionMap[key]) {
         const actionButtons = document.querySelectorAll('#action-options .option-button')
-        const actionButton = Array.from(actionButtons).find(btn => 
+        const actionButton = Array.from(actionButtons).find(btn =>
             btn.textContent.toLowerCase().includes(actionMap[key].replace('_', ' ').split(' ')[0])
         )
         if (actionButton && !actionButton.disabled) {

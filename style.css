@@ -175,6 +175,83 @@ canvas {
     pointer-events: none;
 }
 
+#user-details-panel {
+    top: 50px;
+    left: 20px;
+    width: 280px;
+    max-height: 80vh;
+    overflow-y: auto;
+    transform: translateX(0);
+    pointer-events: all;
+    z-index: 500;
+}
+
+#user-details-panel.hidden {
+    opacity: 0;
+    transform: translateX(-20px);
+    pointer-events: none;
+}
+
+#user-details {
+    font-size: 12px;
+
+    text-align: center;
+
+}
+
+.transaction-section {
+    margin-top: 15px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    padding-top: 10px;
+}
+
+.transaction-section h3 {
+    margin: 0 0 8px 0;
+    font-size: 14px;
+    color: #ccc;
+    font-weight: 500;
+}
+
+.transaction-list {
+    max-height: 150px;
+    overflow-y: auto;
+}
+
+.transaction-item {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-gap: 4px;
+    padding: 6px 8px;
+    margin-bottom: 4px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 4px;
+    font-size: 12px;
+}
+
+.transaction-counterparty {
+    color: #ccc;
+    font-size: 11px;
+}
+
+.transaction-status {
+    font-weight: 500;
+    text-transform: capitalize;
+}
+
+.transaction-progress {
+    color: #aaa;
+    font-size: 11px;
+    text-align: right;
+}
+
+.no-transactions {
+    color: #888;
+    font-style: italic;
+    padding: 10px;
+    text-align: center;
+    font-size: 12px;
+}
+
 .panel-header {
     display: flex;
     justify-content: space-between;

@@ -49,6 +49,39 @@ function getEventCoordinates(e) {
     return { clientX: e.clientX, clientY: e.clientY }
 }
 
+function findUserAt(screenX, screenY) {
+    const worldPos = Camera.getWorldPosition(screenX, screenY)
+    const activeUsers = users.filter(u => u.active)
+    console.log(`Checking ${activeUsers.length} active users at world position ${worldPos.x.toFixed(1)}, ${worldPos.y.toFixed(1)}`)
+
+    if (activeUsers.length === 0) {
+        console.log('No active users found')
+        return null
+    }
+
+    const found = activeUsers.find(user => {
+        const dx = user.x - worldPos.x
+        const dy = user.y - worldPos.y
+        const distance = Math.hypot(dx, dy)
+        if (distance < 20) { // Increased click area for debugging
+            console.log(`User ${user.id} at ${user.x.toFixed(1)}, ${user.y.toFixed(1)} - distance: ${distance.toFixed(1)} - MATCH`)
+        }
+        return distance < 20
+    })
+
+    if (!found) {
+        console.log('Closest users:')
+        activeUsers.slice(0, 3).forEach(user => {
+            const dx = user.x - worldPos.x
+            const dy = user.y - worldPos.y
+            const distance = Math.hypot(dx, dy)
+            console.log(`  User ${user.id} at ${user.x.toFixed(1)}, ${user.y.toFixed(1)} - distance: ${distance.toFixed(1)}`)
+        })
+    }
+
+    return found
+}
+
 function handlePanelClose(e) {
     // Don't handle the event if it's a click on or inside a panel toggle button
     if (e.target.closest('.panel-toggle, .panel-close, .option-button, .game-controls button, .command-button, [role="button"]')) {
@@ -74,6 +107,11 @@ function handlePanelClose(e) {
 document.addEventListener('DOMContentLoaded', () => {
     // Initialize UI panels 
     UI.initUI()
+
+    // Make arrays available globally for UI manager
+    window.transactions = transactions
+    window.users = users
+    window.nodes = nodes
     // Set initial canvas size and enable touch/mouse camera actions
     Camera.resizeCanvas(ctx)
     Camera.setCameraActions()
@@ -90,25 +128,40 @@ document.addEventListener('DOMContentLoaded', () => {
     // Track drag state
     let isDragging = false
 
-    // Handle node interactions
+    // Unified click handler for canvas
     canvas.addEventListener('mousedown', (e) => {
         isDragging = false
         const node = findNodeAt(e.clientX, e.clientY)
+        const user = findUserAt(e.clientX, e.clientY)
 
-        if (node) {
-            UI.showNodeDetails(node, budget, placeTower, enforceAction)
+        if (node || user) {
+            // Don't start dragging when clicking on interactive elements
+            return
         } else {
             Camera.startDrag(e)
             isDragging = true
         }
     })
 
-    // Handle node deselection on click (when not dragging)
     canvas.addEventListener('click', (e) => {
-        if (!isDragging) {
-            const node = findNodeAt(e.clientX, e.clientY)
-            if (!node) UI.hideNodeDetails()
+        if (isDragging) return
+
+        e.stopPropagation() // Prevent document click handler from interfering
+
+        const user = findUserAt(e.clientX, e.clientY)
+        if (user) {
+            UI.showUserDetails(user)
+            return
         }
+
+        const node = findNodeAt(e.clientX, e.clientY)
+        if (node) {
+            UI.showNodeDetails(node, budget, placeTower, enforceAction)
+            return
+        }
+
+        // Empty space clicked - hide all panels
+        UI.closeAllPanels()
     })
 
     // Handle node approval
@@ -358,6 +411,41 @@ const edges = [
     // crypto exchange connections
     [16, 26], [12, 27], [15, 28],
 ]
+
+function nameUser(type, country) {
+    // todo name based on country too
+    switch (type) {
+        case 'person':
+            // Select a random worldwide common name in alphabet order
+            const names = [
+                "Alice", "Bob", "Carlos", "David", "Elena", "Fatima", "Giulia", "Hiroshi", "Ines", "Jamal",
+                "Khalid", "Linh", "Maria", "Nia", "Omar", "Priya", "Qiang", "Ravi", "Sofia", "Tariq",
+                "Umar", "Valeria", "Wei", "Ximena", "Yusuf", "Zara"
+            ]
+            const vowels = ["a", "e", "i", "o", "u"]
+            const conso = country[0]
+            let name = conso.toUpperCase()
+            for (let i = 0; i < Math.ceil(Math.random() * 2); i++) {
+                name += selectRandomly(vowels) + conso.toLowerCase()
+            }
+            name += selectRandomly(vowels)
+
+            return selectRandomly(names) + ' ' + name
+
+            break;
+        case 'business':
+            const businessType = ["Cafe", "Salon", "Logistics", "Restaurant", "Hotel", "Shop", "Warehouse", "Factory", "Corp"]
+            const businessNames = ["Pink", "Happy", "Twisted", "Arrow", "Star", "Lion", "Panda", "Pirate", "Duck", "Bland", "Ironic", "Hiha"]
+            return selectRandomly(businessNames) + ' ' + selectRandomly(businessType)
+            break;
+        case 'government':
+            const governmentType = ["Ministry", "Department", "Agency", "Commission", "Board", "Council", "Office", "Agency", "Commission", "Board", "Council", "Office"]
+            const governmentDomains = ["Education", "Health", "Defense", "Justice", "Interior", "Labor", "Transport", "Environment", "Trade", "Tourism", "Science"]
+            return selectRandomly(governmentDomains) + ' ' + selectRandomly(governmentType)
+            break;
+    }
+}
+
 function generateUsers(target = false) {
     const activeNodes = nodes.filter(n => n.type !== 'processor' && n.active)
     const targetNodes = target ? [target] : activeNodes
@@ -382,6 +470,7 @@ function generateUsers(target = false) {
                 if (!overlapping) {
                     user = {
                         id: `${users.length}`,
+                        name: nameUser(type, country),
                         x,
                         y,
                         type: type,
@@ -1057,6 +1146,7 @@ function gameLoop() {
     nodes.filter(n => n.active).forEach(node => graphics.drawNode(node, debug));
     users.filter(n => n.active).forEach(user => graphics.drawUser(user, debug))
     transactions = transactions.filter(t => t.active);
+    window.transactions = transactions; // Keep global reference updated
     transactions.forEach(tx => {
         moveTransaction(tx)
         graphics.drawTransaction(tx)
