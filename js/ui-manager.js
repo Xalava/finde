@@ -1,6 +1,7 @@
 // Module for pure UI management. 
-import { towerOptions, actionOptions, countries } from './config.js'
+import { towerOptions, actionOptions, countries, legalityOptions, legalityColorMap } from './config.js'
 import * as tech from './tech.js'
+import { uiFont } from './graphics.js'
 
 let indicators = null
 let instructions = null
@@ -8,6 +9,7 @@ let nodeDetails = null
 let policy = null
 let research = null
 let userDetails = null
+let gdpPanel = null
 
 let selectedNode = null
 let panels = null
@@ -66,13 +68,45 @@ export function initUI() {
     research = {
         panel: document.getElementById('research-panel'),
     }
+
+    gdpPanel = {
+        panel: document.getElementById('gdp-panel'),
+        close: document.getElementById('close-gdp'),
+        chart: document.getElementById('gdp-chart'),
+        chartContainer: document.getElementById('gdp-chart-container'),
+        volumeBtn: document.getElementById('volume-btn'),
+        countBtn: document.getElementById('count-btn'),
+        currentView: 'volume'
+    }
+
+
+    if (gdpPanel.close) {
+        gdpPanel.close.addEventListener('click', hideGDPPanel)
+    }
+
+    if (gdpPanel.volumeBtn && gdpPanel.countBtn) {
+        gdpPanel.volumeBtn.addEventListener('click', () => switchGDPView('volume'))
+        gdpPanel.countBtn.addEventListener('click', () => switchGDPView('count'))
+    }
+
+    // Make GDP stat item clickable
+    const gdpStatItem = document.getElementById('gdp-stat-item')
+    if (gdpStatItem) {
+        gdpStatItem.style.cursor = 'pointer'
+        gdpStatItem.addEventListener('click', (e) => {
+            e.stopPropagation()
+            showGDPPanel()
+        })
+    }
+
     // helper array for iterations on panels
     panels = [
         nodeDetails.panel,
         instructions.panel,
         policy.panel,
         research.panel,
-        userDetails.panel
+        userDetails.panel,
+        gdpPanel.panel
     ]
 }
 
@@ -91,6 +125,8 @@ export function closeAllPanels(exceptPanel) {
         if (panel && !panel.classList.contains('hidden') && panel.id !== exceptId) {
             if (panel.id === 'node-details-panel') {
                 hideNodeDetails();
+            } else if (panel.id === 'gdp-panel') {
+                hideGDPPanel();
             } else {
                 panel.classList.add('hidden');
             }
@@ -307,7 +343,7 @@ export function showUserDetails(user) {
     // Update sent transactions list
     if (userTransactions.length > 0) {
         userDetails.userTransactions.innerHTML = userTransactions.map(tx => {
-            const statusColor = tx.legality === 'illegal' ? '#ff3e3e' : tx.legality === 'questionable' ? '#ffaa00' : '#00cc66'
+            const statusColor = legalityColorMap[tx.legality] // tx.legality === 'illegal' ? '#ff3e3e' : tx.legality === 'questionable' ? '#ffaa00' : '#00cc66'
             let counterparty, arrow
             if (tx.path[0] === user.id) {
                 //sending transaction
@@ -348,6 +384,251 @@ export function getSelectedNode() {
 export function updateCurrentNodeDetails(budget, placeTower, enforceAction) {
     if (selectedNode) {
         showNodeDetails(selectedNode, budget, placeTower, enforceAction)
+    }
+}
+
+export function showGDPPanel() {
+    if (!gdpPanel || !gdpPanel.panel) {
+        return
+    }
+    closeAllPanels(gdpPanel.panel)
+    gdpPanel.panel.classList.remove('hidden')
+    updateGDPChart()
+}
+
+export function hideGDPPanel() {
+    if (gdpPanel && gdpPanel.panel) {
+        gdpPanel.panel.classList.add('hidden')
+    }
+}
+
+// Store historical chart data - each bucket represents a fixed time period (e.g., 10 days)
+let historicalBuckets = []
+let lastProcessedLogIndex = 0
+let currentBucket = null
+const BUCKET_DURATION = 10 * 1000 // 10 seconds per bucket (representing 10 days in game time)
+const MAX_BUCKETS = 15 // Show last 15 periods
+
+function calculateBuckets() {
+    const now = Date.now()
+
+    // Initialize current bucket if needed
+    if (!currentBucket || now - currentBucket.startTime >= BUCKET_DURATION) {
+        // Finalize previous bucket if it exists
+        if (currentBucket) {
+            historicalBuckets.push({ ...currentBucket })
+            if (historicalBuckets.length > MAX_BUCKETS) {
+                historicalBuckets = historicalBuckets.slice(-MAX_BUCKETS)
+            }
+        }
+
+        // Create new current bucket
+        currentBucket = {
+            startTime: now,
+            legit: { count: 0, amount: 0 },
+            questionable: { count: 0, amount: 0 },
+            illegal: { count: 0, amount: 0 },
+        }
+    }
+
+    // Only process new transactions since last update
+    if (window.gdpLog && window.gdpLog.length > lastProcessedLogIndex) {
+        const newTransactions = window.gdpLog.slice(lastProcessedLogIndex)
+
+        newTransactions.forEach(logEntry => {
+            if (logEntry.timestamp >= currentBucket.startTime) {
+                const legality = logEntry.legality || 'legit'
+                currentBucket[legality].count++
+                currentBucket[legality].amount += logEntry.amount
+            }
+        })
+
+        lastProcessedLogIndex = window.gdpLog.length
+    }
+
+
+    return [...historicalBuckets, currentBucket]
+}
+
+function switchGDPView(view) {
+    gdpPanel.currentView = view
+
+    // Update button states
+    gdpPanel.volumeBtn.classList.toggle('active', view === 'volume')
+    gdpPanel.countBtn.classList.toggle('active', view === 'count')
+
+    updateGDPChart()
+}
+
+function updateGDPChart() {
+    drawTransactionChart(calculateBuckets(), gdpPanel.currentView)
+}
+
+export function updateGDPPanel() {
+    if (gdpPanel && !gdpPanel.panel.classList.contains('hidden')) {
+        updateGDPChart()
+    }
+}
+function capitalizeFirstLetter(val) {
+    return String(val).charAt(0).toUpperCase() + String(val).slice(1);
+}
+function drawTransactionChart(buckets, viewMode) {
+    const canvas = gdpPanel.chart
+    const ctx = canvas.getContext('2d')
+    const container = gdpPanel.chartContainer
+
+    // Set canvas size from container
+    if (container) {
+        const rect = container.getBoundingClientRect()
+        canvas.width = Math.max(400, rect.width - 20)
+        canvas.height = 200
+    }
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height)
+
+    const margin = { top: 20, right: 20, bottom: 40, left: 60 }
+    const chartWidth = canvas.width - margin.left - margin.right
+    const chartHeight = canvas.height - margin.top - margin.bottom
+
+    // Find max value for scaling
+    const maxValue = Math.max(...buckets.map(bucket => {
+        let sum = 0
+        for (const type of legalityOptions) {
+            const typeData = bucket[type]
+            if (typeData) {
+                const value = viewMode === 'volume' ? typeData.amount : typeData.count
+                sum += value
+            }
+        }
+        return sum
+    })) || 1
+
+    const barWidth = Math.max(chartWidth / buckets.length - 2, 8)
+
+    // Draw bars with game-style effects
+    const currentTime = Date.now()
+    buckets.forEach((bucket, i) => {
+        const x = margin.left + i * (chartWidth / buckets.length) + 1
+        let yOffset = margin.top + chartHeight
+        const isCurrentBucket = i === buckets.length - 1
+
+        for (const type of legalityOptions) {
+            const typeData = bucket[type]
+            if (typeData) {
+                const value = viewMode === 'volume' ? typeData.amount : typeData.count
+                if (value > 0) {
+                    const barHeight = (value / maxValue) * chartHeight
+                    yOffset -= barHeight
+
+                    ctx.fillStyle = legalityColorMap[type]
+                    ctx.fillRect(x, yOffset, barWidth, barHeight)
+
+                    // Add subtle border for depth
+                    ctx.strokeStyle = `rgba(255, 255, 255, ${isCurrentBucket ? 0.3 : 0.1})`
+                    ctx.lineWidth = 1
+                    ctx.strokeRect(x, yOffset, barWidth, barHeight)
+
+                    // Reset effects
+                    ctx.globalAlpha = 1
+                }
+            }
+        }
+    })
+
+    // Get CSS color values
+    const borderColor = 'rgba(255, 255, 255, 0.1)'
+    const textDimColor = 'rgba(240, 240, 240, 0.7)'
+
+    // Draw subtle grid pattern inspired by game's debug grid
+    ctx.strokeStyle = `rgba(255, 255, 255, 0.05)`
+    ctx.lineWidth = 1
+    ctx.beginPath()
+
+    // Vertical grid lines
+    for (let i = 1; i < buckets.length; i++) {
+        const x = margin.left + i * (chartWidth / buckets.length)
+        ctx.moveTo(x, margin.top)
+        ctx.lineTo(x, margin.top + chartHeight)
+    }
+
+    // Horizontal grid lines
+    for (let i = 1; i < 5; i++) {
+        const y = margin.top + (i / 5) * chartHeight
+        ctx.moveTo(margin.left, y)
+        ctx.lineTo(margin.left + chartWidth, y)
+    }
+    ctx.stroke()
+
+    // Draw main axes with game styling
+    ctx.strokeStyle = borderColor
+    ctx.lineWidth = 2
+    ctx.beginPath()
+    ctx.moveTo(margin.left, margin.top)
+    ctx.lineTo(margin.left, margin.top + chartHeight)
+    ctx.lineTo(margin.left + chartWidth, margin.top + chartHeight)
+    ctx.stroke()
+
+    // Y-axis labels with game styling
+    ctx.fillStyle = textDimColor
+    ctx.font = `10px ${uiFont}`
+    ctx.textAlign = 'right'
+    for (let i = 0; i <= 5; i++) {
+        const y = margin.top + chartHeight - (i / 5) * chartHeight
+        const value = (i / 5) * maxValue
+        const label = viewMode === 'volume' ? `$${Math.round(value)}` : Math.round(value).toString()
+        ctx.fillText(label, margin.left - 5, y + 3)
+    }
+
+    // X-axis labels with game styling (positioned above legend)
+    ctx.textAlign = 'center'
+    const periodsAgo = buckets.length - 1
+    if (periodsAgo == 0) {
+        ctx.fillText('Current', margin.left + chartWidth / 2, canvas.height - 30)
+
+    } else {
+        ctx.fillText(`${periodsAgo * 10} days ago`, margin.left + 30, canvas.height - 25)
+        ctx.fillText('Current', margin.left + chartWidth - 20, canvas.height - 25)
+
+    }
+    // Draw legend background with game styling
+    const legendHeight = 40
+    const legendY = canvas.height - legendHeight
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.3)'
+    ctx.fillRect(0, legendY, canvas.width, legendHeight)
+
+    // Draw legend border
+    ctx.strokeStyle = borderColor
+    ctx.lineWidth = 1
+    ctx.strokeRect(0, legendY, canvas.width, legendHeight)
+
+    // Draw legend items horizontally at bottom
+    ctx.textAlign = 'center'
+    ctx.font = `12px  ${uiFont}`
+
+    const itemWidth = canvas.width / legalityOptions.length
+    legalityOptions.forEach((legality, i) => {
+        const centerX = itemWidth * i + itemWidth / 2
+        const textY = legendY + 20
+
+        // Draw colored indicator
+        ctx.fillStyle = legalityColorMap[legality]
+        ctx.fillRect(centerX, textY, 16, 16)
+
+        // Draw text
+        ctx.textAlign = 'left'
+
+        ctx.fillStyle = textDimColor
+        ctx.fillText(`${capitalizeFirstLetter(legality)}`, centerX + 25, textY + 12)
+    })
+
+    // Add animated transaction flow indicators
+    const flowY = legendY - 5
+    for (let i = 0; i < 3; i++) {
+        const flowX = margin.left + (currentTime * 0.1 + i * 100) % chartWidth
+        const alpha = 0.3 + 0.2 * Math.sin(currentTime * 0.01 + i)
+
+        ctx.fillStyle = `rgba(58, 123, 213, ${alpha})`
+        ctx.fillRect(flowX, flowY, 3, 3)
     }
 }
 

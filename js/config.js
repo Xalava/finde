@@ -133,6 +133,11 @@ export const txSizeOptions = {
 }
 
 export const legalityOptions = ['legit', 'questionable', 'illegal']
+export const legalityColorMap = {
+    legit: 'rgba(0, 255, 0, 0.7)',
+    questionable: 'rgba(255, 165, 0, 0.7)',
+    illegal: 'rgba(255, 0, 0, 0.7)'
+}
 
 
 export const nodeTypes = {

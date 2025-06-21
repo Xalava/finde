@@ -2,7 +2,7 @@ import * as UI from './ui-manager.js'
 import * as config from './config.js'
 
 // Font constant
-const uiFont = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+export const uiFont = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
 
 let canvas, ctx
 
@@ -223,13 +223,8 @@ export function drawTransaction(tx) {
     const radius = tx.size === 'small' ? 2 : tx.size === 'medium' ? 4 : 6
 
     // Set shadow based on legality
-    if (tx.legality === 'illegal') {
-        ctx.shadowColor = 'rgba(255, 0, 0, 0.7)'
-    } else if (tx.legality === 'questionable') {
-        ctx.shadowColor = 'rgba(255, 165, 0, 0.7)'
-    } else {
-        ctx.shadowColor = 'rgba(0, 255, 0, 0.7)'
-    }
+    ctx.shadowColor = config.legalityColorMap[tx.legality]
+
     ctx.shadowBlur = 4
 
     // Create gradient

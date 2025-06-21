@@ -84,7 +84,7 @@ function findUserAt(screenX, screenY) {
 
 function handlePanelClose(e) {
     // Don't handle the event if it's a click on or inside a panel toggle button
-    if (e.target.closest('.panel-toggle, .panel-close, .option-button, .game-controls button, .command-button, [role="button"]')) {
+    if (e.target.closest('.panel-toggle, .panel-close, .option-button, .game-controls button, .command-button, [role="button"], #gdp-stat-item, .stat-item')) {
         return
     }
 
@@ -112,6 +112,7 @@ document.addEventListener('DOMContentLoaded', () => {
     window.transactions = transactions
     window.users = users
     window.nodes = nodes
+    window.gdpLog = gdpLog
     // Set initial canvas size and enable touch/mouse camera actions
     Camera.resizeCanvas(ctx)
     Camera.setCameraActions()
@@ -662,7 +663,7 @@ function moveTransaction(tx) {
             // Also, these effect could happen to all nodes, except taxes
             // const isAudited = auditedNodes.some(a => a.id === next.id)
             // if (isAudited) baseIncome = Math.floor(tx.amount / 2)
-            gdpLog.push({ amount: tx.amount, timestamp: Date.now() })
+            gdpLog.push({ amount: tx.amount, timestamp: Date.now(), legality: tx.legality })
             let income = Math.round(tx.amount * policy.getTaxRate())
             budget += income
 
@@ -870,8 +871,8 @@ let hoverNode = null
 let hoverTimeout = null
 
 function calculateIndicators() {
-    // Remove old transactions from the log (older than 90 seconds, each second is a day)
-    while (gdpLog.length && gdpLog[0].timestamp < Date.now() - 90 * 1000) {
+    // Remove old transactions from the log (older than 150 seconds, each second is a day)
+    while (gdpLog.length && gdpLog[0].timestamp < Date.now() - 150 * 1000) {
         gdpLog.shift()
     }
     gdp = gdpLog.reduce((sum, tx) => sum + tx.amount, 0)
@@ -1163,6 +1164,9 @@ function gameLoop() {
 
     // == Update the UI ==
     UI.updateIndicators(budget, gdp, maintenance * tech.bonus.maintenance)
+
+    // Update GDP panel (function will check if visible)
+    UI.updateGDPPanel()
 
     if (hoverNode && !UI.getSelectedNode()) {
         graphics.drawTooltip(hoverNode)

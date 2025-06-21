@@ -1067,3 +1067,27 @@ small {
     background: var(--bg-secondary);
     color: var(--text);
 }
+
+/* GDP Panel Styles */
+.gdp-controls {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    margin-bottom: var(--spacing);
+}
+
+.gdp-controls .active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: white;
+}
+
+#gdp-chart-container {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 10px;
+    background: rgba(0, 0, 0, 0.2);
+    margin-bottom: var(--spacing);
+}
+
+#gdp-chart { height: 200px; }

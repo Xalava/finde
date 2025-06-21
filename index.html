@@ -251,6 +251,27 @@
                 <section class="panel-section" id="approvals"></section>
             </div>
         </aside>
+
+        <aside id="gdp-panel" class="panel command-panel hidden">
+            <div class="panel-header">
+                <h2>Analytics</h2>
+                <button id="close-gdp" class="close-button">×</button>
+            </div>
+            <div class="panel-content">
+                <section class="panel-section">
+                    <div class="gdp-controls">
+                        <button id="volume-btn" class="active" data-view="volume">Volume ($)</button>
+                        <button id="count-btn" data-view="count">Count (#)</button>
+                    </div>
+                </section>
+                <section class="panel-section">
+                    <h3>Transaction Flow Over Time</h3>
+                    <div id="gdp-chart-container">
+                        <canvas id="gdp-chart"></canvas>
+                    </div>
+                </section>
+            </div>
+        </aside>
     </div>
 
     <div id="toast-container">
