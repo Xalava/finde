@@ -257,17 +257,25 @@
                 <h2>Analytics</h2>
                 <button id="close-gdp" class="close-button">×</button>
             </div>
+            <div class="panel-tabs">
+                <button id="chart-tab" class="tab-button active" data-tab="chart">Chart</button>
+                <button id="transactions-tab" class="tab-button" data-tab="transactions">Transactions</button>
+            </div>
             <div class="panel-content">
-                <section class="panel-section">
+                <section class="panel-section" id="chart-section">
+                    <h3>Transaction Flow Over Time</h3>
+                    <div id="gdp-chart-container">
+                        <canvas id="gdp-chart"></canvas>
+                    </div>
                     <div class="gdp-controls">
                         <button id="volume-btn" class="active" data-view="volume">Volume ($)</button>
                         <button id="count-btn" data-view="count">Count (#)</button>
                     </div>
                 </section>
-                <section class="panel-section">
-                    <h3>Transaction Flow Over Time</h3>
-                    <div id="gdp-chart-container">
-                        <canvas id="gdp-chart"></canvas>
+                <section class="panel-section hidden" id="transactions-section">
+                    <h3>All Transactions</h3>
+                    <div id="all-transactions" class="transaction-list">
+                        <div class="no-transactions">No transactions found</div>
                     </div>
                 </section>
             </div>

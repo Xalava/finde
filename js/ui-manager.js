@@ -76,7 +76,13 @@ export function initUI() {
         chartContainer: document.getElementById('gdp-chart-container'),
         volumeBtn: document.getElementById('volume-btn'),
         countBtn: document.getElementById('count-btn'),
-        currentView: 'volume'
+        chartTab: document.getElementById('chart-tab'),
+        transactionsTab: document.getElementById('transactions-tab'),
+        chartSection: document.getElementById('chart-section'),
+        transactionsSection: document.getElementById('transactions-section'),
+        allTransactions: document.getElementById('all-transactions'),
+        currentView: 'volume',
+        currentTab: 'chart'
     }
 
 
@@ -87,6 +93,11 @@ export function initUI() {
     if (gdpPanel.volumeBtn && gdpPanel.countBtn) {
         gdpPanel.volumeBtn.addEventListener('click', () => switchGDPView('volume'))
         gdpPanel.countBtn.addEventListener('click', () => switchGDPView('count'))
+    }
+
+    if (gdpPanel.chartTab && gdpPanel.transactionsTab) {
+        gdpPanel.chartTab.addEventListener('click', () => switchAnalyticsTab('chart'))
+        gdpPanel.transactionsTab.addEventListener('click', () => switchAnalyticsTab('transactions'))
     }
 
     // Make GDP stat item clickable
@@ -330,8 +341,48 @@ export function hideNodeDetails() {
     return selectedNode
 }
 
-export function showUserDetails(user) {
+function formatTransactionList(transactions, userId = null) {
+    const emptyMessage = 'No transactions found'
 
+    if (!transactions || transactions.length === 0) {
+        return `<div class="no-transactions">${emptyMessage}</div>`
+    }
+
+    return transactions.map(tx => {
+        const statusColor = legalityColorMap[tx.legality]
+
+        let displayContent = `<div class="transaction-amount" style="color: ${statusColor}">$${tx.amount}</div>`
+
+        if (userId) {
+            // User-specific view: show counterparty and direction
+            let counterparty, arrow
+            if (tx.path[0] === userId) {
+                counterparty = window.users?.find(u => u.id === tx.path[tx.path.length - 1])
+                arrow = '→'
+            } else {
+                counterparty = window.users?.find(u => u.id === tx.path[0])
+                arrow = '←'
+            }
+            displayContent += `
+                <div class="transaction-counterparty">${arrow} ${counterparty?.name}</div>
+            `
+        } else {
+            // All transactions view: show sender → receiver
+            const sender = window.users?.find(u => u.id === tx.path?.[0])
+            const receiver = window.users?.find(u => u.id === tx.path?.[tx.path.length - 1])
+            const senderName = sender?.name || 'Unknown'
+            const receiverName = receiver?.name || 'Unknown'
+
+            displayContent += `
+                <div class="transaction-counterparty">${senderName} (${countries[sender.country].flag}) \t→\t ${receiverName} (${countries[receiver.country].flag})</div>
+            `
+        }
+
+        return `<div class="transaction-item">${displayContent}</div>`
+    }).join('')
+}
+
+export function showUserDetails(user) {
     userDetails.name.textContent = user.name || 'John Doe'
     userDetails.country.textContent = countries[user.country].flag
     userDetails.type.textContent = user.type
@@ -340,33 +391,7 @@ export function showUserDetails(user) {
         tx.active && tx.path && tx.path[0] === user.id || tx.path[tx.path.length - 1] === user.id
     )
 
-    // Update sent transactions list
-    if (userTransactions.length > 0) {
-        userDetails.userTransactions.innerHTML = userTransactions.map(tx => {
-            const statusColor = legalityColorMap[tx.legality] // tx.legality === 'illegal' ? '#ff3e3e' : tx.legality === 'questionable' ? '#ffaa00' : '#00cc66'
-            let counterparty, arrow
-            if (tx.path[0] === user.id) {
-                //sending transaction
-                counterparty = window.users?.find(u => u.id === tx.path[tx.path.length - 1])
-                arrow = '→'
-            } else {
-                counterparty = window.users?.find(u => u.id === tx.path[0])
-                arrow = '←'
-            }
-            return `
-            <div class="transaction-item">
-                <div class="transaction-amount"  style="color: ${statusColor}">$${tx.amount}</div>
-                <div class="transaction-counterparty">${arrow}  ${counterparty?.name} </div>
-            </div>
-            `
-            //${countries[counterparty?.country].flag}
-            // <div class="transaction-progress">${tx.index + 1}/${tx.path.length}</div>
-
-        }).join('')
-
-    } else {
-        userDetails.userTransactions.innerHTML = '<div class="no-transactions">No pending transaction</div>'
-    }
+    userDetails.userTransactions.innerHTML = formatTransactionList(userTransactions, user.id)
 
     userDetails.panel.classList.remove('hidden')
 }
@@ -393,7 +418,8 @@ export function showGDPPanel() {
     }
     closeAllPanels(gdpPanel.panel)
     gdpPanel.panel.classList.remove('hidden')
-    updateGDPChart()
+
+    updateAnalyticsPanel()
 }
 
 export function hideGDPPanel() {
@@ -464,9 +490,13 @@ function updateGDPChart() {
     drawTransactionChart(calculateBuckets(), gdpPanel.currentView)
 }
 
-export function updateGDPPanel() {
+export function updateAnalyticsPanel() {
     if (gdpPanel && !gdpPanel.panel.classList.contains('hidden')) {
-        updateGDPChart()
+        if (gdpPanel.currentTab === 'chart') {
+            updateGDPChart()
+        } else if (gdpPanel.currentTab === 'transactions') {
+            updateTransactionsList()
+        }
     }
 }
 function capitalizeFirstLetter(val) {
@@ -630,6 +660,30 @@ function drawTransactionChart(buckets, viewMode) {
         ctx.fillStyle = `rgba(58, 123, 213, ${alpha})`
         ctx.fillRect(flowX, flowY, 3, 3)
     }
+}
+
+function switchAnalyticsTab(tab) {
+    if (!gdpPanel) return
+
+    gdpPanel.currentTab = tab
+
+    // Update tab button states
+    gdpPanel.chartTab.classList.toggle('active', tab === 'chart')
+    gdpPanel.transactionsTab.classList.toggle('active', tab === 'transactions')
+
+    // Show/hide sections
+    gdpPanel.chartSection.classList.toggle('hidden', tab !== 'chart')
+    gdpPanel.transactionsSection.classList.toggle('hidden', tab !== 'transactions')
+
+    updateAnalyticsPanel()
+}
+
+function updateTransactionsList() {
+    if (!gdpPanel || !gdpPanel.allTransactions) return
+
+    const allTransactions = window.transactions || []
+
+    gdpPanel.allTransactions.innerHTML = formatTransactionList(allTransactions)
 }
 
 // Keyboard shortcuts for towers (numbers) and actions (letters)

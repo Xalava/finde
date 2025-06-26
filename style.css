@@ -1069,6 +1069,30 @@ small {
 }
 
 /* GDP Panel Styles */
+#all-transactions {
+    min-height: 50vh;
+    overflow-y: auto;
+    padding-right: 10px;
+}
+
+#all-transactions::-webkit-scrollbar {
+    width: 8px;
+}
+
+#all-transactions::-webkit-scrollbar-track {
+    background: var(--bg-dark);
+    border-radius: 4px;
+}
+
+#all-transactions::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 4px;
+}
+
+#all-transactions::-webkit-scrollbar-thumb:hover {
+    background: var(--accent);
+}
+
 .gdp-controls {
     display: flex;
     gap: 10px;
@@ -1090,4 +1114,20 @@ small {
     margin-bottom: var(--spacing);
 }
 
-#gdp-chart { height: 200px; }
+#gdp-chart {
+    height: 200px;
+}
+
+.transaction-status {
+    font-size: 12px;
+    font-weight: bold;
+    margin-top: 2px;
+}
+
+.status-active {
+    color: var(--success);
+}
+
+.status-completed {
+    color: var(--text-dim);
+}

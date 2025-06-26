@@ -84,7 +84,7 @@ function findUserAt(screenX, screenY) {
 
 function handlePanelClose(e) {
     // Don't handle the event if it's a click on or inside a panel toggle button
-    if (e.target.closest('.panel-toggle, .panel-close, .option-button, .game-controls button, .command-button, [role="button"], #gdp-stat-item, .stat-item')) {
+    if (e.target.closest('.panel-toggle, .panel-close, .option-button, .game-controls button, .command-button, [role="button"], #gdp-stat-item, .stat-item, select, .compliance-select, .tab-button')) {
         return
     }
 
@@ -1165,8 +1165,8 @@ function gameLoop() {
     // == Update the UI ==
     UI.updateIndicators(budget, gdp, maintenance * tech.bonus.maintenance)
 
-    // Update GDP panel (function will check if visible)
-    UI.updateGDPPanel()
+    // Update Analytics panel (function will check if visible)
+    UI.updateAnalyticsPanel()
 
     if (hoverNode && !UI.getSelectedNode()) {
         graphics.drawTooltip(hoverNode)
