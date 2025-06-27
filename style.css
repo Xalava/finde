@@ -955,7 +955,7 @@ small {
         width: 100%;
     }
 
-    #gdp-stat-item,
+    #maintenance-stat-item,
     #holiday {
         display: none;
     }

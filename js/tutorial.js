@@ -1,3 +1,5 @@
+import * as UI from './ui-manager.js'
+
 // Returns yes once the tutorial is completed
 export const isFirstPlay = () => !localStorage.getItem('hasPlayedBefore')
 
@@ -10,13 +12,13 @@ const tutorialProgress = document.getElementById('tutorial-progress')
 let currentStep
 
 function completeTutorial() {
-    tutorialContainer.classList.add('hidden')
+    UI.hide(tutorialContainer)
     localStorage.setItem('hasPlayedBefore', 'true')
 }
 
 
 function nextStep() {
-    tutorialContainer.classList.add('hidden');
+    UI.hide(tutorialContainer);
     currentStep++;
 
     // Shorter delay between steps for better flow
@@ -41,7 +43,7 @@ export function showTutorial() {
     const skipButton = document.getElementById('tutorial-skip')
 
     const onStart = () => {
-        tutorialContainer.classList.add('hidden')
+        UI.hide(tutorialContainer)
         currentStep = 0
         setTimeout(showTutorialStep, 1000)
     }
@@ -55,7 +57,7 @@ export function showTutorial() {
     skipButton.onclick = onSkip
 
     // Show tutorial
-    tutorialContainer.classList.remove('hidden')
+    UI.show(tutorialContainer)
 }
 
 const TUTORIAL_STEPS = [
@@ -130,7 +132,7 @@ export function showTutorialStep() {
         document.getElementById('tutorial-next').onclick = nextStep
     }
 
-    tutorialContainer.classList.remove('hidden')
+    UI.show(tutorialContainer)
 
 
 }

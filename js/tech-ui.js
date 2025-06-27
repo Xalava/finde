@@ -1,7 +1,7 @@
 // tech-ui.js - Simplified tech tree with fixed grid layout
 import { getResearchPoints, addResearchPoints, getResearchProgress, canResearch, researchTechnology } from './tech.js'
 import { techTree } from './config.js'
-import { showToast, togglePanel } from './ui-manager.js'
+import { showToast, togglePanel, show } from './ui-manager.js'
 
 let currentTab = 'compliance'
 
@@ -20,8 +20,6 @@ export function initTechUI() {
     })
     resUI.button.addEventListener('click', toggleResearch)
     resUI.close.addEventListener('click', toggleResearch)
-
-    resUI.button.style.display = 'none'
 
     // Add tab switching functionality
     const tabButtons = document.querySelectorAll('.panel-tabs .tab-button')
@@ -46,8 +44,7 @@ function updateResearchPointsDisplay() {
     if (pts >= 1 && !firstResearchPoint) {
         addResearchPoints(10)// one time bonus for the early game
         setTimeout(() => {
-            resUI.button.style.display = ''
-            resUI.button.classList.remove('hidden')
+            show(resUI.button)
             showToast(`🧪 Research Enabled!`, `Research Points are collected when blocking transactions.`, 'info')
         }, 1000)
 

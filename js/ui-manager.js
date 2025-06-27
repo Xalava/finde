@@ -4,15 +4,16 @@ import * as tech from './tech.js'
 import { uiFont } from './graphics.js'
 
 let indicators = null
+let controls = null
 let instructions = null
 let nodeDetails = null
 let policy = null
 let research = null
 let userDetails = null
-let gdpPanel = null
+let analytics = null
+let panels = null
 
 let selectedNode = null
-let panels = null
 
 export function initUI() {
     indicators = {
@@ -21,6 +22,20 @@ export function initUI() {
         maintenance: document.getElementById('maintenance'),
         day: document.getElementById('day'),
         holiday: document.getElementById('holiday')
+    }
+
+    controls = {
+        centerBtn: document.getElementById('center-view'),
+        debugBtn: document.getElementById('toggle-debug'),
+        countriesBtn: document.getElementById('toggle-countries'),
+        slowBtn: document.getElementById('slow'),
+        normalBtn: document.getElementById('normal'),
+        fastBtn: document.getElementById('fast'),
+        restartBtn: document.getElementById('restart-game'),
+        gdpStatItem: document.getElementById('gdp-stat-item'),
+        maintenanceStatItem: document.getElementById('maintenance-stat-item'),
+        debugControls: document.getElementById('debug-controls'),
+        policyBtn: document.getElementById('policy-button')
     }
 
     instructions = {
@@ -59,7 +74,7 @@ export function initUI() {
         close: document.getElementById('close-user-panel')
     }
 
-    userDetails.close.addEventListener('click', hideUserDetails)
+    userDetails.close.addEventListener('click', () => hide(userDetails.panel))
 
     policy = {
         panel: document.getElementById('policy-panel'),
@@ -69,7 +84,7 @@ export function initUI() {
         panel: document.getElementById('research-panel'),
     }
 
-    gdpPanel = {
+    analytics = {
         panel: document.getElementById('gdp-panel'),
         close: document.getElementById('close-gdp'),
         chart: document.getElementById('gdp-chart'),
@@ -86,18 +101,18 @@ export function initUI() {
     }
 
 
-    if (gdpPanel.close) {
-        gdpPanel.close.addEventListener('click', hideGDPPanel)
+    if (analytics.close) {
+        analytics.close.addEventListener('click', () => hide(analytics.panel))
     }
 
-    if (gdpPanel.volumeBtn && gdpPanel.countBtn) {
-        gdpPanel.volumeBtn.addEventListener('click', () => switchGDPView('volume'))
-        gdpPanel.countBtn.addEventListener('click', () => switchGDPView('count'))
+    if (analytics.volumeBtn && analytics.countBtn) {
+        analytics.volumeBtn.addEventListener('click', () => switchGDPView('volume'))
+        analytics.countBtn.addEventListener('click', () => switchGDPView('count'))
     }
 
-    if (gdpPanel.chartTab && gdpPanel.transactionsTab) {
-        gdpPanel.chartTab.addEventListener('click', () => switchAnalyticsTab('chart'))
-        gdpPanel.transactionsTab.addEventListener('click', () => switchAnalyticsTab('transactions'))
+    if (analytics.chartTab && analytics.transactionsTab) {
+        analytics.chartTab.addEventListener('click', () => switchAnalyticsTab('chart'))
+        analytics.transactionsTab.addEventListener('click', () => switchAnalyticsTab('transactions'))
     }
 
     // Make GDP stat item clickable
@@ -117,7 +132,7 @@ export function initUI() {
         policy.panel,
         research.panel,
         userDetails.panel,
-        gdpPanel.panel
+        analytics.panel
     ]
 }
 
@@ -135,11 +150,9 @@ export function closeAllPanels(exceptPanel) {
     panels.forEach(panel => {
         if (panel && !panel.classList.contains('hidden') && panel.id !== exceptId) {
             if (panel.id === 'node-details-panel') {
-                hideNodeDetails();
-            } else if (panel.id === 'gdp-panel') {
-                hideGDPPanel();
+                hideNodeDetails()
             } else {
-                panel.classList.add('hidden');
+                hide(panel)
             }
         }
     });
@@ -222,7 +235,7 @@ export function showNodeDetails(node, budget, placeTower, enforceAction) {
     updateTowerOptions(node, budget, placeTower)
     updateActionOptions(node, budget, enforceAction)
     // Todo: harmonize display
-    nodeDetails.panel.classList.remove('hidden')
+    show(nodeDetails.panel)
     return selectedNode
 }
 
@@ -336,7 +349,7 @@ function createTowerButton(towerType, node, budget, placeTower) {
 }
 
 export function hideNodeDetails() {
-    nodeDetails.panel.classList.add('hidden')
+    hide(nodeDetails.panel)
     selectedNode = null
     return selectedNode
 }
@@ -393,17 +406,33 @@ export function showUserDetails(user) {
 
     userDetails.userTransactions.innerHTML = formatTransactionList(userTransactions, user.id)
 
-    userDetails.panel.classList.remove('hidden')
-}
-
-export function hideUserDetails() {
-    userDetails.panel.classList.add('hidden')
+    show(userDetails.panel)
 }
 
 
+export function showRestartButton() {
+    show(controls.restartBtn)
+}
 
 export function getSelectedNode() {
     return selectedNode
+}
+
+export function getControls() {
+    return controls
+}
+
+export function getNodeDetailsPanel() {
+    return nodeDetails?.panel
+}
+
+// UI utilities
+export function show(element) {
+    if (element) element.classList.remove('hidden')
+}
+
+export function hide(element) {
+    if (element) element.classList.add('hidden')
 }
 
 export function updateCurrentNodeDetails(budget, placeTower, enforceAction) {
@@ -413,20 +442,16 @@ export function updateCurrentNodeDetails(budget, placeTower, enforceAction) {
 }
 
 export function showGDPPanel() {
-    if (!gdpPanel || !gdpPanel.panel) {
+    if (!analytics || !analytics.panel) {
         return
     }
-    closeAllPanels(gdpPanel.panel)
-    gdpPanel.panel.classList.remove('hidden')
+    closeAllPanels(analytics.panel)
+    show(analytics.panel)
 
     updateAnalyticsPanel()
 }
 
-export function hideGDPPanel() {
-    if (gdpPanel && gdpPanel.panel) {
-        gdpPanel.panel.classList.add('hidden')
-    }
-}
+
 
 // Store historical chart data - each bucket represents a fixed time period (e.g., 10 days)
 let historicalBuckets = []
@@ -477,24 +502,24 @@ function calculateBuckets() {
 }
 
 function switchGDPView(view) {
-    gdpPanel.currentView = view
+    analytics.currentView = view
 
     // Update button states
-    gdpPanel.volumeBtn.classList.toggle('active', view === 'volume')
-    gdpPanel.countBtn.classList.toggle('active', view === 'count')
+    analytics.volumeBtn.classList.toggle('active', view === 'volume')
+    analytics.countBtn.classList.toggle('active', view === 'count')
 
     updateGDPChart()
 }
 
 function updateGDPChart() {
-    drawTransactionChart(calculateBuckets(), gdpPanel.currentView)
+    drawTransactionChart(calculateBuckets(), analytics.currentView)
 }
 
 export function updateAnalyticsPanel() {
-    if (gdpPanel && !gdpPanel.panel.classList.contains('hidden')) {
-        if (gdpPanel.currentTab === 'chart') {
+    if (analytics && !analytics.panel.classList.contains('hidden')) {
+        if (analytics.currentTab === 'chart') {
             updateGDPChart()
-        } else if (gdpPanel.currentTab === 'transactions') {
+        } else if (analytics.currentTab === 'transactions') {
             updateTransactionsList()
         }
     }
@@ -503,9 +528,9 @@ function capitalizeFirstLetter(val) {
     return String(val).charAt(0).toUpperCase() + String(val).slice(1);
 }
 function drawTransactionChart(buckets, viewMode) {
-    const canvas = gdpPanel.chart
+    const canvas = analytics.chart
     const ctx = canvas.getContext('2d')
-    const container = gdpPanel.chartContainer
+    const container = analytics.chartContainer
 
     // Set canvas size from container
     if (container) {
@@ -663,27 +688,27 @@ function drawTransactionChart(buckets, viewMode) {
 }
 
 function switchAnalyticsTab(tab) {
-    if (!gdpPanel) return
+    if (!analytics) return
 
-    gdpPanel.currentTab = tab
+    analytics.currentTab = tab
 
     // Update tab button states
-    gdpPanel.chartTab.classList.toggle('active', tab === 'chart')
-    gdpPanel.transactionsTab.classList.toggle('active', tab === 'transactions')
+    analytics.chartTab.classList.toggle('active', tab === 'chart')
+    analytics.transactionsTab.classList.toggle('active', tab === 'transactions')
 
     // Show/hide sections
-    gdpPanel.chartSection.classList.toggle('hidden', tab !== 'chart')
-    gdpPanel.transactionsSection.classList.toggle('hidden', tab !== 'transactions')
+    analytics.chartSection.classList.toggle('hidden', tab !== 'chart')
+    analytics.transactionsSection.classList.toggle('hidden', tab !== 'transactions')
 
     updateAnalyticsPanel()
 }
 
 function updateTransactionsList() {
-    if (!gdpPanel || !gdpPanel.allTransactions) return
+    if (!analytics || !analytics.allTransactions) return
 
     const allTransactions = window.transactions || []
 
-    gdpPanel.allTransactions.innerHTML = formatTransactionList(allTransactions)
+    analytics.allTransactions.innerHTML = formatTransactionList(allTransactions)
 }
 
 // Keyboard shortcuts for towers (numbers) and actions (letters)

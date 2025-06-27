@@ -19,13 +19,6 @@ graphics.init(canvas, ctx)
 Camera.initCamera(canvas)
 window.addEventListener('resize', Camera.resizeCanvas.bind(null, ctx))
 
-const centerBtn = document.getElementById('center-view')
-const debugBtn = document.getElementById('toggle-debug')
-const countriesBtn = document.getElementById('toggle-countries')
-const slowBtn = document.getElementById('slow')
-const normalBtn = document.getElementById('normal')
-const fastBtn = document.getElementById('fast')
-const restartBtn = document.getElementById('restart-game')
 
 let effects = []
 let animationFrameId
@@ -52,10 +45,10 @@ function getEventCoordinates(e) {
 function findUserAt(screenX, screenY) {
     const worldPos = Camera.getWorldPosition(screenX, screenY)
     const activeUsers = users.filter(u => u.active)
-    console.log(`Checking ${activeUsers.length} active users at world position ${worldPos.x.toFixed(1)}, ${worldPos.y.toFixed(1)}`)
+    // console.log(`Checking ${activeUsers.length} active users at world position ${worldPos.x.toFixed(1)}, ${worldPos.y.toFixed(1)}`)
 
     if (activeUsers.length === 0) {
-        console.log('No active users found')
+        // console.log('No active users found')
         return null
     }
 
@@ -64,18 +57,18 @@ function findUserAt(screenX, screenY) {
         const dy = user.y - worldPos.y
         const distance = Math.hypot(dx, dy)
         if (distance < 20) { // Increased click area for debugging
-            console.log(`User ${user.id} at ${user.x.toFixed(1)}, ${user.y.toFixed(1)} - distance: ${distance.toFixed(1)} - MATCH`)
+            // console.log(`User ${user.id} at ${user.x.toFixed(1)}, ${user.y.toFixed(1)} - distance: ${distance.toFixed(1)} - MATCH`)
         }
         return distance < 20
     })
 
     if (!found) {
-        console.log('Closest users:')
+        // console.log('Closest users:')
         activeUsers.slice(0, 3).forEach(user => {
             const dx = user.x - worldPos.x
             const dy = user.y - worldPos.y
             const distance = Math.hypot(dx, dy)
-            console.log(`  User ${user.id} at ${user.x.toFixed(1)}, ${user.y.toFixed(1)} - distance: ${distance.toFixed(1)}`)
+            // console.log(`  User ${user.id} at ${user.x.toFixed(1)}, ${user.y.toFixed(1)} - distance: ${distance.toFixed(1)}`)
         })
     }
 
@@ -96,7 +89,7 @@ function handlePanelClose(e) {
 
         const clickedNode = findNodeAt(coords.clientX, coords.clientY)
         if (clickedNode) {
-            UI.closeAllPanels(document.getElementById('node-details-panel'))
+            UI.closeAllPanels(UI.getNodeDetailsPanel())
         } else {
             UI.closeAllPanels()
         }
@@ -118,12 +111,13 @@ document.addEventListener('DOMContentLoaded', () => {
     Camera.setCameraActions()
 
     // First-time setup
+    const ctrls = UI.getControls()
     if (isFirstPlay()) {
-        document.getElementById('gdp-stat-item').style.display = 'none'
-        document.getElementById('maintenance-stat-item').style.display = 'none'
+        UI.hide(ctrls.gdpStatItem)
+        UI.hide(ctrls.maintenance)
     }
     if (!debugAvailable) {
-        document.getElementById('debug-controls').style.display = "none"
+        UI.hide(ctrls.debugControls)
     }
 
     // Track drag state
@@ -188,36 +182,36 @@ document.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('touchstart', handlePanelClose, { passive: false })
 
 
-    centerBtn.addEventListener('click', Camera.centerView.bind(null, nodes))
-    debugBtn.addEventListener('click', () => {
+    ctrls.centerBtn.addEventListener('click', Camera.centerView.bind(null, nodes))
+    ctrls.debugBtn.addEventListener('click', () => {
         debug = !debug
-        debugBtn.style.backgroundColor = debug ? 'rgba(255, 0, 0, 0.2)' : ''
+        ctrls.debugBtn.style.backgroundColor = debug ? 'rgba(255, 0, 0, 0.2)' : ''
         tech.addResearchPoints(8000)
         budget += 20000
         if (nodes[5]) nodes[5].reputation = 0
         speedControl = 0.5
         NEW_NODE_FREQUENCY = 20
     })
-    countriesBtn.addEventListener('click', () => {
+    ctrls.countriesBtn.addEventListener('click', () => {
         displayCountries = !displayCountries
-        countriesBtn.style.backgroundColor = displayCountries ? 'rgba(0, 255, 0, 0.2)' : ''
+        ctrls.countriesBtn.style.backgroundColor = displayCountries ? 'rgba(0, 255, 0, 0.2)' : ''
     })
 
-    slowBtn.addEventListener('click', () => {
+    ctrls.slowBtn.addEventListener('click', () => {
         speedControl = 0.5
         spawnControl = 0.5
 
     })
-    normalBtn.addEventListener('click', () => {
+    ctrls.normalBtn.addEventListener('click', () => {
         speedControl = 1
         spawnControl = 1
     })
-    fastBtn.addEventListener('click', () => {
+    ctrls.fastBtn.addEventListener('click', () => {
         speedControl = 2
         spawnControl = 2
     })
 
-    restartBtn.addEventListener('click', () => {
+    ctrls.restartBtn.addEventListener('click', () => {
         window.location.reload()
     })
 
@@ -229,8 +223,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // })
 
     setTimeout(() => {
-        document.getElementById('policy-button').style.display = 'block'
-        document.getElementById('policy-button').classList.remove('hidden')
+        UI.show(ctrls.policyBtn)
     }, debugAvailable ? 120 : 100000)
 
     // Initialize the game
@@ -251,8 +244,8 @@ document.addEventListener('DOMContentLoaded', () => {
             speedControl = 1
         }, 20000)
         setTimeout(() => {
-            document.getElementById('gdp-stat-item').style.display = 'block'
-            document.getElementById('maintenance-stat-item').style.display = 'block'
+            UI.show(ctrls.gdpStatItem)
+            UI.show(ctrls.maintenanceStatItem)
         }, 100000)
         showTutorial()
         Camera.centerView(nodes, -50)
@@ -378,7 +371,10 @@ function initNodes() {
         // node.active = true
         // node.reputation = 0
         node.changeReputation = (amount) => {
-            console.log(`${node.name} reputation changed by ${amount}`)
+            if (debugAvailable) {
+
+                console.log(`#${node.id} reputation ${amount > 0 ? "+" : ''}${amount}`)
+            }
             node.reputation = Math.min(100, node.reputation + amount)
             if (node.reputation < 0) {
                 node.reputation = 50 // Magical number for post-bankruptcy
@@ -682,7 +678,7 @@ function moveTransaction(tx) {
                 // addEffect(next.x, next.y, '💥')
                 next.changeReputation(-5) // Reputation decrease when illegal transactions go through
                 // UI.showToast('Illegal transaction completed', 'Corruption increased at ' + next.name, 'error')
-                console.log(`💥 Breach at node ${next.id}, from ${tx.path[0]}`)
+                console.log(`💥 Breach #${next.id}`)
             } else if (tx.legality === 'questionable') {
                 // addEffect(next.x, next.y, '', 'pulseNode', 'rgba(255, 187, 0, 0.2)')
                 if (debug) console.log(`Questionable transaction at node ${next.id}, from ${tx.path[0]}`)
@@ -734,7 +730,7 @@ function placeTower(node, towerType) {
     // node.accuracy = tower.accuracy + (node.type === 'fintech' ? 0.1 : 0)// We move the accuracy to the node for AI usages
     budget -= tower.cost
     maintenance -= tower.maintenance
-    console.log(`🛠️ Tower placed at node ${node.id}`)
+    console.log(`🛠️ Tower placed at #${node.id}`)
     if (debug) console.log(tower)
     // Update UI immediately after placing tower
     UI.showNodeDetails(node, budget, placeTower, enforceAction)
@@ -822,7 +818,7 @@ function detect(tx) {
             UI.showToast('First illegal transaction blocked!', `Detected at ${node.name} (${towerOptions[node.tower].name})`, 'success')
             firstDetection = true
         }
-        console.log(`✔️ Illegal tx blocked at node ${node.id}`)
+        console.log(`✔️ Illegal tx blocked #${node.id}`)
         node.detectedAmount += tx.amount
         node.receivedAmount += tx.amount
 
@@ -973,7 +969,7 @@ function checkNodesCompliance() {
 
 function activateNode(node) {
     node.active = true
-    console.log(`🌟 New node activated: ${node.name}`);
+    console.log(`🌟 New node activated #${node.id}`);
     UI.showToast('🌟 A new actor has emerged', `Welcome ${node.name}`, 'info');
     if (node.reputation !== 50) {
         generateUsers(node)
@@ -1008,19 +1004,19 @@ function checkEndGame() {
     // Loosing cases
     if (spread >= 100) {
         graphics.drawEndGame('Corruption has reached critical levels!')
-        restartBtn.classList.remove('hidden')
+        UI.showRestartButton()
         return true
     }
 
     if (budget < -100) {
         graphics.drawEndGame('The country is bankrupt!')
-        restartBtn.classList.remove('hidden')
+        UI.showRestartButton()
         return true
     }
 
     if (policy.sentiment <= 0) {
         graphics.drawEndGame('The ecosystem disapproves of your policies!')
-        restartBtn.classList.remove('hidden')
+        UI.showRestartButton()
         return true
     }
 

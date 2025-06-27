@@ -4,7 +4,7 @@ export const regulationLevels = {
     stringent: { detectMod: 1.3, fpMod: 0.5, icon: '🔒' }
 }
 
-import { showToast } from './ui-manager.js'
+import { showToast, hide, show, togglePanel } from './ui-manager.js'
 
 
 const policyPoints = document.getElementById('policy-points')
@@ -141,17 +141,9 @@ const policyUI = {
     close: document.getElementById('close-policy')
 }
 
-function togglePolicyPanel(e) {
-    if (e) e.stopPropagation();
-    const panel = document.getElementById('policy-panel');
-    // closeAllPanels(panel);
-    panel.classList.toggle('hidden');
-}
-
 // Initialize event listeners
-if (policyUI.button) policyUI.button.addEventListener('click', togglePolicyPanel)
-if (policyUI.close) policyUI.close.addEventListener('click', togglePolicyPanel)
-if (policyUI.button) policyUI.button.style.display = 'none'
+if (policyUI.button) policyUI.button.addEventListener('click', togglePanel('policy-panel'))
+if (policyUI.close) policyUI.close.addEventListener('click', togglePanel('policy-panel'))
 
 // const policyPoints = document.getElementById('policy-points')
 // Policy change handlers
