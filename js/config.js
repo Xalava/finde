@@ -127,9 +127,14 @@ export const actionOptions = {
 export const HIGH_CORRUPTION_THRESHOLD = 4;
 
 export const txSizeOptions = {
-    small: { name: 'small', amount: 5 },
-    medium: { name: 'medium', amount: 10 },
-    large: { name: 'large', amount: 30 }
+    small: { name: 'small', max: 10 },
+    medium: { name: 'medium', max: 30 },
+    large: { name: 'large', max: 0 }
+}
+export const getTransactionSizeName = (amount) => {
+    if (amount < txSizeOptions.small.max) return 'small'
+    if (amount < txSizeOptions.medium.max) return 'medium'
+    return 'large'
 }
 
 export const legalityOptions = ['legit', 'questionable', 'illegal']

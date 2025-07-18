@@ -9,6 +9,7 @@ import { showTutorial, isFirstPlay } from './js/tutorial.js'
 
 import * as policy from './js/policy.js'
 // == UI == 
+const CLICK_DETECTION_RADIUS = 20
 let debug = false
 let displayCountries = false
 const debugAvailable = ['localhost', '127.0.0.1'].includes(location.hostname)
@@ -30,7 +31,7 @@ function findNodeAt(screenX, screenY) {
         const dx = node.x - worldPos.x
         const dy = node.y - worldPos.y
 
-        return node.active && Math.hypot(dx, dy) < 20
+        return node.active && Math.hypot(dx, dy) < CLICK_DETECTION_RADIUS
     })
 }
 
@@ -56,10 +57,10 @@ function findUserAt(screenX, screenY) {
         const dx = user.x - worldPos.x
         const dy = user.y - worldPos.y
         const distance = Math.hypot(dx, dy)
-        if (distance < 20) { // Increased click area for debugging
+        if (distance < CLICK_DETECTION_RADIUS) { // Increased click area for debugging
             // console.log(`User ${user.id} at ${user.x.toFixed(1)}, ${user.y.toFixed(1)} - distance: ${distance.toFixed(1)} - MATCH`)
         }
-        return distance < 20
+        return distance < CLICK_DETECTION_RADIUS
     })
 
     if (!found) {
@@ -276,8 +277,18 @@ let lastWarningTime = 0
 // Game constants
 const BASE_SPAWN_RATE = 0.002
 const HOLIDAY_SPAWN_BONUS = 10
-const MAX_DISTANCE_USERTONODE = 150
 let NEW_NODE_FREQUENCY = 60
+
+const DISTANCE = {
+    MAX_USERTONODE: 150,
+    MIN_USERTONODE: 30,
+    MIN_USERTOUSER: 25
+}
+
+const REPUTATION = {
+    STARTING: 80,
+    POSTFAILURE: 50,
+}
 
 // Game internal data 
 const gdpLog = []
@@ -362,7 +373,7 @@ function initNodes() {
         node.tower = null
         node.detectedAmount = 0
         node.receivedAmount = 0
-        node.reputation = 80 // Default node reputation
+        node.reputation = REPUTATION.STARTING
         node.accuracy = 0
         assignCountryToNode(node); // Assign country based on proximity
         if (isFirstPlay() && node.id != 10 && node.id != 11) {
@@ -377,7 +388,7 @@ function initNodes() {
             }
             node.reputation = Math.min(100, node.reputation + amount)
             if (node.reputation < 0) {
-                node.reputation = 50 // Magical number for post-bankruptcy
+                node.reputation = REPUTATION.POSTFAILURE
 
                 UI.showToast('Bankruptcy', `Due to its plummeting reputation ${node.name} closes its doors`, 'errors')
                 node.active = false
@@ -461,9 +472,9 @@ function generateUsers(target = false) {
             let tries = 0;
             let country = nodes[t.id].country
             do {
-                const x = t.x + (Math.random() - 0.5) * 150;
-                const y = t.y + (Math.random() - 0.5) * 150;
-                const overlapping = nodes.some(n => Math.hypot(x - n.x, y - n.y) < 30) || users.some(u => Math.hypot(x - u.x, y - u.y) < 25);
+                const x = t.x + (Math.random() - 0.5) * DISTANCE.MAX_USERTONODE
+                const y = t.y + (Math.random() - 0.5) * DISTANCE.MAX_USERTONODE
+                const overlapping = nodes.some(n => Math.hypot(x - n.x, y - n.y) < DISTANCE.MIN_USERTONODE) || users.some(u => Math.hypot(x - u.x, y - u.y) < DISTANCE.MIN_USERTOUSER);
                 if (!overlapping) {
                     user = {
                         id: `${users.length}`,
@@ -563,7 +574,7 @@ function spawnTransaction() {
     const dice100 = Math.random() * multi
     const legality = legalityOptions[dice100 < 10 ? 2 : dice100 < 15 ? 1 : 0]
     const amount = Math.round(Math.exp(Math.random() * 4.2)) // 15 in average with a log normal distribution
-    const size = amount < 9 ? 'small' : amount < 30 ? 'medium' : 'large'
+    const size = getTransactionSizeName(amount)
 
     const newTx = {
         path: txPath,
