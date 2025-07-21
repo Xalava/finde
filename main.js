@@ -532,7 +532,10 @@ function realignUsersBanks() {
 function selectRandomly(array) {
     return array[Math.floor(Math.random() * array.length)];
 }
-// == Canvas drawing functions == 
+
+// == Transaction Management ==
+
+
 
 function spawnTransaction() {
     const activeUsers = users.filter(u => u.active)
@@ -540,7 +543,7 @@ function spawnTransaction() {
 
     const sourceUser = selectRandomly(activeUsers)
     // let targetUser = selectRandomly(activeUsers.filter(u => u.country !== sourceUser.country))
-    let targetUser = selectRandomly(activeUsers.filter(u => u.id !== sourceUser.id))
+    const targetUser = selectRandomly(activeUsers.filter(u => u.id !== sourceUser.id))
 
 
     if (!sourceUser || !targetUser) {
@@ -551,45 +554,20 @@ function spawnTransaction() {
     const sourceBank = nodes[sourceUser.bankId]
     const targetBank = nodes[targetUser.bankId]
 
-    let multi = 1
     let txPath = []
     if (!sourceBank || !targetBank) {
-        // we have no bank connecting users, they will do a P2P transaction. it is more likely to be illegal
-        // Multi is 20 to 100, 25
-        multi = Math.max(100 / (sourceUser.corruption + targetUser.corruption + 1), 20)
+
         txPath = [sourceUser.id, targetUser.id]
     } else {
 
-        // Illegal tx depends on the corruption of the source user (avg 2) and its bank (0 then increase)
-        // If corruption is 2, 10% chance of being illegal, 5% chance of being questionable. Increase quickly with bank corruption
-        multi = Math.max(200 / (sourceUser.corruption + sourceBank.corruption * 5 + 1), 20) // 20 to 200 
-        // console.log("factor", 30 / (sourceUser.corruption + sourceBank.corruption * 5 + 1))
-        // console.log(multi, sourceUser.corruption, sourceBank.corruption)
         const innerPath = getPathFrom(sourceBank.id, targetBank.id)
         if (!innerPath || innerPath.length < 2) return
 
         txPath = [sourceUser.id, ...innerPath, targetUser.id]
     }
 
-    const dice100 = Math.random() * multi
-    const legality = legalityOptions[dice100 < 10 ? 2 : dice100 < 15 ? 1 : 0]
-    const amount = Math.round(Math.exp(Math.random() * 4.2)) // 15 in average with a log normal distribution
-    const size = getTransactionSizeName(amount)
+    const newTx = new Transaction(sourceUser, targetUser, txPath, nodes)
 
-    const newTx = {
-        path: txPath,
-        index: 0,
-        issuanceDate: Date.now(),
-        terminationDate: null,
-        x: sourceUser.x,
-        y: sourceUser.y,
-        speed: 0.5 + Math.random() * Math.min(15 / amount, 1),
-        legality,
-        size, // kept for comptaibility, in the future, we could use directly amount
-        amount,
-        sourceUser,
-        active: true,
-    }
     if (debug) {
         console.log(`${newTx.legality === 'illegal' ? '💸' : '💵'} from ${sourceUser.id} to ${newTx.path[newTx.path.length - 1]}`)
     }
@@ -622,102 +600,138 @@ function getPathFrom(startId, targetId = null) {
 }
 
 let lostTransactions = 0
-function loseTransaction(tx, message = '') {
-    tx.active = false
-    tx.end = "lost"
-    console.log("Transaction lost!")
-    addEffect(tx.x - 2, tx.y, "∅", "insitus")
-    if (lostTransactions < 2 || lostTransactions % 10 === 0) {
-        UI.showToast('∅ Lost transaction', message, 'error')
+
+class Transaction {
+    constructor(sourceUser, targetUser, path, nodes) {
+        this.path = path
+        this.index = 0
+        this.issuanceDate = Date.now()
+        this.terminationDate = null
+        this.x = sourceUser.x
+        this.y = sourceUser.y
+        this.sourceUser = sourceUser
+        this.active = true
+
+        const sourceBank = nodes[sourceUser.bankId]
+        this.legality = this._calculateLegality(sourceUser, targetUser, sourceBank)
+
+        this.amount = Math.round(Math.exp(Math.random() * 4.2)) // 15 on average with log-normal distribution
+        this.size = getTransactionSizeName(this.amount) // kept for comptaibility, in the future, we could use directly amount
+        this.speed = 0.5 + Math.random() * Math.min(15 / this.amount, 1)
     }
-    lostTransactions++
-}
-function moveTransaction(tx) {
-    const prec = nodes[tx.path[tx.index]]
-    let next
-    //convoluted approach as we store nodes and users in different tables
-    // could be either joined or final destination stored separately
-    if (tx.index == tx.path.length - 2) {
-        next = users[tx.path[tx.index + 1]]
-    } else {
-        next = nodes[tx.path[tx.index + 1]]
+
+    _calculateLegality(sourceUser, targetUser, sourceBank) {
+        // Illegal tx depends on the corruption of the source user (avg 2) and its bank (0 then increase)
+        // If corruption is 2, 10% chance of being illegal, 5% chance of being questionable. Increase quickly with bank corruption
+        // P2P transactions are more likely to be illegal
+        let multi = sourceBank ?
+            Math.max(200 / (sourceUser.corruption + sourceBank.corruption * 5 + 1), 20) : // 20 to 200
+            Math.max(100 / (sourceUser.corruption + targetUser.corruption + 1), 20)        // 20 to 100
+
+        const dice100 = Math.random() * multi
+        return legalityOptions[dice100 < 10 ? 2 : dice100 < 15 ? 1 : 0] // illegal : questionable : legit
     }
-    if (!next) return  // we had reached the end of the path
 
-    const dx = next.x - tx.x
-    const dy = next.y - tx.y
-    let speed = tx.speed * tech.bonus.transactionSpeed * speedControl
-
-    const dist = Math.hypot(dx, dy)
-
-    if (dist < speed) {
-        // remaining distance to next node is less than the speed of the transaction
-        if (!next.active) {
-            loseTransaction(tx, `Due to ${next.name} closure`)
+    moveTransaction() {
+        // Should be updated for P2P tx
+        // We are already at the last node. Should not happen
+        if (this.index >= this.path.length - 1)
             return
-        }
-        tx.index++
-        // we check for detection when we reach a node. If detected, there will be no income
-        next.receivedAmount += tx.amount
-        if (detect(tx)) {
-            dailyDetectedTransactions++
-            tx.active = false
-            return
-        }
-        if (tx.index == tx.path.length - 2) {
-            // We have reached the end of the path
-            // in the future, inspection could cost to budget
-            // Also, these effect could happen to all nodes, except taxes
-            // const isAudited = auditedNodes.some(a => a.id === next.id)
-            // if (isAudited) baseIncome = Math.floor(tx.amount / 2)
-            gdpLog.push({ amount: tx.amount, timestamp: Date.now(), legality: tx.legality })
-            let income = Math.round(tx.amount * policy.getTaxRate())
-            budget += income
+        const next = this.index + 1 === this.path.length - 1 ?
+            users[this.path[this.index + 1]] :
+            nodes[this.path[this.index + 1]]
 
+        const dx = next.x - this.x
+        const dy = next.y - this.y
+        const speed = this.speed * tech.bonus.transactionSpeed * speedControl
+        const dist = Math.hypot(dx, dy)
 
-            // Budget effect. Only if zoomed to reduce load
-            if (Camera.getZoom() > 4) {
-                addEffect(next.x, next.y, "+" + income, 'budget')
+        if (dist < speed) {
+            // remaining distance to next node is less than the speed of the transaction
+            if (!next.active) {
+                loseTransaction(this, `Due to ${next.name} closure`)
+                return false
+            }
+
+            this.index++
+            // we check for detection when we reach a node. If detected, there will be no income
+            next.receivedAmount += this.amount
+            if (detect(this)) {
+                dailyDetectedTransactions++
+                this.active = false
+                return
             }
 
 
-            if (tx.legality === 'illegal') {
+            if (this.index === this.path.length - 2) {
+                // We have reached the end of the path
+                // in the future, inspection could cost to budget
+                // Also, these effect could happen to all nodes, except taxes
+                // const isAudited = auditedNodes.some(a => a.id === next.id)
+                // if (isAudited) baseIncome = Math.floor(tx.amount / 2)
+                gdpLog.push({ amount: this.amount, timestamp: Date.now(), legality: this.legality })
 
-                addEffect(next.x, next.y, '', 'pulseNode', 'rgba(255, 0, 0, 0.2)')
+                const income = Math.round(this.amount * policy.getTaxRate())
+                budget += income
 
-                next.corruption++
-                // addEffect(next.x, next.y, '💥')
-                next.changeReputation(-5) // Reputation decrease when illegal transactions go through
-                // UI.showToast('Illegal transaction completed', 'Corruption increased at ' + next.name, 'error')
-                console.log(`💥 Breach #${next.id}`)
-            } else if (tx.legality === 'questionable') {
-                // addEffect(next.x, next.y, '', 'pulseNode', 'rgba(255, 187, 0, 0.2)')
-                if (debug) console.log(`Questionable transaction at node ${next.id}, from ${tx.path[0]}`)
-                // no particular effect
-            } else {
-                next.changeReputation(1)// Small reputation gain for legitimate transactions
-                // addEffect(next.x, next.y, '', 'pulseNode', 'rgba(0, 255, 0, 0.2)')
+                // Budget effect only if zoomed in to reduce load
+                if (Camera.getZoom() > 4) {
+                    addEffect(next.x, next.y, "+" + income, 'budget')
+                }
+
+
+                if (this.legality === 'illegal') {
+
+                    addEffect(next.x, next.y, '', 'pulseNode', 'rgba(255, 0, 0, 0.2)')
+
+                    next.corruption++
+                    // addEffect(next.x, next.y, '💥')
+                    next.changeReputation(-5) // Reputation decrease when illegal transactions go through
+                    // UI.showToast('Illegal transaction completed', 'Corruption increased at ' + next.name, 'error')
+                    console.log(`💥 Breach #${next.id}`)
+                } else if (this.legality === 'questionable') {
+                    // addEffect(next.x, next.y, '', 'pulseNode', 'rgba(255, 187, 0, 0.2)')
+                    if (debug) console.log(`Questionable transaction at node ${next.id}, from ${tx.path[0]}`)
+                    // no particular effect
+                } else {
+                    next.changeReputation(1)// Small reputation gain for legitimate transactions
+                    // addEffect(next.x, next.y, '', 'pulseNode', 'rgba(0, 255, 0, 0.2)')
+
+                }
+
+                // Update panel if the affected node is selected
+                if (UI.getSelectedNode() && UI.getSelectedNode().id === next.id) {
+                    UI.showNodeDetails(next, budget, placeTower)
+                }
 
             }
-
-            // Update panel if the affected node is selected
-            if (UI.getSelectedNode() && UI.getSelectedNode().id === next.id) {
-                UI.showNodeDetails(next, budget, placeTower)
+            if (this.index == this.path.length - 1) {
+                addEffect(next.x, next.y, '', 'pulse')
+                this.active = false
+                this.end = 'success'
             }
 
+        } else {
+            // Move toward target with chance of transmission failure
+            if (Math.random() < dropProbability) {
+                this.loseTransaction()
+                return
+            }
+            this.x += (dx / dist) * speed
+            this.y += (dy / dist) * speed
         }
-        if (tx.index == tx.path.length - 1) {
-            addEffect(next.x, next.y, '', 'pulse')
-            tx.active = false
-            tx.end = 'success'
-        }
-    } else {
-        if (Math.random() < dropProbability) {
-            loseTransaction(tx, `Due to poor tranmissions. Develop the appropriate technologies.`)
 
+    }
+    loseTransaction(message = '') {
+        this.active = false
+        this.end = "lost"
+        console.log("Transaction lost!")
+        addEffect(this.x - 2, this.y, "∅", "insitus")
+        if (lostTransactions < 2 || lostTransactions % 10 === 0) {
+            const message = 'Due to poor transmissions. Develop the appropriate technologies.'
+            UI.showToast('∅ Lost transaction', message, 'error')
         }
-        tx.x += (dx / dist) * speed
-        tx.y += (dy / dist) * speed
+        lostTransactions++
     }
 }
 
@@ -1156,7 +1170,7 @@ function gameLoop() {
     transactions = transactions.filter(t => t.active);
     window.transactions = transactions; // Keep global reference updated
     transactions.forEach(tx => {
-        moveTransaction(tx)
+        tx.moveTransaction()
         graphics.drawTransaction(tx)
     })
     graphics.drawEffects(effects)
