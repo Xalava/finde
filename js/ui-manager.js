@@ -401,7 +401,7 @@ export function showUserDetails(user) {
     userDetails.type.textContent = user.type
 
     const userTransactions = window.transactions.filter(tx =>
-        tx.active && tx.path && tx.path[0] === user.id || tx.path[tx.path.length - 1] === user.id
+        tx.active && tx.path && (tx.path[0] === user.id || tx.path[tx.path.length - 1] === user.id)
     )
 
     userDetails.userTransactions.innerHTML = formatTransactionList(userTransactions, user.id)

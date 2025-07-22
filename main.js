@@ -115,7 +115,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const ctrls = UI.getControls()
     if (isFirstPlay()) {
         UI.hide(ctrls.gdpStatItem)
-        UI.hide(ctrls.maintenance)
+        UI.hide(ctrls.maintenanceStatItem)
     }
     if (!debugAvailable) {
         UI.hide(ctrls.debugControls)
@@ -390,7 +390,7 @@ function initNodes() {
             if (node.reputation < 0) {
                 node.reputation = REPUTATION.POSTFAILURE
 
-                UI.showToast('Bankruptcy', `Due to its plummeting reputation ${node.name} closes its doors`, 'errors')
+                UI.showToast('Bankruptcy', `Due to its plummeting reputation ${node.name} closes its doors`, 'error')
                 node.active = false
                 node.tower = null
                 userEdges = userEdges.filter(e => e[1] !== node.id)
@@ -510,7 +510,7 @@ function assignNearestBank(user) {
         activeNodes = nodes.filter(n => n.type !== 'processor' && n.active)
     }
     const nearest = activeNodes.sort((a, b) => Math.hypot(user.x - a.x, user.y - a.y) - Math.hypot(user.x - b.x, user.y - b.y))[0]
-    if (nearest && Math.hypot(user.x - nearest.x, user.y - nearest.y) < MAX_DISTANCE_USERTONODE) {
+    if (nearest && Math.hypot(user.x - nearest.x, user.y - nearest.y) < DISTANCE.MAX_USERTONODE) {
         user.bankId = nearest.id;
         userEdges = userEdges.filter(e => e[0] !== user.id);
         userEdges.push([user.id, user.bankId]);
@@ -649,7 +649,7 @@ class Transaction {
         if (dist < speed) {
             // remaining distance to next node is less than the speed of the transaction
             if (!next.active) {
-                loseTransaction(this, `Due to ${next.name} closure`)
+                this.loseTransaction(`Due to ${next.name} closure`)
                 return false
             }
 
@@ -691,7 +691,7 @@ class Transaction {
                     console.log(`💥 Breach #${next.id}`)
                 } else if (this.legality === 'questionable') {
                     // addEffect(next.x, next.y, '', 'pulseNode', 'rgba(255, 187, 0, 0.2)')
-                    if (debug) console.log(`Questionable transaction at node ${next.id}, from ${tx.path[0]}`)
+                    if (debug) console.log(`Questionable transaction at node ${next.id}, from ${this.path[0]}`)
                     // no particular effect
                 } else {
                     next.changeReputation(1)// Small reputation gain for legitimate transactions
@@ -714,7 +714,7 @@ class Transaction {
         } else {
             // Move toward target with chance of transmission failure
             if (Math.random() < dropProbability) {
-                this.loseTransaction()
+                this.loseTransaction('Due to poor transmissions. Develop the appropriate technologies.')
                 return
             }
             this.x += (dx / dist) * speed
@@ -728,7 +728,6 @@ class Transaction {
         console.log("Transaction lost!")
         addEffect(this.x - 2, this.y, "∅", "insitus")
         if (lostTransactions < 2 || lostTransactions % 10 === 0) {
-            const message = 'Due to poor transmissions. Develop the appropriate technologies.'
             UI.showToast('∅ Lost transaction', message, 'error')
         }
         lostTransactions++
@@ -818,7 +817,7 @@ function detect(tx) {
             addEffect(node.x, node.y, '🛑', "tower")
             tx.active = false
             tx.end = "FalsePositive"
-            console.log(`🛑 False postive at `, node.name)
+            console.log(`🛑 False postive at`, node.name)
             node.changeReputation(-5) // harmful for reputation, but not for corruption. Also the transaction ends when it shouldn't have, reducing income
             if (!firstFalsePositive) {
                 UI.showToast(`🛑 First false postive at`, `Reputation damaged at ${node.name}`, 'error')
@@ -884,7 +883,7 @@ function addEffect(x, y, emoji, type = 'default', color = null) {
             timer = 15 // small text notifications)
 
     }
-    effects.push({ x, y, emoji, timer: timer, type: type, color: color })
+    effects.push({ x, y, emoji, timer, type, color })
 
 }
 
@@ -929,7 +928,7 @@ function calculateCorruptionSpread() {
 }
 
 function increaseAIaccuracy() {
-    nodes.filter(n => n.active && n.tower === "ai" || n.tower === "super")
+    nodes.filter(n => n.active && (n.tower === "ai" || n.tower === "super"))
         .forEach(n => {
             if (n.tower === "ai" && n.accuracy < 0.85) {
                 n.accuracy *= 1.005 * tech.bonus.aiLearning
