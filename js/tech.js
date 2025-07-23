@@ -15,7 +15,7 @@ export let bonus = {
     falsePositive: 1, // reverse
     transactionDrop: 1, // reverse
     reputationDamage: 1, // reverse
-    enforcementCost: 1, // reveres
+    enforcementCost: 1, // reverse
     enforcementEfficiency: 1 // reverse
 }
 

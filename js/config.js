@@ -241,7 +241,7 @@ export const techTree = {
             prerequisites: ['ai_research'],
             description: 'Unlocks Supra AI System and improves learning speed.',
             effects: {
-                unlockTowers: ['supra_ai'],
+                unlockTowers: ['super'],
                 aiLearning: 1.1,
             },
             icon: '📊',

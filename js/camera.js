@@ -88,7 +88,7 @@ export function centerView(nodes = [], offset = 0) {
     const centerY = totalY / activeNodes.length
 
     camera.x = canvas.width / 2 - centerX * camera.zoom
-    camera.y = canvas.height / 2 - centerY * camera.zoom + (offset * window.devicePixelRatio || 0)
+    camera.y = canvas.height / 2 - centerY * camera.zoom + offset
     // Todo: 
     // - animate movement toward center 
     // - adjust zoom to current needs

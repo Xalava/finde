@@ -261,43 +261,47 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 // == Game data ==
-// Economics & Game play
-let budget = 120
-let maintenance = 0
-let gdp = 0
-// let globalReputation = 100 // Todo
-let holiday = false
-let dropProbability = 0.00001
-let speedControl = 1
-let spawnControl = 1
-let almostWon = 0
-let spread = 5
-let lastWarningTime = 0
-
 // Game constants
 const BASE_SPAWN_RATE = 0.002
 const HOLIDAY_SPAWN_BONUS = 10
 let NEW_NODE_FREQUENCY = 60
-
 const DISTANCE = {
     MAX_USERTONODE: 150,
     MIN_USERTONODE: 30,
     MIN_USERTOUSER: 25
 }
-
 const REPUTATION = {
     STARTING: 80,
     POSTFAILURE: 50,
 }
 
-// Game internal data 
+// Economics 
+let budget = 120
+let maintenance = 0
+let gdp = 0
+let holiday = false
+let dropProbability = 0.00001
+let spawnControl = 1
+let corruptionSpread = 10
 const gdpLog = []
 let transactions = []
 const startTime = Date.now()
 let currentDay = 0
 const users = []
 let userEdges = []
+let nbActiveNodes = 0
+let activeNodes = []
 
+// Gameplay
+let speedControl = 1
+let hoverNode = null
+
+// Endgame 
+let almostWon = 0
+let lastWarningTime = 0
+let priorNow = Date.now()
+let deltaTime = 0
+let dailyDetectedTransactions = 0
 
 const nodes = [
     { id: 0, x: 490, y: 400, corruption: 0, type: 'processor', name: 'PayFlow', active: true },
@@ -393,6 +397,10 @@ function initNodes() {
                 UI.showToast('Bankruptcy', `Due to its plummeting reputation ${node.name} closes its doors`, 'error')
                 node.active = false
                 node.tower = null
+                // Update cached activeNodes immediately since bank failed
+                activeNodes = nodes.filter(n => n.active)
+                nbActiveNodes = activeNodes.length
+
                 userEdges = userEdges.filter(e => e[1] !== node.id)
                 const usersToUpdate = users.filter(u => u.bankId === node.id)
                 console.log("Users to update", usersToUpdate)
@@ -405,6 +413,8 @@ function initNodes() {
             }
         }
     })
+    activeNodes = nodes.filter(n => n.active)
+    nbActiveNodes = activeNodes.length
 }
 
 const edges = [
@@ -455,8 +465,7 @@ function nameUser(type, country) {
 }
 
 function generateUsers(target = false) {
-    const activeNodes = nodes.filter(n => n.type !== 'processor' && n.active)
-    const targetNodes = target ? [target] : activeNodes
+    const targetNodes = target ? [target] : activeNodes.filter(n => n.type !== 'processor')
 
     targetNodes.forEach(t => {
         const c = nodeTypes[t.type].usersCount
@@ -503,13 +512,13 @@ function generateUsers(target = false) {
 }
 
 function assignNearestBank(user) {
-    let activeNodes = []
+    let validNodes = []
     if (user.type === 'government') {
-        activeNodes = nodes.filter(n => n.type === 'bank' && n.active)
+        validNodes = activeNodes.filter(n => n.type === 'bank')
     } else {
-        activeNodes = nodes.filter(n => n.type !== 'processor' && n.active)
+        validNodes = activeNodes.filter(n => n.type !== 'processor')
     }
-    const nearest = activeNodes.sort((a, b) => Math.hypot(user.x - a.x, user.y - a.y) - Math.hypot(user.x - b.x, user.y - b.y))[0]
+    const nearest = validNodes.sort((a, b) => Math.hypot(user.x - a.x, user.y - a.y) - Math.hypot(user.x - b.x, user.y - b.y))[0]
     if (nearest && Math.hypot(user.x - nearest.x, user.y - nearest.y) < DISTANCE.MAX_USERTONODE) {
         user.bankId = nearest.id;
         userEdges = userEdges.filter(e => e[0] !== user.id);
@@ -887,9 +896,6 @@ function addEffect(x, y, emoji, type = 'default', color = null) {
 
 }
 
-let hoverNode = null
-let hoverTimeout = null
-
 function calculateIndicators() {
     // Remove old transactions from the log (older than 150 seconds, each second is a day)
     while (gdpLog.length && gdpLog[0].timestamp < Date.now() - 150 * 1000) {
@@ -922,7 +928,6 @@ function removeExpiredEnforcementActions(now) {
 }
 
 function calculateCorruptionSpread() {
-    let activeNodes = nodes.filter(n => n.active)
     const totalCorruption = activeNodes.reduce((sum, n) => sum + n.corruption, 0)
     return Math.floor((totalCorruption / (HIGH_CORRUPTION_THRESHOLD * activeNodes.length + 2)) * 100)
 }
@@ -1002,18 +1007,12 @@ function activateNode(node) {
     }
 }
 
-let priorNow = Date.now()
-let deltaTime = 0
-let dailyDetectedTransactions = 0
-
-
 function checkEndGame() {
-
     const now = Date.now();
 
     // Warning states
     if (now - lastWarningTime > 30000) {
-        if (spread >= 80 && spread < 100) {
+        if (corruptionSpread >= 80 && corruptionSpread < 100) {
             UI.showToast('⚠️ Critical Warning', 'Corruption is dangerously high!', 'error');
             lastWarningTime = now;
         } else if (budget < -50 && budget >= -100) {
@@ -1026,7 +1025,7 @@ function checkEndGame() {
     }
 
     // Loosing cases
-    if (spread >= 100) {
+    if (corruptionSpread >= 100) {
         graphics.drawEndGame('Corruption has reached critical levels!')
         UI.showRestartButton()
         return true
@@ -1045,7 +1044,7 @@ function checkEndGame() {
     }
 
     // Victory condition Low corruption maintained
-    if (spread < 2) {
+    if (corruptionSpread < 2) {
         if (almostWon > 7) {
             graphics.drawEndGame('You maintained corruption below 2%!', true)
             return true
@@ -1065,89 +1064,49 @@ function checkEndGame() {
         return true
     }
 }
-
-function gameLoop() {
-
-    // == Update the game state == 
-    const now = Date.now()
-    const newCurrentDay = Math.floor((now - startTime) / 1000) // in seconds
-    if (newCurrentDay !== currentDay) {
-        currentDay = newCurrentDay
-        const dayOfYear = currentDay % 365 + 1
-        // const year = Math.floor(currentDay / 365)
-        // After the first drawing, we slow the game to ask for the tutorial 
-        if (!isFirstPlay()) {
-            // No holidway while first play
-            holiday = false
-            // Check for specific holidays
-            switch (dayOfYear) {
-                case 15: // Lunar New Year
-                    holiday = true
-                    UI.showToast('🎆 Holiday!', 'Happy Lunar New Year!', 'info')
-                    break
-                case 85: // Eid
-                    holiday = true
-                    UI.showToast('🫖 Holiday!', 'Happy Eid!', 'info')
-                    break
-                case 356: // Christmas
-                    holiday = true
-                    UI.showToast('🎁 Holiday!', 'Merry Christmas!', 'info')
-                    break
-            }
-
-        }
-        // We perform the following tasks once a day
-        UI.updateDate(currentDay, holiday)
-        if (currentDay % Math.round(NEW_NODE_FREQUENCY / spawnControl) === 0) {
-            // Every 60 days, a new node is added
-            const inactiveNodes = nodes.filter(n => !n.active && edges.some(([a, b]) => (a === n.id && nodes[b].active) || (b === n.id && nodes[a].active)));
-            if (inactiveNodes.length > 0) {
-                const newNode = inactiveNodes[Math.floor(Math.random() * inactiveNodes.length)];
-                if (policy.state.requireValidation) {
-                    policy.addPendingNode(newNode);
-                    UI.showToast('⚖️  Approval needed', `${newNode.name} awaits regulatory clearance`, 'info');
-                } else {
-                    activateNode(newNode);
-                }
-            }
-            policy.tickSentiment()
-        }
-        const researchPointsGain = tech.calculateResearchPointsGain(gdp, dailyDetectedTransactions)
-        tech.addResearchPoints(researchPointsGain)
-        if (researchPointsGain > 0) {
-            //   UI.showToast('Research Progress', `Gained ${researchPointsGain} Research Points`, 'info')
-        }
-        dailyDetectedTransactions = 0
-        techUI.updateResearchUI();
-
-
-        increaseAIaccuracy()
-        checkNodesCompliance()
-        if (UI.getSelectedNode()) {
-            UI.updateCurrentNodeDetails(budget, placeTower, enforceAction)
-        }
-
-        removeExpiredEnforcementActions(now)
-        spread = calculateCorruptionSpread()
-        if (!isFirstPlay()) {
-            if (checkEndGame()) return
+function spawnNode() {
+    const inactiveNodes = nodes.filter(n => !n.active && edges.some(([a, b]) => (a === n.id && nodes[b].active) || (b === n.id && nodes[a].active)));
+    if (inactiveNodes.length > 0) {
+        const newNode = inactiveNodes[Math.floor(Math.random() * inactiveNodes.length)];
+        if (policy.state.requireValidation) {
+            policy.addPendingNode(newNode);
+            UI.showToast('⚖️  Approval needed', `${newNode.name} awaits regulatory clearance`, 'info');
+        } else {
+            activateNode(newNode);
         }
     }
-    if (transactions.filter(t => t.active).length === 0) {
-        // ensure there is always a transaction going
-        spawnTransaction()
-    } else {
-        const nbActiveNodes = nodes.filter(n => n.active).length
-        const holidayBonus = holiday ? HOLIDAY_SPAWN_BONUS : 1
-        const spawnRate = nbActiveNodes * holidayBonus * Math.log10(currentDay + 1) * BASE_SPAWN_RATE * spawnControl
-        if (Math.random() < spawnRate) {
-            spawnTransaction()
+}
+
+function checkForHoliday(currentDay) {
+    // We perform the following tasks once a day
+    const dayOfYear = currentDay % 365 + 1
+    // const year = Math.floor(currentDay / 365)
+    // After the first drawing, we slow the game to ask for the tutorial 
+    if (!isFirstPlay()) {
+        // No holidway while first play
+        holiday = false
+        // Check for specific holidays
+        switch (dayOfYear) {
+            case 15: // Lunar New Year
+                holiday = true
+                UI.showToast('🎆 Holiday!', 'Happy Lunar New Year!', 'info')
+                break
+            case 85: // Eid
+                holiday = true
+                UI.showToast('🫖 Holiday!', 'Happy Eid!', 'info')
+                break
+            case 356: // Christmas
+                holiday = true
+                UI.showToast('🎁 Holiday!', 'Merry Christmas!', 'info')
+                break
         }
     }
+}
 
-    calculateIndicators()
-
+function drawGame() {
     // == Updade the game display ==
+    const now = Date.now()
+
     ctx.clearRect(0, 0, canvas.width, canvas.height)
     if (debug) Camera.drawCameraInfo(ctx)
     if (debug) {
@@ -1160,16 +1119,12 @@ function gameLoop() {
     }
     Camera.applyCamera(ctx)
     if (debug) Camera.drawDebugGrid(ctx)
-
     userEdges.forEach(edge => graphics.drawUserEdge(edge, users, nodes))
     edges.filter(([a, b]) => nodes[a].active && nodes[b].active)
         .forEach(edge => graphics.drawEdge(edge, nodes));
-    nodes.filter(n => n.active).forEach(node => graphics.drawNode(node, debug));
+    nodes.filter(n => n.active).forEach(node => graphics.drawNode(node, debug))
     users.filter(n => n.active).forEach(user => graphics.drawUser(user, debug))
-    transactions = transactions.filter(t => t.active);
-    window.transactions = transactions; // Keep global reference updated
     transactions.forEach(tx => {
-        tx.moveTransaction()
         graphics.drawTransaction(tx)
     })
     graphics.drawEffects(effects)
@@ -1178,16 +1133,67 @@ function gameLoop() {
     if (displayCountries) {
         graphics.drawCountries(nodes, users)
     }
-
-
     Camera.restoreCamera(ctx)
+    if (!isFirstPlay()) {
+        graphics.drawCorruptionMeter(corruptionSpread)
+    }
+}
+
+function gameLoop() {
+    // == Update the game state == 
+    const now = Date.now()
+    const newCurrentDay = Math.floor((now - startTime) / 1000) // in seconds
+    if (newCurrentDay !== currentDay) {
+        //Daily actions
+        currentDay = newCurrentDay
+        checkForHoliday(currentDay)
+        UI.updateDate(currentDay, holiday)
+        const researchPointsGain = tech.calculateResearchPointsGain(gdp, dailyDetectedTransactions)
+        tech.addResearchPoints(researchPointsGain)
+        if (researchPointsGain > 0) {
+            //   UI.showToast('Research Progress', `Gained ${researchPointsGain} Research Points`, 'info')
+        }
+        increaseAIaccuracy()
+        checkNodesCompliance()
+        removeExpiredEnforcementActions(now)
+        corruptionSpread = calculateCorruptionSpread()
+        if (!isFirstPlay()) {
+            if (checkEndGame()) return
+        }
+        techUI.updateResearchUI();
+        if (UI.getSelectedNode()) {
+            UI.updateCurrentNodeDetails(budget, placeTower, enforceAction)
+        }
+        if (currentDay % Math.round(NEW_NODE_FREQUENCY / spawnControl) === 0) {
+            // Every 60 days, a new node is added and we check for sentiment
+            spawnNode()
+            policy.tickSentiment()
+        }
+        activeNodes = nodes.filter(n => n.active) // light optimisation, we check once a day: checkNodesCompliance and spawnNodes might have changed the count. 
+        nbActiveNodes = activeNodes.length
+        dailyDetectedTransactions = 0 // reinit at the end of a new day, tx will accumulate during the frames of the day. 
+    }
+    transactions = transactions.filter(t => t.active);
+    window.transactions = transactions // Keep global reference updated
+    if (transactions.length === 0) {
+        // ensure there is always a transaction going
+        spawnTransaction()
+    } else {
+        const holidayBonus = holiday ? HOLIDAY_SPAWN_BONUS : 1
+        const spawnRate = nbActiveNodes * holidayBonus * Math.log10(currentDay + 1) * BASE_SPAWN_RATE * spawnControl
+        if (Math.random() < spawnRate) {
+            spawnTransaction()
+        }
+        transactions.forEach(tx => {
+            tx.moveTransaction()
+        })
+    }
+    calculateIndicators()
 
     // == Update the UI ==
     UI.updateIndicators(budget, gdp, maintenance * tech.bonus.maintenance)
-
     // Update Analytics panel (function will check if visible)
     UI.updateAnalyticsPanel()
-
     if (hoverNode && !UI.getSelectedNode()) {
         graphics.drawTooltip(hoverNode)
     } else {
@@ -1196,10 +1202,8 @@ function gameLoop() {
         // if (hoveredUser) drawUserTooltip(hoveredUser)
     }
 
-    if (!isFirstPlay()) {
-        graphics.drawCorruptionMeter(spread)
-    }
-
+    // == Draw the game ==
+    drawGame()
     animationFrameId = requestAnimationFrame(gameLoop)
 }
 
