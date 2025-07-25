@@ -197,6 +197,75 @@ export const userTypes = {
     },
 }
 
+export const events = {
+    structuredLayering: {
+        id: 'structuredLayering',
+        name: 'Structured Layering Operation Detected',
+        description: 'Our Transaction Monitoring System flagged a coordinated layering scheme. Multiple entities are conducting structured deposits under thresholds to avoid Currency Transaction Reporting (CTR) requirements. The funds are being rapidly moved through shell accounts across jurisdictions.',
+        icon: '🚨',
+        probability: 0.0008,
+        cooldown: 480000, // 8 minutes
+        choices: [
+            {
+                id: 'enhancedMonitoring',
+                text: 'Activate Enhanced Transaction Monitoring',
+                description: 'Deploy advanced pattern recognition algorithms to detect structured transactions. Doubles illegal transaction detection for 1 minutes but increases operational costs.',
+                effects: {
+                    detectionMod: 2,
+                    maintenance: 10,
+                    duration: 60000,
+                    toast: { success: 'Enhanced Monitoring Active' }
+                }
+            },
+            {
+                id: 'fileCTR',
+                text: 'File Currency Transaction Reports',
+                description: 'Report structured transactions to authorities and receive compliance rewards. However, filing alerts may cause the criminal network to modify their methods.',
+                effects: {
+                    budget: 400,
+                    launderingAlert: true,
+                    duration: 90000,
+                    toast: { success: 'Reports Filed Successfully', warning: 'Criminal Network Alerted' }
+                }
+            }
+        ]
+    },
+    cybersecurityBreach: {
+        id: 'cybersecurityBreach',
+        name: 'Critical Infrastructure Cyber Attack',
+        description: 'URGENT: Advanced Persistent Threat detected targeting core banking infrastructure. Attackers have compromised network switches and are attempting to manipulate transaction routing protocols. The attack vector appears to be a zero-day exploit against SWIFT messaging interfaces. Immediate response required to prevent catastrophic system compromise.',
+        icon: '🔴',
+        probability: 0.0004,
+        cooldown: 720000, // 12 minutes
+        choices: [
+            {
+                id: 'emergencyShutdown',
+                text: 'Execute Emergency Network Isolation',
+                description: 'Immediately isolate all systems and halt transaction processing. Prevents further damage but causes complete network shutdown and significant financial losses.',
+                effects: {
+                    budget: -800,
+                    detectionMod: 0.5,
+                    maintenance: 0,
+                    duration: 150000,
+                    toast: { warning: 'Network Isolated - Major Disruption' }
+                }
+            },
+            {
+                id: 'activeDefense',
+                text: 'Deploy Active Cyber Defense Countermeasures',
+                description: 'Engage incident response team to contain threat while maintaining operations. Risky approach that may allow continued monitoring systems but keeps network functional.',
+                effects: {
+                    budget: 100,
+                    detectionMod: 0.3,
+                    maintenance: 25,
+                    duration: 120000,
+                    toast: { success: 'Containment Protocols Active', warning: 'Network Remains Vulnerable' }
+                }
+            }
+        ]
+    }
+}
+
 export const techTree = {
     compliance: [
         {

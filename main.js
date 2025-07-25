@@ -8,6 +8,7 @@ import * as techUI from './js/tech-ui.js'
 import { showTutorial, isFirstPlay } from './js/tutorial.js'
 
 import * as policy from './js/policy.js'
+import * as events from './js/events.js'
 // == UI == 
 const CLICK_DETECTION_RADIUS = 20
 let debug = false
@@ -230,6 +231,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initialize the game
     tech.initTechTree()
     techUI.initTechUI()
+    events.initializeEvents()
     initNodes()
     generateUsers()
 
@@ -662,6 +664,7 @@ class Transaction {
                 return false
             }
 
+            // TODO Could handle active nodes but under audit or investigation. 
             this.index++
             // we check for detection when we reach a node. If detected, there will be no income
             next.receivedAmount += this.amount
@@ -812,9 +815,9 @@ function detect(tx) {
     if (!node || !node.tower) return false
 
 
-    const { detectMod, fpMod } = policy.regulationLevels[policy.state.current]
+    const { policyDetectMod, fpMod } = policy.regulationLevels[policy.state.current]
 
-    let detectionChance = node.accuracy * detectMod // towerOptions[node.tower].accuracy
+    let detectionChance = node.accuracy * policyDetectMod * events.detectMod
 
     if (node.tower === 'basic' && tx.size === 'small') {
         detectionChance *= 0.5; // Reduce accuracy for small transactions
@@ -1182,12 +1185,50 @@ function gameLoop() {
         const holidayBonus = holiday ? HOLIDAY_SPAWN_BONUS : 1
         const spawnRate = nbActiveNodes * holidayBonus * Math.log10(currentDay + 1) * BASE_SPAWN_RATE * spawnControl
         if (Math.random() < spawnRate) {
-            spawnTransaction()
+            // spawnTransaction()
+        } else if (window.launderingAlert && Math.random() < spawnRate * 0.1) {
+            // If laundering alert is active, spawn burst of structured transactions
+            UI.showToast('💸 Laundering Scheme!', 'Structured transactions detected.', 'warning')
+            // During laundering create structured transactions (multiple small amounts)
+            for (let i = 0; i < 3; i++) {
+                setTimeout(() => {
+                    spawnTransaction() // Create a new transaction each time
+                    let newTx = transactions[transactions.length - 1]
+                    if (newTx) {
+                        newTx.legality = "illegal"
+                        newTx.amount = 2 + Math.floor(Math.random() * 7) // 2 to 9
+                        newTx.size = "small"
+                    }
+                }, i * 500) // Reduced delay to 1 second intervals
+            }
         }
-        transactions.forEach(tx => {
-            tx.moveTransaction()
-        })
     }
+
+    // Check for events
+    events.checkForEvents(startTime)
+
+    // Apply event effects if any choice was made
+    if (window.eventBudgetChange) {
+        budget += window.eventBudgetChange
+        window.eventBudgetChange = 0 // Reset after applying
+    }
+    if (window.eventMaintenanceChange) {
+        let eventMaintenance = window.eventMaintenanceChange
+        maintenance += eventMaintenance
+        // Reset maintenance after duration
+        if (window.eventDuration) {
+            setTimeout(() => {
+                maintenance -= eventMaintenance
+            }, window.eventDuration)
+        }
+        window.eventMaintenanceChange = 0 // Reset after applying
+        window.eventDuration = 0
+    }
+
+    transactions.forEach(tx => {
+        tx.moveTransaction()
+    })
+
     calculateIndicators()
 
     // == Update the UI ==
