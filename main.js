@@ -372,6 +372,16 @@ function assignCountryToNode(node) {
     }
     node.country = closestCountryKey;
 }
+function reassignUsersBank(nodeID) {
+    //after a bank closure, we reassign users to the nearest bank
+    userEdges = userEdges.filter(e => e[1] !== nodeID)
+    const usersToUpdate = users.filter(u => u.bankId === nodeID)
+    console.log("Users to update", usersToUpdate)
+    usersToUpdate.forEach(u => {
+        u.bankId = null
+        assignNearestBank(u)
+    })
+}
 
 // for each node, we add empty variables tower:null, detectedAmount:0, receivedAmount:0, reputation:80
 function initNodes() {
@@ -403,15 +413,35 @@ function initNodes() {
                 activeNodes = nodes.filter(n => n.active)
                 nbActiveNodes = activeNodes.length
 
-                userEdges = userEdges.filter(e => e[1] !== node.id)
-                const usersToUpdate = users.filter(u => u.bankId === node.id)
-                console.log("Users to update", usersToUpdate)
-                // usersToUpdate.forEach(u => u.active = false)
-                usersToUpdate.forEach(u => {
-                    u.bankId = null
-                    assignNearestBank(u)
-                }
-                )
+                reassignUsersBank(node.id)
+            }
+        }
+
+        node.completeTransaction = (tx) => {
+            //Taxation
+            const income = Math.round(tx.amount * policy.getTaxRate())
+            budget += income
+            if (Camera.getZoom() > 4) {
+                addEffect(node.x, node.y, "+" + income, 'budget')
+            }
+
+            // Apply legality effects
+            node.receivedAmount += tx.amount
+            if (tx.legality === 'illegal') {
+                addEffect(node.x, node.y, '', 'pulseNode', 'rgba(255, 0, 0, 0.2)')
+                node.corruption++
+                node.changeReputation(-5)
+                console.log(`💥 Breach #${node.id}`)
+            } else if (tx.legality === 'questionable') {
+                node.changeReputation(-1)
+                if (debug) console.log(`Questionable transaction at node ${node.id}, from ${tx.path[0]}`)
+            } else {
+                node.changeReputation(1)
+            }
+
+            // Update UI if this node is selected
+            if (UI.getSelectedNode()?.id === node.id) {
+                UI.showNodeDetails(node, budget, placeTower, enforceAction)
             }
         }
     })
@@ -681,41 +711,12 @@ class Transaction {
                 // Also, these effect could happen to all nodes, except taxes
                 // const isAudited = auditedNodes.some(a => a.id === next.id)
                 // if (isAudited) baseIncome = Math.floor(tx.amount / 2)
+
+                // Record for GDP
                 gdpLog.push({ amount: this.amount, timestamp: Date.now(), legality: this.legality })
 
-                const income = Math.round(this.amount * policy.getTaxRate())
-                budget += income
 
-                // Budget effect only if zoomed in to reduce load
-                if (Camera.getZoom() > 4) {
-                    addEffect(next.x, next.y, "+" + income, 'budget')
-                }
-
-
-                if (this.legality === 'illegal') {
-
-                    addEffect(next.x, next.y, '', 'pulseNode', 'rgba(255, 0, 0, 0.2)')
-
-                    next.corruption++
-                    // addEffect(next.x, next.y, '💥')
-                    next.changeReputation(-5) // Reputation decrease when illegal transactions go through
-                    // UI.showToast('Illegal transaction completed', 'Corruption increased at ' + next.name, 'error')
-                    console.log(`💥 Breach #${next.id}`)
-                } else if (this.legality === 'questionable') {
-                    // addEffect(next.x, next.y, '', 'pulseNode', 'rgba(255, 187, 0, 0.2)')
-                    if (debug) console.log(`Questionable transaction at node ${next.id}, from ${this.path[0]}`)
-                    // no particular effect
-                } else {
-                    next.changeReputation(1)// Small reputation gain for legitimate transactions
-                    // addEffect(next.x, next.y, '', 'pulseNode', 'rgba(0, 255, 0, 0.2)')
-
-                }
-
-                // Update panel if the affected node is selected
-                if (UI.getSelectedNode() && UI.getSelectedNode().id === next.id) {
-                    UI.showNodeDetails(next, budget, placeTower)
-                }
-
+                next.completeTransaction(this)
             }
             if (this.index == this.path.length - 1) {
                 addEffect(next.x, next.y, '', 'pulse')
@@ -735,14 +736,19 @@ class Transaction {
 
     }
     loseTransaction(message = '') {
+        let reason = 'lost' // Temporarily fixed. Could be expanded in the call
+
         this.active = false
-        this.end = "lost"
-        console.log("Transaction lost!")
-        addEffect(this.x - 2, this.y, "∅", "insitus")
-        if (lostTransactions < 2 || lostTransactions % 10 === 0) {
-            UI.showToast('∅ Lost transaction', message, 'error')
+        this.end = reason
+
+        if (reason === 'lost') {
+            console.log("Transaction lost!")
+            addEffect(this.x - 2, this.y, "∅", "insitus")
+            if (lostTransactions < 2 || lostTransactions % 10 === 0) {
+                UI.showToast('∅ Lost transaction', message, 'error')
+            }
+            lostTransactions++
         }
-        lostTransactions++
     }
 }
 
@@ -815,9 +821,9 @@ function detect(tx) {
     if (!node || !node.tower) return false
 
 
-    const { policyDetectMod, fpMod } = policy.regulationLevels[policy.state.current]
-
-    let detectionChance = node.accuracy * policyDetectMod * events.detectMod
+    const { detectMod, fpMod } = policy.regulationLevels[policy.state.current]
+    if (debug) console.log(`events detectMod`, events.detectMod, "policyDetectMod", detectMod, "fpMod", fpMod)
+    let detectionChance = node.accuracy * detectMod * events.detectMod
 
     if (node.tower === 'basic' && tx.size === 'small') {
         detectionChance *= 0.5; // Reduce accuracy for small transactions
@@ -1185,7 +1191,7 @@ function gameLoop() {
         const holidayBonus = holiday ? HOLIDAY_SPAWN_BONUS : 1
         const spawnRate = nbActiveNodes * holidayBonus * Math.log10(currentDay + 1) * BASE_SPAWN_RATE * spawnControl
         if (Math.random() < spawnRate) {
-            // spawnTransaction()
+            spawnTransaction()
         } else if (window.launderingAlert && Math.random() < spawnRate * 0.1) {
             // If laundering alert is active, spawn burst of structured transactions
             UI.showToast('💸 Laundering Scheme!', 'Structured transactions detected.', 'warning')
