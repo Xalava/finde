@@ -18,6 +18,7 @@ export function drawEffects(effects) {
             case 'insitus':
                 ctx.font = `6px ${uiFont}`
                 ctx.fillText(e.emoji, e.x, e.y)
+                break
             case 'malus':
                 ctx.fillStyle = 'red'
                 ctx.font = `12px ${uiFont}`

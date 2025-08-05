@@ -184,7 +184,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('touchstart', handlePanelClose, { passive: false })
 
 
-    ctrls.centerBtn.addEventListener('click', Camera.centerView.bind(null, nodes))
+    ctrls.centerBtn.addEventListener('click', () => Camera.centerView(nodes))
     ctrls.debugBtn.addEventListener('click', () => {
         debug = !debug
         ctrls.debugBtn.style.backgroundColor = debug ? 'rgba(255, 0, 0, 0.2)' : ''
@@ -678,9 +678,10 @@ class Transaction {
         // We are already at the last node. Should not happen
         if (this.index >= this.path.length - 1)
             return
+        const nextId = this.path[this.index + 1]
         const next = this.index + 1 === this.path.length - 1 ?
-            users[this.path[this.index + 1]] :
-            nodes[this.path[this.index + 1]]
+            users[nextId] :
+            nodes[nextId]
 
         const dx = next.x - this.x
         const dy = next.y - this.y
