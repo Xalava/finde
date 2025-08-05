@@ -188,7 +188,16 @@
                 <button id="close-policy" class="close-button">×</button>
             </div>
             <div class="panel-content">
-                <div class="policy-row">
+                <section class="panel-section">
+                    <h3>🗳️ Ecosystem Sentiment</h3>
+                    <div id="sentiment-wrap" data-tooltip="Updates regularly based on policy level and changes">
+                        <div id="sentiment-bar"></div>
+                    </div>
+                    <div style="text-align: center;">
+                        <em>Δ <span id="policy-points">0</span> per quarter</em>
+                    </div>
+                </section>
+                <section class="panel-section policy-row" data-tooltip="Set the compliance level.">
                     <label class="policy-option">
                         <span class="policy-icon">🌿</span>
                         <strong>Lenient</strong>
@@ -207,18 +216,7 @@
                         <span class="policy-hint">More detection, but more false positives</span>
                         <input type="radio" name="reg" value="stringent">
                     </label>
-                </div>
-                <section class="panel-section">
-                    <h3>🗳️ Ecosystem Sentiment</h3>
-                    <div id="sentiment-wrap" data-tooltip="Updates regularly based on policy level and changes">
-                        <div id="sentiment-bar"></div>
-                    </div>
-                    <div style="text-align: center;">
-                        <em>Δ <span id="policy-points">0</span> per quarter</em>
-                    </div>
                 </section>
-
-
                 <section class="panel-section" data-tooltip="Set the national taxation level.">
                     <h3>💰️ Taxation Level</h3>
                     <div class="tax-slider-wrapper">
@@ -230,8 +228,9 @@
                 <section class="panel-section"
                     data-tooltip="Require minimum filter compliance for banks. Non-compliant banks trigger automated tower placement.">
                     <h3>🏦 Minmal Compliance</h3>
-                    <span class="policy-hint">Banks will be required to install compliant
-                        filters automatically.</span>
+                    <p class="policy-hint">Banks will be required to install compliant
+                        filters automatically. Have the appropriate budget ready.</p>
+                    <br>
                     <select id="compliance-select" class="compliance-select">
                         <option value="0">None - No requirements</option>
                         <option value="1">Basic filter required</option>

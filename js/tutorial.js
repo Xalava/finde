@@ -29,7 +29,7 @@ export function showTutorial() {
     // Set tutorial content
     tutorialHeader.textContent = 'Welcome to Financial Defense 💼'
     tutorialContent.innerHTML = `
-            <p>Defend the financial network against illegal transactions and corruption.</p>
+            <p>Facilitate economic growth while defending the financial network against illegal transactions and corruption.</p>
         `
 
     // Create and add buttons
@@ -80,7 +80,7 @@ const TUTORIAL_STEPS = [
     },
     {
         title: '<span class="glow glow-red"></span>',
-        content: '<p>Illegal transactions money too, but they damage banks\' reputation and increase corruption.</p>',
+        content: '<p>Illegal transactions move money too, but they damage banks\' reputation and increase corruption.</p>',
     },
     {
         title: 'Your turn',
@@ -88,15 +88,15 @@ const TUTORIAL_STEPS = [
     },
     {
         title: '🔍 Basic Filter',
-        content: '<p>This filter catches 50% of illegal transactions. Each catch provides intelligence that can be spend as research.</p>',
+        content: '<p>This filter catches 50% of illegal transactions. Each catch provides intelligence that can be spent as research.</p>',
     },
     {
         title: '🧪 Research',
         content: '<p>Research allows you to improve compliance filters, enforcement actions, and the network.</p>',
     },
     {
-        title: '🎉 et voila!',
-        content: `<p>The rest is your history. You will win if corruption stays below 1% or if the economy booms. Good luck!</p>`
+        title: '🎉 Et voilà!',
+        content: `<p>The rest is your history. You will win if corruption stays below 2% or if the economy booms. Good luck!</p>`
     }
 ];
 

@@ -45,7 +45,7 @@ function updateResearchPointsDisplay() {
         addResearchPoints(10)// one time bonus for the early game
         setTimeout(() => {
             show(resUI.button)
-            showToast(`🧪 Research Enabled!`, `Research Points are collected when blocking transactions.`, 'info')
+            showToast(`🧪 Research Enabled!`, `Research points are collected when blocking transactions.`, 'info')
         }, 1000)
 
         firstResearchPoint = true
