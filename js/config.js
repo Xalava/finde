@@ -94,7 +94,7 @@ export const actionOptions = {
     audit: {
         name: 'Audit',
         cost: 160,
-        description: 'Request an audit. It will reduce corruption in an institution when completed.',
+        description: 'Reduces local corruption when completed.',
         icon: '🕵️‍♂️',
         duration: 10,
         reputationEffect: -5,
@@ -104,10 +104,11 @@ export const actionOptions = {
     raid: {
         name: 'Raid',
         cost: 600, //450 after discount
-        description: 'Raids damage reputation but significantly reduce corruption.',
+        description: 'Significantly reduces corruption, but damages reputation and popularity.',
         icon: '🚨',
-        duration: 20,
-        reputationEffect: -20,
+        duration: 5,
+        reputationEffect: -30,
+        popularityEffect: -3,
         corruptionEffect: 0.2,
         techRequirement: 'special_operations'
     },
@@ -141,7 +142,7 @@ export const legalityOptions = ['legit', 'questionable', 'illegal']
 export const legalityColorMap = {
     legit: 'rgba(0, 255, 0, 0.7)',
     questionable: 'rgba(255, 165, 0, 0.7)',
-    illegal: 'rgba(255, 0, 0, 0.7)'
+    illegal: 'rgba(255, 0, 0, 0.9)'
 }
 
 
@@ -342,28 +343,28 @@ export const techTree = {
     ],
     enforcement: [
         {
-            id: 'investigation_methods',
-            name: 'Investigation Methods',
-            cost: 90,
-            prerequisites: [],
-            description: 'Augments enforcement efficiency.',
-            effects: {
-                enforcementEfficiency: 0.6,
-            },
-            icon: '👮',
-        },
-        {
             id: 'organised_procedures',
             name: 'Organised Procedures',
-            cost: 350,
-            prerequisites: ['investigation_methods'],
+            cost: 90,
+            prerequisites: [],
             description: 'Reduces Enforcement cost.',
             effects: {
-                enforcementCost: 0.75,
-                // unlockActions: ['audit'],
+                enforcementCost: 0.70,
             },
             icon: '🗃️',
         },
+        {
+            id: 'investigation_methods',
+            name: 'Investigation Methods',
+            cost: 350,
+            prerequisites: ['organised_procedures'],
+            description: 'Augments enforcement efficiency.',
+            effects: {
+                enforcementEfficiency: 1.4,
+            },
+            icon: '👮',
+        },
+
         {
             id: 'special_operations',
             name: 'Special Operations Unit',
@@ -372,27 +373,15 @@ export const techTree = {
             description: 'Unlocks Raid action.',
             effects: {
                 unlockActions: ['raid'],
-                // corruptionReduction: 0.2,
             },
             icon: '🚔',
         },
-        // {
-        //     id: 'digital_forensics',
-        //     name: 'Digital Forensics',
-        //     cost: 600,
-        //     prerequisites: ['special_operations'],
-        //     description: 'Unlock Forensic Analysis action.',
-        //     effects: {
-        //         unlockActions: ['forensic_analysis'],
-        //     },
-        //     icon: '💻',
-        // },
         {
             id: 'public_relations',
             name: 'Public Relations Department',
             cost: 750,
             prerequisites: ['organised_procedures'],
-            description: 'Strongly reduces reputational damage from enforcement actions.',
+            description: 'Reduces reputational damage from enforcement actions.',
             effects: {
                 reputationDamage: 0.3,
             },
@@ -409,7 +398,7 @@ export const techTree = {
                 multiNodeTargeting: true,
             },
             icon: '🌍',
-        }
+        },
     ],
     network: [
         {

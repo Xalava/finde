@@ -54,6 +54,10 @@ export function setCameraActions() {
     canvas.addEventListener('contextmenu', (e) => e.preventDefault())
 }
 
+export function getDefaultZoom() {
+    return window.innerWidth < 600 ? 1.1 : 1.8
+}
+
 export function applyCamera(ctx) {
     ctx.save()
     ctx.translate(camera.x, camera.y)
@@ -71,21 +75,23 @@ export function resizeCanvas(ctx) {
     ctx.setTransform(1, 0, 0, 1, 0, 0)
 }
 
-export function centerView(nodes = [], offset = 0) {
-    if (!canvas || nodes.length === 0) return
-
-    // Reset any ongoing drag state
-    camera.dragging = false
-
+export function calculateCenter(activeNodes) {
     let totalX = 0, totalY = 0
-    let activeNodes = nodes.filter(node => node.active)
-    if (activeNodes.length === 0) return
     activeNodes.forEach(node => {
         totalX += node.x
         totalY += node.y
     })
     const centerX = totalX / activeNodes.length
     const centerY = totalY / activeNodes.length
+    return { centerX, centerY }
+}
+export function centerView(activeNodes, offset = 0) {
+    if (!canvas || activeNodes.length === 0) return
+
+    // Reset any ongoing drag state
+    camera.dragging = false
+
+    const { centerX, centerY } = calculateCenter(activeNodes)
 
     camera.x = canvas.width / 2 - centerX * camera.zoom
     camera.y = canvas.height / 2 - centerY * camera.zoom + offset
@@ -135,9 +141,9 @@ export function endDrag() {
     canvas.style.cursor = 'default'
 }
 
-export function cinematicZoom(zoomFactor) {
+export function cinematicZoom(zoomTarget) {
     const startZoom = camera.zoom
-    const targetZoom = zoomFactor
+    const targetZoom = zoomTarget
     const duration = 800 // 1 second
     const startTime = Date.now()
 
@@ -215,6 +221,49 @@ export function drawDebugGrid(ctx) {
     }
 
     ctx.restore()
+}
+
+export function cinematicCenterPoint(x, y, targetZoom = 3) {
+    if (camera.zoom === targetZoom) {
+        // First dezoom, then center and zoom back
+        cinematicZoom(getDefaultZoom())
+        setTimeout(() => {
+            cinematicPanAndZoom(x, y, targetZoom)
+        }, 800)
+    } else {
+        // Direct center and zoom
+        cinematicPanAndZoom(x, y, targetZoom)
+    }
+}
+
+export function cinematicCenterMap(activeNodes, offset = 0) {
+    const { centerX, centerY } = calculateCenter(activeNodes)
+    cinematicPanAndZoom(centerX, centerY + offset, getDefaultZoom())
+}
+
+
+function cinematicPanAndZoom(x, y, targetZoom) {
+    const startX = camera.x
+    const startY = camera.y
+    const startZoom = camera.zoom
+    const duration = 800
+    const startTime = Date.now()
+
+    const targetX = canvas.width / 2 - x * targetZoom
+    const targetY = canvas.height / 2 - y * targetZoom
+
+    function animate() {
+        const progress = Math.min((Date.now() - startTime) / duration, 1)
+        const easeProgress = 1 - Math.pow(1 - progress, 3) // Ease out cubic
+
+        camera.x = startX + (targetX - startX) * easeProgress
+        camera.y = startY + (targetY - startY) * easeProgress
+        camera.zoom = startZoom + (targetZoom - startZoom) * easeProgress
+
+        if (progress < 1) requestAnimationFrame(animate)
+    }
+
+    animate()
 }
 
 export function getZoom() {

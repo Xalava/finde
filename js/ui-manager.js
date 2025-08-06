@@ -35,7 +35,8 @@ export function initUI() {
         gdpStatItem: document.getElementById('gdp-stat-item'),
         maintenanceStatItem: document.getElementById('maintenance-stat-item'),
         debugControls: document.getElementById('debug-controls'),
-        policyBtn: document.getElementById('policy-button')
+        policyBtn: document.getElementById('policy-button'),
+        gameControls: document.getElementById('game-controls')
     }
 
     instructions = {
@@ -738,3 +739,20 @@ window.addEventListener('keydown', (e) => {
         }
     }
 })
+
+export function activatePolicy() {
+    show(controls.policyBtn)
+}
+
+export function hideFullInterface() {
+    // Simplified interface when using the tutorial
+    hide(controls.gdpStatItem)
+    hide(controls.maintenanceStatItem)
+    hide(controls.gameControls)
+}
+
+export function showFullInterface() {
+    show(controls.gdpStatItem)
+    show(controls.maintenanceStatItem)
+    show(controls.gameControls)
+}

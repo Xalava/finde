@@ -9,12 +9,12 @@ import { showToast, hide, show, togglePanel } from './ui-manager.js'
 
 const policyPoints = document.getElementById('policy-points')
 
-const SENTIMENT_MAX = 100
-export let sentiment = 100                          // starts full
+const POPULARITY_MAX = 100
+export let popularity = 100                          // starts full
 
 // +3 lenient, +1 balanced, –1 stringent, –1 if approvals ON
-// TODO Delta could be udated via change sentiment
-function sentimentDelta() {
+// TODO Delta could be udated via change popularity
+function popularityDelta() {
     let d
     switch (state.current) {
         case 'lenient':
@@ -36,15 +36,15 @@ function sentimentDelta() {
     return d
 }
 
-export function changeSentiment(delta) {
-    sentiment = Math.max(0, Math.min(SENTIMENT_MAX, sentiment + delta))
+export function changePopularity(delta) {
+    popularity = Math.max(0, Math.min(POPULARITY_MAX, popularity + delta))
     displayPolicyStatus()
     displayPolicyPoints()
-    displaySentimentBar()
+    displayPopularityBar()
 }
 
-export function tickSentiment() {
-    changeSentiment(sentimentDelta())
+export function tickPopularity() {
+    changePopularity(popularityDelta())
 }
 // Policy state management
 export const state = {
@@ -115,7 +115,7 @@ export function updateApprovalsUI() {
         btn.addEventListener('click', (e) => {
             const nodeId = parseInt(e.target.dataset.id, 10)
             const node = pendingNodes.find(n => n.id === nodeId)
-            changeSentiment(1)
+            changePopularity(1)
             if (node) {
                 window.dispatchEvent(new CustomEvent('approveNode', { detail: node }))
             }
@@ -126,7 +126,7 @@ export function updateApprovalsUI() {
         btn.addEventListener('click', (e) => {
             const nodeId = parseInt(e.target.dataset.id, 10)
             const node = pendingNodes.find(n => n.id === nodeId)
-            changeSentiment(-10)
+            changePopularity(-10)
             if (node) {
                 removePendingNode(node)
             }
@@ -150,7 +150,7 @@ if (policyUI.close) policyUI.close.addEventListener('click', togglePanel('policy
 document.getElementById('approvals-policy')?.addEventListener('change', e => {
     state.requireValidation = e.target.checked
     showToast('Policy updated', `Approvals policy is now ${state.requireValidation ? 'on' : 'off'}`, 'info')
-    changeSentiment(-1)
+    changePopularity(-1)
     // Todo: Policy point/reputation
     // if (policyPoints) policyPoints.textContent = state.requireValidation ? '2' : '1'
 
@@ -159,7 +159,7 @@ document.getElementById('approvals-policy')?.addEventListener('change', e => {
 document.querySelectorAll('input[name="reg"]').forEach(el => {
     el.addEventListener('change', e => {
         state.current = e.target.value
-        changeSentiment(-1)
+        changePopularity(-1)
     })
 })
 
@@ -173,7 +173,7 @@ taxValueDisplay.textContent = taxSlider.value
 taxSlider.addEventListener('input', (event) => {
     taxValueDisplay.textContent = event.target.value
     setTaxRate(event.target.value / 100)
-    changeSentiment(-0.1)
+    changePopularity(-0.1)
 });
 
 // Compliance policy handlers
@@ -184,19 +184,19 @@ document.getElementById('compliance-select')?.addEventListener('change', e => {
     state.minCompliance = level
     const levelName = complianceLevels[level]
     showToast('Policy updated', `Minimum compliance set to ${levelName}`, 'info')
-    changeSentiment(level > 0 ? -1 : 0)
+    changePopularity(level > 0 ? -1 : 0)
 })
 
 
-function displaySentimentBar() {
-    const bar = document.getElementById('sentiment-bar')
-    bar.style.width = sentiment + '%'
+function displayPopularityBar() {
+    const bar = document.getElementById('popularity-bar')
+    bar.style.width = popularity + '%'
     const colours = ['#c0392b', '#e67e22', '#f1c40f', '#2ecc71']
-    bar.style.background = colours[Math.floor(sentiment / 25)]
+    bar.style.background = colours[Math.floor(popularity / 25)]
 }
 
 function displayPolicyPoints() {
-    const d = sentimentDelta() * 2
+    const d = popularityDelta() * 2
     const deltaText = d > 0 ? `+${d}` : d < 0 ? `${d}` : '0'
     policyPoints.innerText = deltaText
 }

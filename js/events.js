@@ -23,8 +23,8 @@ export function initializeEvents() {
 
 export function checkForEvents(startTime) {
     const now = Date.now()
-    // Don't start events until 8 minutes of play
-    if (now - startTime < 480000) return
+    // Don't start events until 10 minutes of play
+    if (now - startTime < 600000) return
     if (activeEvent || now - lastEventTime < 120000) return
 
     // Check each event from config

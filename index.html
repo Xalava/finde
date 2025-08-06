@@ -41,8 +41,7 @@
                 <strong class="ui-name">Budget</strong>
                 <span id="budget">150</span>
             </div>
-            <div id="maintenance-stat-item" class="stat-item"
-                data-tooltip="Ongoing system maintenance costs per second">
+            <div id="maintenance-stat-item" class="stat-item" data-tooltip="Ongoing system maintenance costs per second">
                 <span class="stat-icon">🛠️</span>
                 <strong class="ui-name">Upkeep</strong>
                 <span id="maintenance">0</span>
@@ -133,10 +132,10 @@
                 <h2 id="tutorial-title"></h2>
             </div>
             <div id="tutorial-content" class="panel-content"></div>
+            <div id="tutorial-buttons" class="panel-footer"></div>
             <div id="tutorial-progress-container">
                 <div id="tutorial-progress"></div>
             </div>
-            <div id="tutorial-buttons" class="panel-footer"></div>
         </aside>
 
 
@@ -166,6 +165,7 @@
                     <li>Holidays result in more transactions</li>
                     <li>Entities with higher corruption produce more illegal transactions</li>
                 </ul>
+            </div>
         </aside>
         </aside>
         <aside id="research-panel" class="panel command-panel hidden">
@@ -189,14 +189,15 @@
             </div>
             <div class="panel-content">
                 <section class="panel-section">
-                    <h3>🗳️ Ecosystem Sentiment</h3>
-                    <div id="sentiment-wrap" data-tooltip="Updates regularly based on policy level and changes">
-                        <div id="sentiment-bar"></div>
+                    <h3>🗳️ Your Ecosystem Popularity</h3>
+                    <div id="popularity-wrap" data-tooltip="Updates regularly based on policy level and changes">
+                        <div id="popularity-bar"></div>
                     </div>
                     <div style="text-align: center;">
                         <em>Δ <span id="policy-points">0</span> per quarter</em>
                     </div>
                 </section>
+                <br>
                 <section class="panel-section policy-row" data-tooltip="Set the compliance level.">
                     <label class="policy-option">
                         <span class="policy-icon">🌿</span>
@@ -207,7 +208,7 @@
                     <label class="policy-option">
                         <span class="policy-icon">⚖️</span>
                         <strong>Balanced</strong>
-                        <span class="policy-hint">Default policy. No impact on sentiment</span>
+                        <span class="policy-hint">Default policy. No impact on popularity</span>
                         <input type="radio" name="reg" value="balanced" checked>
                     </label>
                     <label class="policy-option">
@@ -221,12 +222,10 @@
                     <h3>💰️ Taxation Level</h3>
                     <div class="tax-slider-wrapper">
                         <label for="taxation-slider">Rate: <span id="taxation-value">20</span>%</label>
-                        <input type="range" id="taxation-slider" name="taxation" min="0" max="50" value="20"
-                            class="policy-slider">
+                        <input type="range" id="taxation-slider" name="taxation" min="0" max="50" value="20" class="policy-slider">
                     </div>
                 </section>
-                <section class="panel-section"
-                    data-tooltip="Require minimum filter compliance for banks. Non-compliant banks trigger automated tower placement.">
+                <section class="panel-section" data-tooltip="Require minimum filter compliance for banks. Non-compliant banks trigger automated tower placement.">
                     <h3>🏦 Minmal Compliance</h3>
                     <p class="policy-hint">Banks will be required to install compliant
                         filters automatically. Have the appropriate budget ready.</p>
@@ -238,8 +237,7 @@
                         <!-- <option value="3">High level filter required</option> -->
                     </select>
                 </section>
-                <section class="panel-section"
-                    data-tooltip="Manual approval for new nodes; more control, slower expansion">
+                <section class="panel-section" data-tooltip="Manual approval for new nodes; more control, slower expansion">
                     <label class="policy-checkbox">
                         <input type="checkbox" id="approvals-policy">
                         <strong>Mandatory Approvals</strong>
@@ -285,8 +283,10 @@
         <!-- Notification toasts will be added here dynamically -->
     </div>
 
-    <div class="game-controls">
-        <button id="toggle-instructions">❔ <span class="ui-name">Explanations</span></button>
+    <div class="game-controls" id="game-controls">
+        <div class="left-controls">
+            <button id="toggle-instructions">❔ <span class="ui-name">Explanations</span></button>
+        </div>
         <button id="center-view">⭕️ <span class="ui-name">Center</span></button>
         <div id="debug-controls">
             <button id="toggle-debug">🔧 <span class="ui-name">Debug</span></button>

@@ -1,4 +1,5 @@
-import { techTree } from "./config.js";
+import { techTree } from "./config.js"
+import * as UI from './ui-manager.js'
 
 // Manage data
 const researchState = {
@@ -16,7 +17,7 @@ export let bonus = {
     transactionDrop: 1, // reverse
     reputationDamage: 1, // reverse
     enforcementCost: 1, // reverse
-    enforcementEfficiency: 1 // reverse
+    enforcementEfficiency: 1
 }
 
 export function getResearchPoints() {
@@ -76,10 +77,15 @@ export function researchTechnology(techId) {
     researchState.cumulativePoints += tech.cost;
 
     // Update availability of technologies that depend on this one
-    updateAvailability();
+    updateAvailability()
 
     // Apply effects
-    applyTechnologyEffects(tech);
+    applyTechnologyEffects(tech)
+    if (researchState.cumulativePoints > 2000) {
+        UI.activatePolicy()
+
+    }
+
 
     return true;
 }

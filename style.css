@@ -417,21 +417,13 @@ details {
 
 /* instance of panel */
 #tutorial {
-    /* position: fixed; */
     bottom: 20px;
     left: 50%;
     transform: translateX(-50%);
-    width: 40vw;
+    width: 38vw;
     max-width: 90vw;
-    /* background: var(--panel-bg); */
-    /* border-radius: var(--radius); */
-    /* box-shadow: 0 5px 20px rgba(0, 0, 0, 0.4); */
-    /* border: 1px solid var(--border); */
     z-index: 10000;
-    /* transition: all 0.3s ease; */
-    /* overflow: hidden; */
-    display: flex;
-    flex-direction: column;
+    display: grid;
     padding: 10px;
     place-content: center;
 }
@@ -442,15 +434,8 @@ details {
     align-items: center;
 }
 
-#tutorial:not(.hidden) {
-    display: grid;
-}
-
 #tutorial .panel-content {
-    /* background: var(--panel-bg); */
     padding: 20px;
-    /* overflow-y: auto; */
-    /* border-radius: 6px; */
     line-height: 1.4;
 }
 
@@ -479,6 +464,7 @@ details {
     animation: pulse 2s infinite;
 }
 
+
 @keyframes pulse {
     0% {
         transform: scale(1);
@@ -490,6 +476,25 @@ details {
 
     100% {
         transform: scale(1);
+    }
+}
+
+.oscillate {
+    animation: oscillate 2s 2;
+    display: inline-block;
+}
+
+@keyframes oscillate {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    50% {
+        transform: rotate(-15deg);
+    }
+
+    100% {
+        transform: rotate(0deg);
     }
 }
 
@@ -520,6 +525,21 @@ details {
     transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     width: 0;
     position: relative;
+}
+
+/* Large screen tutorial consistency */
+@media (min-width: 1400px) {
+    #tutorial {
+        width: 500px;
+        max-width: 500px;
+        padding: 24px;
+
+    }
+
+    #tutorial-progress-container {
+        margin: 16px 16px 0px 32px;
+        max-width: 400px;
+    }
 }
 
 button {
@@ -654,6 +674,11 @@ button:disabled {
     z-index: 900;
 }
 
+.left-controls {
+    display: flex;
+    gap: 10px;
+}
+
 .command-button {
     background: linear-gradient(135deg, #3a7bd599, #4e8df899);
     /* cursor: pointer; */
@@ -766,6 +791,13 @@ button:disabled {
     box-shadow: 0 0 10px rgba(58, 123, 213, 0.3);
 }
 
+.tech-item.unaffordable {
+    border-color: var(--warning);
+    box-shadow: 0 0 8px rgba(255, 170, 0, 0.2);
+    opacity: 0.8;
+    cursor: pointer;
+}
+
 .tech-item.researched {
     background: linear-gradient(135deg, rgba(0, 128, 0, 0.2), rgba(0, 128, 0, 0.1));
     border-color: var(--success);
@@ -792,6 +824,11 @@ button:disabled {
     color: #FFD700;
     font-size: 12px;
     margin-bottom: 8px;
+}
+
+.tech-cost.unaffordable-cost {
+    color: var(--warning);
+    font-weight: 700;
 }
 
 .tech-desc {
@@ -892,7 +929,7 @@ small {
     top: -0.25em;
 }
 
-#sentiment-wrap {
+#popularity-wrap {
     position: relative;
     height: 4px;
     border: 1px solid var(--border);
@@ -902,7 +939,7 @@ small {
     background: rgba(0, 0, 0, 0.1);
 }
 
-#sentiment-bar {
+#popularity-bar {
     height: 100%;
     width: 100%;
     transition: width 0.3s ease, background-color 0.3s ease;

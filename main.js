@@ -108,6 +108,15 @@ document.addEventListener('DOMContentLoaded', () => {
     window.users = users
     window.nodes = nodes
     window.gdpLog = gdpLog
+
+    // Hacky budget access
+    Object.defineProperty(window, 'budget', {
+        get: () => budget,
+        set: (value) => {
+            budget = value
+            // UI.updateIndicators(...) 
+        }
+    })
     // Set initial canvas size and enable touch/mouse camera actions
     Camera.resizeCanvas(ctx)
     Camera.setCameraActions()
@@ -115,11 +124,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // First-time setup
     const ctrls = UI.getControls()
     if (isFirstPlay()) {
-        UI.hide(ctrls.gdpStatItem)
-        UI.hide(ctrls.maintenanceStatItem)
-    }
-    if (!debugAvailable) {
-        UI.hide(ctrls.debugControls)
+        UI.hideFullInterface()
+    } else {
+        if (!debugAvailable) {
+            UI.hide(ctrls.debugControls)
+        }
     }
 
     // Track drag state
@@ -184,7 +193,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('touchstart', handlePanelClose, { passive: false })
 
 
-    ctrls.centerBtn.addEventListener('click', () => Camera.centerView(nodes))
+    ctrls.centerBtn.addEventListener('click', () => Camera.cinematicCenterMap(activeNodes))
     ctrls.debugBtn.addEventListener('click', () => {
         debug = !debug
         ctrls.debugBtn.style.backgroundColor = debug ? 'rgba(255, 0, 0, 0.2)' : ''
@@ -224,9 +233,6 @@ document.addEventListener('DOMContentLoaded', () => {
     //     Camera.moveCamera(e)
     // })
 
-    setTimeout(() => {
-        UI.show(ctrls.policyBtn)
-    }, debugAvailable ? 120 : 100000)
 
     // Initialize the game
     tech.initTechTree()
@@ -242,22 +248,17 @@ document.addEventListener('DOMContentLoaded', () => {
         // Restauring default after a while
         setTimeout(() => {
             spawnControl = 1
-        }, 10000)
-        setTimeout(() => {
             speedControl = 1
         }, 20000)
-        setTimeout(() => {
-            UI.show(ctrls.gdpStatItem)
-            UI.show(ctrls.maintenanceStatItem)
-        }, 100000)
         showTutorial()
-        Camera.centerView(nodes, -50)
+        Camera.centerView(activeNodes, -50)
 
     } else {
-        Camera.centerView(nodes, 0)
+        Camera.centerView(activeNodes, 0)
 
     }
-    Camera.cinematicZoom(window.innerWidth < 600 ? 1.1 : 1.8)
+    // We center view and then zoom initially.
+    Camera.cinematicZoom(Camera.getDefaultZoom())
     gameLoop()
 })
 
@@ -429,7 +430,10 @@ function initNodes() {
             node.receivedAmount += tx.amount
             if (tx.legality === 'illegal') {
                 addEffect(node.x, node.y, '', 'pulseNode', 'rgba(255, 0, 0, 0.2)')
-                node.corruption++
+                // Medium and large transactions increase corruption
+                if (tx.size !== 'small') {
+                    node.corruption++
+                }
                 node.changeReputation(-5)
                 console.log(`💥 Breach #${node.id}`)
             } else if (tx.legality === 'questionable') {
@@ -801,6 +805,7 @@ function enforceAction(node, actionType, free = false) {
     } else {
         budget -= actionCost
         node.changeReputation(action.reputationEffect * tech.bonus.reputationDamage)//negative
+        policy.changePopularity(action.popularityEffect)
         node.enforcementAction = actionType
         node.enforcementEnd = Date.now() + action.duration * 1000
         if (action.affectsConnected) {
@@ -827,7 +832,7 @@ function detect(tx) {
     let detectionChance = node.accuracy * detectMod * events.detectMod
 
     if (node.tower === 'basic' && tx.size === 'small') {
-        detectionChance *= 0.5; // Reduce accuracy for small transactions
+        detectionChance *= 0.5; // Reduce accuracy for small transactions (TODO : could be removed)
     }
     if (tx.legality === 'legit') {
         // console.log("We check a legit tx with chance ", detectionChance)
@@ -922,7 +927,7 @@ function removeExpiredEnforcementActions(now) {
         .forEach(node => {
             if (node.enforcementEnd <= now) {
                 let endingAction = actionOptions[node.enforcementAction]
-                node.corruption = Math.round(node.corruption * endingAction.corruptionEffect * tech.bonus.enforcementEfficiency)
+                node.corruption = Math.round(node.corruption * endingAction.corruptionEffect / tech.bonus.enforcementEfficiency)
                 node.enforcementAction = null
                 node.enforcementEnd = null
                 UI.showToast(`${endingAction.icon} ${endingAction.name} ended`, `Corruption reduced at ${node.name}`, 'info')
@@ -998,10 +1003,10 @@ function checkNodesCompliance() {
             }
         } else {
             UI.showToast(`🏛️ Automated Compliance Failure`,
-                `Insufficient funds for compliance at ${node.name}. Reputation and sentiment penalty.`,
+                `Insufficient funds for compliance at ${node.name}. Reputation and popularity penalty.`,
                 `error`)
             node.reputation -= 10
-            policy.changeSentiment(-10)
+            policy.changePopularity(-10)
         }
     }
 }
@@ -1028,8 +1033,8 @@ function checkEndGame() {
         } else if (budget < -50 && budget >= -100) {
             UI.showToast('💰 Financial Warning', 'Budget is critically low!', 'error');
             lastWarningTime = now;
-        } else if (policy.sentiment <= 20 && policy.sentiment > 0) {
-            UI.showToast('😡 Sentiment Warning', 'Public sentiment is very low!', 'error');
+        } else if (policy.popularity <= 20 && policy.popularity > 0) {
+            UI.showToast('😡 Sentiment Warning', 'Your popularity is very low!', 'error');
             lastWarningTime = now;
         }
     }
@@ -1047,7 +1052,7 @@ function checkEndGame() {
         return true
     }
 
-    if (policy.sentiment <= 0) {
+    if (policy.popularity <= 0) {
         graphics.drawEndGame('The ecosystem disapproves of your policies!')
         UI.showRestartButton()
         return true
@@ -1175,9 +1180,13 @@ function gameLoop() {
             UI.updateCurrentNodeDetails(budget, placeTower, enforceAction)
         }
         if (currentDay % Math.round(NEW_NODE_FREQUENCY / spawnControl) === 0) {
-            // Every 60 days, a new node is added and we check for sentiment
-            spawnNode()
-            policy.tickSentiment()
+            // Every 60 days, a new node is added and we check for popularity
+            if (isFirstPlay && currentDay < 120) {
+                // nothing
+            } else {
+                spawnNode()
+                policy.tickPopularity()
+            }
         }
         activeNodes = nodes.filter(n => n.active) // light optimisation, we check once a day: checkNodesCompliance and spawnNodes might have changed the count. 
         nbActiveNodes = activeNodes.length

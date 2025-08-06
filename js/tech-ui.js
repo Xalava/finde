@@ -134,8 +134,20 @@ function groupTechsByTier(branch) {
 // Replace the createTechElement function with this cleaner version
 function createTechElement(tech) {
     const progress = getResearchProgress()[tech.id]
+    const currentPoints = getResearchPoints()
+    const canAfford = progress.available && currentPoints >= tech.cost
+
+    let cssClass = 'tech-item '
+    if (progress.researched) {
+        cssClass += 'researched'
+    } else if (progress.available) {
+        cssClass += canAfford ? 'available' : 'unaffordable'
+    } else {
+        cssClass += 'locked'
+    }
+
     const techElement = document.createElement('div')
-    techElement.className = `tech-item ${progress.researched ? 'researched' : progress.available ? 'available' : 'locked'}`
+    techElement.className = cssClass
     techElement.setAttribute('data-tech-id', tech.id)
 
     // Create HTML more directly
@@ -153,7 +165,7 @@ function createTechElement(tech) {
       <div class="tech-icon">${tech.icon}</div>
         <div class="tech-info">
             <div class="tech-name">${tech.name}</div>
-            <div class="tech-cost">🧪 ${tech.cost} RP</div>
+            <div class="tech-cost">🧪 ${tech.cost}</div>
             <div class="tech-desc">${tech.description}</div>
         ${prereqsText}
         </div>
