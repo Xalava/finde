@@ -52,7 +52,7 @@ function triggerEvent(eventId, event) {
     const buttons = document.getElementById('tutorial-buttons')
 
     header.textContent = `${event.icon} ${event.name}`
-    content.innerHTML = `<p>${event.description}</p><p><strong>Choose your response:</strong></p>`
+    content.innerHTML = `<p>${event.description}</p><br><p><strong>Choose your response:</strong></p>`
 
     // Generate buttons from event choices
     buttons.innerHTML = event.choices.map(choice =>

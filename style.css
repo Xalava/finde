@@ -420,8 +420,8 @@ details {
     bottom: 20px;
     left: 50%;
     transform: translateX(-50%);
-    width: 38vw;
-    max-width: 90vw;
+    width: 90vw;
+    max-width: 500px;
     z-index: 10000;
     display: grid;
     padding: 10px;
@@ -527,20 +527,6 @@ details {
     position: relative;
 }
 
-/* Large screen tutorial consistency */
-@media (min-width: 1400px) {
-    #tutorial {
-        width: 500px;
-        max-width: 500px;
-        padding: 24px;
-
-    }
-
-    #tutorial-progress-container {
-        margin: 16px 16px 0px 32px;
-        max-width: 400px;
-    }
-}
 
 button {
     background: rgba(35, 35, 50, 0.8);
@@ -566,6 +552,15 @@ button:disabled {
     cursor: not-allowed;
 }
 
+button.primary {
+    background: rgba(0, 204, 102, 0.2);
+}
+
+button.primary:hover:not(:disabled) {
+    background: rgba(0, 204, 102, 0.3);
+    border-color: var(--success);
+    box-shadow: 0 3px 10px rgba(0, 204, 102, 0.3);
+}
 /* instance of panel */
 #instructions {
 
@@ -1001,9 +996,6 @@ small {
         padding: 10px 10px;
     }
 
-    #tutorial {
-        width: 100vw;
-    }
 
     #node-details-panel {
         position: fixed;

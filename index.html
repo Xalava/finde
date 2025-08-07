@@ -165,6 +165,9 @@
                     <li>Holidays result in more transactions</li>
                     <li>Entities with higher corruption produce more illegal transactions</li>
                 </ul>
+                <div style="margin-top: 20px; text-align: center;">
+                    <button id="restart-tutorial">🎓 Restart Tutorial</button>
+                </div>
             </div>
         </aside>
         </aside>
@@ -255,11 +258,11 @@
                 <button id="close-gdp" class="close-button">×</button>
             </div>
             <div class="panel-tabs">
-                <button id="chart-tab" class="tab-button active" data-tab="chart">Chart</button>
-                <button id="transactions-tab" class="tab-button" data-tab="transactions">Transactions</button>
+                <button id="transactions-tab" class="tab-button active" data-tab="transactions">Transactions</button>
+                <button id="chart-tab" class="tab-button " data-tab="chart">Chart</button>
             </div>
             <div class="panel-content">
-                <section class="panel-section" id="chart-section">
+                <section class="panel-section hidden" id="chart-section">
                     <h3>Transaction Flow Over Time</h3>
                     <div id="gdp-chart-container">
                         <canvas id="gdp-chart"></canvas>
@@ -269,7 +272,7 @@
                         <button id="count-btn" data-view="count">Count (#)</button>
                     </div>
                 </section>
-                <section class="panel-section hidden" id="transactions-section">
+                <section class="panel-section" id="transactions-section">
                     <h3>All Transactions</h3>
                     <div id="all-transactions" class="transaction-list">
                         <div class="no-transactions">No transactions found</div>
@@ -288,7 +291,7 @@
             <button id="toggle-instructions">❔ <span class="ui-name">Explanations</span></button>
         </div>
         <button id="center-view">⭕️ <span class="ui-name">Center</span></button>
-        <div id="debug-controls">
+        <div id="debug-controls" class="hidden">
             <button id="toggle-debug">🔧 <span class="ui-name">Debug</span></button>
         </div>
         <button id="restart-game" class="hidden">🔄 <span class="ui-name">Restart</span></button>

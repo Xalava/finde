@@ -19,6 +19,11 @@ function completeTutorial() {
     UI.showFullInterface()
 }
 
+export function resetTutorial() {
+    localStorage.setItem('hasPlayedBefore', '')
+    window.location.reload()
+}
+
 
 function nextStep() {
     UI.hide(tutorialContainer);
@@ -28,15 +33,14 @@ function nextStep() {
 export function showTutorial() {
 
     // Set tutorial content
-    tutorialHeader.innerHTML = `Welcome to Financial Defense`
-    tutorialContent.innerHTML = `
-            <p>Facilitate economic growth while defending the financial network against illegal transactions.</p>
+    tutorialHeader.innerHTML = `Welcome to Financial Defense `
+    tutorialContent.innerHTML = `Facilitate economic growth while defending the financial network against illegal transactions.
         `
 
     // Create and add buttons
     tutorialButtons.innerHTML = `
             <button id="tutorial-skip">Skip</button>
-            <button id="tutorial-start">Start Tutorial ➡️ </button>
+            <button id="tutorial-start" class="primary">Start Tutorial ➡️ </button>
         `
 
     // Add event listeners
@@ -113,7 +117,6 @@ const TUTORIAL_STEPS = [
         title: '<span><span class="glow glow-red"></span>✔️</span>',
         content: 'When an illegal transaction is caught, you collect intelligence that can be used for research.',
         onEnter: () => {
-
         }
     },
     {
@@ -129,9 +132,8 @@ const TUTORIAL_STEPS = [
     },
     {
         title: 'Enforcement Actions',
-        content: 'Reduce corruption by taking direct action. Click on the corrupt bank and select Audit 🕵️‍♂️',
+        content: 'Take direct action to reduce corruption. Click on the corrupt bank and select Audit 🕵️‍♂️',
         onEnter: () => {
-
             if (window.budget < 160) {
                 window.budget = 160
             }
@@ -140,8 +142,8 @@ const TUTORIAL_STEPS = [
             if (window.nodes.some(node => node.enforcementAction === 'audit')) {
                 setTimeout(() => {
                     UI.closeAllPanels()
+                    camera.cinematicCenterMap(window.nodes.filter(n => n.active))
                 }, 300)
-                camera.cinematicCenterMap(window.nodes.filter(n => n.active))
                 return true
 
             }
@@ -188,10 +190,9 @@ const TUTORIAL_STEPS = [
     },
     {
         title: '🎉 First technology',
-        content: `Congratulations! You will be able to improve compliance filters, enforcement actions, and network efficiency. 
+        content: `Congratulations! You can improve compliance filters, enforcement actions, and network efficiency. 
         <br><br>
         Once advanced enough, you will also be able to adjust policies such as tax rates and minimal compliance.`
-
     },
     {
         title: 'Et voilà!',
@@ -229,7 +230,7 @@ export function showTutorialStep() {
     if (currentStep === TUTORIAL_STEPS.length - 1) {
         tutorialButtons.innerHTML = `
             <button id="tutorial-reload">Restart Game</button>
-            <button id="tutorial-continue">Continue</button>
+            <button id="tutorial-continue" class="primary">Continue</button>
         `
         document.getElementById('tutorial-continue').onclick = completeTutorial;
         document.getElementById('tutorial-reload').onclick = () => {
@@ -237,17 +238,11 @@ export function showTutorialStep() {
             window.location.reload()
         }
     } else {
-        tutorialButtons.innerHTML = `
-            <button id="tutorial-next">
-                ${step.waitFor ? 'Waiting...' : 'Next →'}
-            </button>
-        `
-
-        document.getElementById('tutorial-next').onclick = nextStep
-        if (!step.waitFor) {
-            document.getElementById('tutorial-next').style.display = 'inline-block'
+        if (step.waitFor) {
+            tutorialButtons.innerHTML = `<button id="tutorial-next" disabled style="border:0;">Waiting...</button>`
         } else {
-            document.getElementById('tutorial-next').style.display = 'none'
+            tutorialButtons.innerHTML = `<button id="tutorial-next">Next →</button>`
+            document.getElementById('tutorial-next').onclick = nextStep
         }
     }
 

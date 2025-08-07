@@ -123,14 +123,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // First-time setup
     const ctrls = UI.getControls()
+    // We show debug controls if relevant
+    if (debugAvailable) {
+        UI.show(ctrls.debugControls)
+    }
     if (isFirstPlay()) {
         UI.hideFullInterface()
-    } else {
-        if (!debugAvailable) {
-            UI.hide(ctrls.debugControls)
-        }
     }
-
     // Track drag state
     let isDragging = false
 
@@ -400,7 +399,6 @@ function initNodes() {
         // node.reputation = 0
         node.changeReputation = (amount) => {
             if (debugAvailable) {
-
                 console.log(`#${node.id} reputation ${amount > 0 ? "+" : ''}${amount}`)
             }
             node.reputation = Math.min(100, node.reputation + amount)
@@ -731,7 +729,7 @@ class Transaction {
 
         } else {
             // Move toward target with chance of transmission failure
-            if (Math.random() < dropProbability) {
+            if (!isFirstPlay() && Math.random() < dropProbability) {
                 this.loseTransaction('Due to poor transmissions. Develop the appropriate technologies.')
                 return
             }
@@ -835,20 +833,22 @@ function detect(tx) {
         detectionChance *= 0.5; // Reduce accuracy for small transactions (TODO : could be removed)
     }
     if (tx.legality === 'legit') {
-        // console.log("We check a legit tx with chance ", detectionChance)
-        // small chance of false flag, inversely proportional to accuracy, then 10% unless robust tech
-        if (Math.random() > detectionChance && Math.random() < towerOptions[node.tower].errors * 0.01 * tech.bonus.falsePositive * fpMod) {
-            addEffect(node.x, node.y, '🛑', "tower")
-            tx.active = false
-            tx.end = "FalsePositive"
-            console.log(`🛑 False postive at`, node.name)
-            node.changeReputation(-5) // harmful for reputation, but not for corruption. Also the transaction ends when it shouldn't have, reducing income
-            if (!firstFalsePositive) {
-                UI.showToast(`🛑 First false postive at`, `Reputation damaged at ${node.name}`, 'error')
-                firstFalsePositive = true
-            }
-            return true
+        if (!isFirstPlay()) {
+            // console.log("We check a legit tx with chance ", detectionChance)
+            // small chance of false flag, inversely proportional to accuracy, then 10% unless robust tech
+            if (Math.random() > detectionChance && Math.random() < towerOptions[node.tower].errors * 0.01 * tech.bonus.falsePositive * fpMod) {
+                addEffect(node.x, node.y, '🛑', "tower")
+                tx.active = false
+                tx.end = "FalsePositive"
+                console.log(`🛑 False postive at`, node.name)
+                node.changeReputation(-5) // harmful for reputation, but not for corruption. Also the transaction ends when it shouldn't have, reducing income
+                if (!firstFalsePositive) {
+                    UI.showToast(`🛑 First false postive at`, `Reputation damaged at ${node.name}`, 'error')
+                    firstFalsePositive = true
+                }
+                return true
 
+            }
         }
     }
 

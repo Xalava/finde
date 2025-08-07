@@ -48,6 +48,12 @@ export function initUI() {
     instructions.toggle.addEventListener('click', togglePanel('instructions'))
     instructions.close.addEventListener('click', togglePanel('instructions'))
 
+    document.getElementById('restart-tutorial').addEventListener('click', () => {
+        import('./tutorial.js').then(tutorial => {
+            tutorial.resetTutorial()
+        })
+    })
+
     nodeDetails = {
         panel: document.getElementById('node-details-panel'),
         title: document.getElementById('panel-title'),
@@ -98,7 +104,7 @@ export function initUI() {
         transactionsSection: document.getElementById('transactions-section'),
         allTransactions: document.getElementById('all-transactions'),
         currentView: 'volume',
-        currentTab: 'chart'
+        currentTab: 'transactions'
     }
 
 
