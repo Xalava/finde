@@ -250,8 +250,7 @@ document.addEventListener('DOMContentLoaded', () => {
             speedControl = 1
         }, 20000)
         showTutorial()
-        Camera.centerView(activeNodes, -50)
-
+        Camera.centerView(activeNodes, -70)
     } else {
         Camera.centerView(activeNodes, 0)
 
@@ -297,6 +296,7 @@ let activeNodes = []
 // Gameplay
 let speedControl = 1
 let hoverNode = null
+let isFirstNewNode = false
 
 // Endgame 
 let almostWon = 0
@@ -1114,7 +1114,14 @@ function spawnNode() {
             policy.addPendingNode(newNode);
             UI.showToast('⚖️  Approval needed', `${newNode.name} awaits regulatory clearance`, 'info');
         } else {
-            activateNode(newNode);
+            activateNode(newNode)
+            if (!isFirstNewNode) {
+                Camera.cinematicCenterPoint(newNode.x, newNode.y, 2)
+                isFirstNewNode = false
+                setTimeout(() => {
+                    Camera.cinematicCenterMap(nodes.filter(n => n.active))
+                }, 2000) // Come back after 2 seconds
+            }
         }
     }
 }
@@ -1208,9 +1215,7 @@ function gameLoop() {
         }
         if (currentDay % Math.round(NEW_NODE_FREQUENCY / spawnControl) === 0) {
             // Every 60 days, a new node is added and we check for popularity
-            if (isFirstPlay && currentDay < 120) {
-                // nothing
-            } else {
+            if (!isFirstPlay()) {
                 spawnNode()
                 policy.tickPopularity()
             }

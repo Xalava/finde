@@ -121,7 +121,7 @@ const TUTORIAL_STEPS = [
     },
     {
         title: 'Corruption',
-        content: 'Corrupt financial institutions produce more illegal transactions. They appear with a yellow or red glow.',
+        content: 'Corrupt financial institutions produce more illegal transactions. They appear with a yellow or red glow for the most serious cases.',
         onEnter: () => {
             //ensure there is a corrupt node
             const corruptNode = window.nodes.find(n => n.active && !n.tower);
@@ -142,7 +142,7 @@ const TUTORIAL_STEPS = [
             if (window.nodes.some(node => node.enforcementAction === 'audit')) {
                 setTimeout(() => {
                     UI.closeAllPanels()
-                    camera.cinematicCenterMap(window.nodes.filter(n => n.active))
+                    camera.cinematicCenterMap(window.nodes.filter(n => n.active), 100)
                 }, 300)
                 return true
 
@@ -160,7 +160,7 @@ const TUTORIAL_STEPS = [
         waitFor: () => {
             if (!window.nodes.some(node => node.enforcementAction === 'audit')) {
 
-                camera.cinematicCenterMap(window.nodes.filter(n => n.active))
+                // camera.cinematicCenterMap(window.nodes.filter(n => n.active), 100)
                 return true
 
             }
@@ -176,7 +176,7 @@ const TUTORIAL_STEPS = [
         onEnter: () => {
             tech.addResearchPoints(100)
             //we reset the camera
-            camera.cinematicCenterMap(window.nodes.filter(n => n.active))
+            // camera.cinematicCenterMap(window.nodes.filter(n => n.active))
         },
         waitFor: () => {
             const progress = tech.getResearchProgress()

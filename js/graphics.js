@@ -20,12 +20,12 @@ export function drawEffects(effects) {
                 ctx.fillText(e.emoji, e.x, e.y)
                 break
             case 'malus':
-                ctx.fillStyle = 'red'
+                ctx.fillStyle = '#ff3e3e'
                 ctx.font = `12px ${uiFont}`
                 ctx.fillText(e.emoji, e.x - 5, e.y - 50)
                 break
             case 'bonus':
-                ctx.fillStyle = 'green'
+                ctx.fillStyle = '#00cc66'
                 ctx.font = `12px ${uiFont}`
                 ctx.fillText(e.emoji, e.x + 25, e.y + 5)
                 break
@@ -242,26 +242,35 @@ export function drawTransaction(tx) {
 
 export function drawCorruptionMeter(spread) {
     ctx.save()
-    const meterX = canvas.width - 260
+    const meterX = canvas.width - 230
     const meterY = 10
     const meterWidth = 220
-    const meterHeight = 22
+    const meterHeight = 20
 
-    // Draw background
-    ctx.fillStyle = '#222'
-    ctx.fillRect(meterX, meterY, meterWidth, meterHeight)
+    // Draw background with rounded corners
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.8)'
+    ctx.beginPath()
+    ctx.roundRect(meterX, meterY, meterWidth, meterHeight, 6)
+    ctx.fill()
 
+    ctx.strokeStyle = 'rgba(0, 0, 0, 0.1)'
+    ctx.lineWidth = 1
+    ctx.stroke()
     // Draw corruption bar
+    const barWidth = (meterWidth * Math.min(spread, 100)) / 100
     const gradient = ctx.createLinearGradient(meterX, meterY, meterX + meterWidth, meterY)
     gradient.addColorStop(0, 'green')
     gradient.addColorStop(0.6, 'orange')
     gradient.addColorStop(1, 'red')
     ctx.fillStyle = gradient
-    ctx.fillRect(meterX, meterY, (meterWidth * Math.min(spread, 100)) / 100, meterHeight)
+    ctx.beginPath()
+    ctx.roundRect(meterX, meterY, barWidth, meterHeight, 6)
+    ctx.fill()
+
 
     // Draw text
     ctx.fillStyle = 'white'
-    ctx.font = `14px ${uiFont}`
+    ctx.font = `12px ${uiFont}`
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
     ctx.fillText(`Corruption: ${Math.floor(spread)}%`, meterX + meterWidth / 2, meterY + meterHeight / 2)
@@ -402,7 +411,7 @@ export function drawTooltip(hoverNode) {
         { text: `Click for details` }
     ]
     ctx.font = `14px ${uiFont}`
-    ctx.fillStyle = 'rgba(15, 15, 25, 0.9)'
+    ctx.fillStyle = 'rgba(15, 15, 20, 0.85)'
     const tooltipX = hoverNode.x + 25
     const tooltipY = hoverNode.y
     const lineHeight = 18
