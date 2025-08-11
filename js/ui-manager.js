@@ -490,6 +490,7 @@ function calculateBuckets() {
     }
 
     // Only process new transactions since last update
+    // TODO: Update to use transacitons array instead of window.gdpLog
     if (window.gdpLog && window.gdpLog.length > lastProcessedLogIndex) {
         const newTransactions = window.gdpLog.slice(lastProcessedLogIndex)
 

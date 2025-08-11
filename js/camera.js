@@ -86,7 +86,10 @@ export function calculateCenter(activeNodes) {
     return { centerX, centerY }
 }
 export function centerView(activeNodes, offset = 0) {
-    if (!canvas || activeNodes.length === 0) return
+    if (activeNodes.length === 0) {
+        console.error("No nodes available to center view")
+        return
+    }
 
     // Reset any ongoing drag state
     camera.dragging = false

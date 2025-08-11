@@ -50,7 +50,7 @@ function findUserAt(screenX, screenY) {
     // console.log(`Checking ${activeUsers.length} active users at world position ${worldPos.x.toFixed(1)}, ${worldPos.y.toFixed(1)}`)
 
     if (activeUsers.length === 0) {
-        // console.log('No active users found')
+        if (debug) console.log('No active users found at', screenX, screenY)
         return null
     }
 
@@ -350,7 +350,7 @@ function assignCountryToNode(node) {
 
     if (!config.countries || !config.countryKeys) {
         console.error('Country data is not loaded correctly from config.');
-        return;
+        return
     }
 
     for (const countryKey of config.countryKeys) {
@@ -358,7 +358,7 @@ function assignCountryToNode(node) {
 
         if (typeof country.x !== 'number' || typeof country.y !== 'number') {
             console.warn(`Country ${countryKey} in config.js is missing x or y coordinates.`)
-            continue;
+            continue
         }
 
         const dx = node.x - country.x;
@@ -370,7 +370,7 @@ function assignCountryToNode(node) {
             closestCountryKey = countryKey;
         }
     }
-    node.country = closestCountryKey;
+    node.country = closestCountryKey
 }
 function reassignUsersBank(nodeID) {
     //after a bank closure, we reassign users to the nearest bank
@@ -642,8 +642,6 @@ function getPathFrom(startId, targetId = null) {
     return null;
 }
 
-let lostTransactions = 0
-
 class Transaction {
     constructor(sourceUser, targetUser, path, nodes) {
         this.path = path
@@ -701,9 +699,11 @@ class Transaction {
             this.index++
             // we check for detection when we reach a node. If detected, there will be no income
             next.receivedAmount += this.amount
-            if (detect(this)) {
+            if (detect(next, this)) {
+                // TODO : Remove these variables and use log of gdp directly
+                next.detectedAmount += this.amount
                 dailyDetectedTransactions++
-                this.active = false
+                // we could use a more semantic return to update the tx status
                 return
             }
 
@@ -715,43 +715,50 @@ class Transaction {
                 // const isAudited = auditedNodes.some(a => a.id === next.id)
                 // if (isAudited) baseIncome = Math.floor(tx.amount / 2)
 
-                // Record for GDP
-                gdpLog.push({ amount: this.amount, timestamp: Date.now(), legality: this.legality })
 
-
+                // damages will incur
                 next.completeTransaction(this)
             }
             if (this.index == this.path.length - 1) {
+                // Record for GDP [TODO : we could use transactions array instead]
+                gdpLog.push({ amount: this.amount, timestamp: Date.now(), legality: this.legality })
+
                 addEffect(next.x, next.y, '', 'pulse')
-                this.active = false
-                this.end = 'success'
+                this.endTransaction('completed')
             }
 
         } else {
-            // Move toward target with chance of transmission failure
+            // Chance of transmission failure
             if (!isFirstPlay() && Math.random() < dropProbability) {
                 this.loseTransaction('Due to poor transmissions. Develop the appropriate technologies.')
                 return
             }
+            //  Move toward target 
             this.x += (dx / dist) * speed
             this.y += (dy / dist) * speed
         }
 
     }
+
     loseTransaction(message = '') {
-        let reason = 'lost' // Temporarily fixed. Could be expanded in the call
-
-        this.active = false
-        this.end = reason
-
-        if (reason === 'lost') {
-            console.log("Transaction lost!")
-            addEffect(this.x - 2, this.y, "∅", "insitus")
-            if (lostTransactions < 2 || lostTransactions % 10 === 0) {
-                UI.showToast('∅ Lost transaction', message, 'error')
-            }
-            lostTransactions++
+        this.endTransaction('lost')
+        console.log("Transaction lost!")
+        addEffect(this.x - 2, this.y, "∅", "insitus")
+        let lostTransactions = transactions.filter(tx => tx.endReason === 'lost').length
+        if (lostTransactions < 2 || lostTransactions % 10 === 0) {
+            UI.showToast('∅ Lost transaction', message, 'error')
         }
+    }
+    endTransaction(reason) {
+        this.active = false
+        this.endDate = Date.now()
+        this.endReason = reason
+    // TODO Remove from transactions array 
+    // Alternatively we could keep tx for statistics
+    // const index = transactions.indexOf(this)
+    // if (index > -1) {
+    //     transactions.splice(index, 1)
+    // }
     }
 }
 
@@ -765,7 +772,7 @@ function placeTower(node, towerType) {
         const progress = tech.getResearchProgress();
         if (!progress[requiredTech]?.researched) {
             UI.showToast('Technology Required', `Research "${requiredTech}" to unlock this tower`, 'error');
-            return;
+            return
         }
     }
 
@@ -819,74 +826,92 @@ function enforceAction(node, actionType, free = false) {
 
 let firstDetection = false
 let firstFalsePositive = false
-function detect(tx) {
-    const node = nodes[tx.path[tx.index]]
+// TODO : Could be a method of the node
+function detect(node, tx) {
+    // defensive check
+    if (!node || !tx)
+        console.error("Detect(): Node or tx found", node, tx)
 
-    if (!node || !node.tower) return false
+    // No detection if there is no tower
+    if (!node.tower)
+        return false
 
 
     const { detectMod, fpMod } = policy.regulationLevels[policy.state.current]
-    if (debug) console.log(`events detectMod`, events.detectMod, "policyDetectMod", detectMod, "fpMod", fpMod)
     let detectionChance = node.accuracy * detectMod * events.detectMod
 
     if (node.tower === 'basic' && tx.size === 'small') {
         detectionChance *= 0.5; // Reduce accuracy for small transactions (TODO : could be removed)
     }
-    if (tx.legality === 'legit') {
-        if (!isFirstPlay()) {
-            // console.log("We check a legit tx with chance ", detectionChance)
-            // small chance of false flag, inversely proportional to accuracy, then 10% unless robust tech
-            if (Math.random() > detectionChance && Math.random() < towerOptions[node.tower].errors * 0.01 * tech.bonus.falsePositive * fpMod) {
-                addEffect(node.x, node.y, '🛑', "tower")
-                tx.active = false
-                tx.end = "FalsePositive"
-                console.log(`🛑 False postive at`, node.name)
-                node.changeReputation(-5) // harmful for reputation, but not for corruption. Also the transaction ends when it shouldn't have, reducing income
-                if (!firstFalsePositive) {
-                    UI.showToast(`🛑 First false postive at`, `Reputation damaged at ${node.name}`, 'error')
-                    firstFalsePositive = true
+
+    if (debug) console.log(`Detection rolls at ${node.id} with chance ${detectionChance} (Event mod:`, events.detectMod, "PolicyMod", detectMod, "False Positive Mod", fpMod, ").")
+
+    switch (tx.legality) {
+        case 'legit':
+            if (!isFirstPlay()) {
+                // console.log("We check a legit tx with chance ", detectionChance)
+                // small chance of false flag, inversely proportional to accuracy, then 10% unless robust tech
+                if (Math.random() > detectionChance && Math.random() < towerOptions[node.tower].errors * 0.01 * tech.bonus.falsePositive * fpMod) {
+                    addEffect(node.x, node.y, '🛑', "tower")
+                    tx.endTransaction("falsePositive")
+                    console.log(`🛑 False postive at`, node.name)
+                    node.changeReputation(-5) // harmful for reputation, but not for corruption. Also the transaction ends when it shouldn't have, reducing income
+                    if (!firstFalsePositive) {
+                        UI.showToast(`🛑 First false postive at`, `Reputation damaged at ${node.name}`, 'error')
+                        firstFalsePositive = true
+                    }
+                    return true
+                } else {
+                    return false
                 }
-                return true
-
             }
-        }
-    }
+            break;
 
+        case 'questionable':
+            if (!isFirstPlay()) {
+                // TODO (with better logic on how to improve this tradeoff over time)
+                // Questionable tx can be detected as illegal
+                if (Math.random() < detectionChance / 2) {
+                    console.log(`Suspicious❗ Potential illegal tx detected at #${node.id}`)
+                    return true
+                    // Questionable tx are more likely to be detected as false positive
+                } else if (Math.random() > detectionChance / 2 && Math.random() < towerOptions[node.tower].errors * 0.01 * tech.bonus.falsePositive * fpMod) {
+                    console.log(`Suspricious: 🛑 Potential false positive at #${node.id}`)
+                    return true
+                }
+            }
 
-    if (tx.legality !== 'illegal') return
+            return false
+            break;
 
-    if (debug) console.log(`Detection roll at ${node.id}, chance: ${detectionChance}`)
+        case 'illegal':
+            if (Math.random() < detectionChance) {
+                tx.endTransaction("detected")
+                addEffect(node.x, node.y, '✔️', "tower")
+                if (!firstDetection) {
+                    UI.showToast('First illegal transaction blocked!', `Detected at ${node.name} (${towerOptions[node.tower].name})`, 'success')
+                    firstDetection = true
+                }
+                console.log(`✔️ Illegal tx blocked #${node.id}`)
+                if (debug) console.log(tx)
 
+                // Gain reputation for successful detection
+                node.changeReputation(3)
 
-    if (Math.random() < detectionChance) {
-        tx.active = false
-        tx.end = "detected"
-        addEffect(node.x, node.y, '✔️', "tower")
-        if (!firstDetection) {
-            UI.showToast('First illegal transaction blocked!', `Detected at ${node.name} (${towerOptions[node.tower].name})`, 'success')
-            firstDetection = true
-        }
-        console.log(`✔️ Illegal tx blocked #${node.id}`)
-        node.detectedAmount += tx.amount
-        node.receivedAmount += tx.amount
+                // Update panel if the detection happens at the selected node
+                if (UI.getSelectedNode() && UI.getSelectedNode().id === node.id) {
+                    UI.showNodeDetails(node, budget, placeTower, enforceAction)
+                }
 
-        // To be refined, a percentage of the amount could still reach the budget 
-        let income = Math.round(tx.amount * policy.getTaxRate())
-        budget += income
-        addEffect(node.x, node.y, income, 'budget')
+                return true
+            } else {
+                return false
+            }
+            break;
 
-        // Gain reputation for successful detection
-        node.changeReputation(3)
-
-        // Update panel if the detection happens at the selected node
-        if (UI.getSelectedNode() && UI.getSelectedNode().id === node.id) {
-            UI.showNodeDetails(node, budget, placeTower, enforceAction)
-        }
-
-        if (debug) console.log(tx)
-        return true
-    } else {
-        return false
+        default:
+            console.error("Tx has no legality")
+            break;
     }
 }
 
@@ -918,6 +943,9 @@ function calculateIndicators() {
     }
     gdp = gdpLog.reduce((sum, tx) => sum + tx.amount, 0)
 
+    // TODO : use transactions array instead of gdpLog. (currently, tx are cleaned up). E.g.:
+    // gdp = transactions.filter(t=>(!t.active&&t.endDate < Date.now()-150*1000)).reduce((sum, tx) => sum + tx.amount, 0)
+
     budget += maintenance / (60 * 7) * tech.bonus.maintenance// maintenance is per week for balance   
 
 }
@@ -932,7 +960,6 @@ function removeExpiredEnforcementActions(now) {
                 node.enforcementEnd = null
                 UI.showToast(`${endingAction.icon} ${endingAction.name} ended`, `Corruption reduced at ${node.name}`, 'info')
                 console.log(`✅ Enforcement action ended at node ${node.id}`)
-
 
                 // Update the panel if the audited node is selected
                 if (UI.getSelectedNode() && UI.getSelectedNode().id === node.id) {

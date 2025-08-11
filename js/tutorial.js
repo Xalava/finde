@@ -204,7 +204,7 @@ const TUTORIAL_STEPS = [
 export function showTutorialStep() {
     if (currentStep >= TUTORIAL_STEPS.length) {
         completeTutorial();
-        return;
+        return
     }
 
     const step = TUTORIAL_STEPS[currentStep]
