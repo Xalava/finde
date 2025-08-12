@@ -31,7 +31,11 @@
                 <span id="policy-status">⚖️</span>
             </button>
             <div id="separator"></div>
-            <div id="gdp-stat-item" class="stat-item" data-tooltip="GDP from financial transactions (past quarter)">
+            <div id="tx-stat-item" class="stat-item" data-tooltip="Ongoing transactions.">
+                <span class="stat-icon">↔️</span>
+                <strong class="ui-name">Transactions</strong>
+            </div>
+            <div id="gdp-stat-item" class="stat-item hidden" data-tooltip="GDP from financial transactions (past quarter)">
                 <span class="stat-icon">📊</span>
                 <strong class="ui-name">GDP</strong>
                 <span id="gdp">0</span>
@@ -41,7 +45,7 @@
                 <strong class="ui-name">Budget</strong>
                 <span id="budget">150</span>
             </div>
-            <div id="maintenance-stat-item" class="stat-item" data-tooltip="Ongoing system maintenance costs per second">
+            <div id="maintenance-stat-item" class="stat-item hidden" data-tooltip="Ongoing system maintenance costs per second">
                 <span class="stat-icon">🛠️</span>
                 <strong class="ui-name">Upkeep</strong>
                 <span id="maintenance">0</span>
@@ -61,51 +65,53 @@
                     <h2 id="panel-title">Node Name</h2>
                     <button id="close-panel" class="close-button">×</button>
                 </div>
+                <!-- Removed transactions tab - now using dedicated transactions panel -->
                 <div class="panel-content">
-                    <section class="panel-section">
-                        <h3 style="display: flex;">
-                            Reputation
-                            <span id="reputation-value">80</span>
-                        </h3>
+                    <div id="overview-tab" class="tab-content">
+                        <section class="panel-section">
+                            <h3 style="display: flex;">
+                                Reputation
+                                <span id="reputation-value">80</span>
+                            </h3>
 
-                        <div class="bar-container">
-                            <div class="bar-fill good" id="reputation-bar" style="width: 80%"></div>
-                        </div>
-                    </section>
+                            <div class="bar-container">
+                                <div class="bar-fill good" id="reputation-bar" style="width: 80%"></div>
+                            </div>
+                            </section>
 
-                    <details class="node-details">
-                        <summary>Details</summary>
-                        <div class="detail-row">
-                            <span class="detail-label">Type of institution</span>
-                            <span class="detail-value" id="panel-type">Bank</span>
-                        </div>
-                        <div class="detail-row">
-                            <span class="detail-label">Country</span>
-                            <span id="country-name"></span>
+                        <details class="node-details">
+                            <summary>Details</summary>
+                            <div class="detail-row">
+                                <span class="detail-label">Type of institution</span>
+                                <span class="detail-value" id="panel-type">Bank</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Country</span>
+                                <span id="country-name"></span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Corruption Level</span>
+                                <span class="detail-value" id="panel-corruption">0</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Total Funds Processed</span>
+                                <span>$ <span class="detail-value" id="panel-received">0</span></span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Illegal Funds Seized</span>
+                                <span>$ <span class="detail-value" id="panel-detected">0</span></span>
+                            </div>
+                            </details>
 
+                        <section class="panel-section">
+                            <h3>Control Systems</h3>
+                            <div id="tower-options" class="options-section"></div>
+                            <br>
+                            <h3>Enforcement</h3>
+                            <div id="action-options" class="options-section"></div>
+                        </section>
                         </div>
-                        <div class="detail-row">
-                            <span class="detail-label">Corruption Level</span>
-                            <span class="detail-value" id="panel-corruption">0</span>
-                        </div>
-                        <div class="detail-row">
-                            <span class="detail-label">Total Funds Processed</span>
-                            <span>$ <span class="detail-value" id="panel-received">0</span></span>
-                        </div>
-                        <div class="detail-row">
-                            <span class="detail-label">Illegal Funds Seized</span>
-                            <span>$ <span class="detail-value" id="panel-detected">0</span></span>
-                        </div>
-                    </details>
-
-                    <section class="panel-section">
-                        <h3>Control Systems</h3>
-                        <div id="tower-options" class="options-section"></div>
-                        <br>
-                        <h3>Enforcement</h3>
-                        <div id="action-options" class="options-section"></div>
-                    </section>
-                </div>
+                    </div>
             </aside>
 
             <aside id="user-details-panel" class="panel hidden">
@@ -172,7 +178,6 @@
                 </div>
             </div>
         </aside>
-        </aside>
         <aside id="research-panel" class="panel command-panel hidden">
             <div class="panel-header">
                 <h2>Research</h2>
@@ -231,7 +236,7 @@
                     </div>
                 </section>
                 <section class="panel-section" data-tooltip="Require minimum filter compliance for banks. Non-compliant banks trigger automated tower placement.">
-                    <h3>🏦 Minmal Compliance</h3>
+                    <h3>🏦 Minimal Compliance</h3>
                     <p class="policy-hint">Banks will be required to install compliant
                         filters automatically. Have the appropriate budget ready.</p>
                     <br>
@@ -259,12 +264,8 @@
                 <h2>Analytics</h2>
                 <button id="close-gdp" class="close-button">×</button>
             </div>
-            <div class="panel-tabs">
-                <button id="transactions-tab" class="tab-button active" data-tab="transactions">Transactions</button>
-                <button id="chart-tab" class="tab-button " data-tab="chart">Chart</button>
-            </div>
             <div class="panel-content">
-                <section class="panel-section hidden" id="chart-section">
+                <section class="panel-section">
                     <h3>Transaction Flow Over Time</h3>
                     <div id="gdp-chart-container">
                         <canvas id="gdp-chart"></canvas>
@@ -274,12 +275,41 @@
                         <button id="count-btn" data-view="count">Count (#)</button>
                     </div>
                 </section>
-                <section class="panel-section" id="transactions-section">
+            </div>
+            </aside>
+            
+            <aside id="transactions-panel" class="panel  hidden">
+                <div class="panel-header">
+                    <h2>Transactions</h2>
+                    <button id="close-transactions" class="close-button">×</button>
+                </div>
+                <div class="panel-content">
+                    <section class="panel-section" id="transactions-list-section">
                     <h3>All Transactions</h3>
                     <div id="all-transactions" class="transaction-list">
                         <div class="no-transactions">No transactions found</div>
                     </div>
                 </section>
+                <div id="transaction-details" class="hidden">
+                    <div class="panel-section">
+                        <button id="back-to-transactions" class="option-button" style="margin-bottom: 16px; width: 100%;">← Back to List</button>
+                
+                        <div id="tx-summary">
+                            <!-- Transaction summary will be populated here -->
+                        </div>
+                
+                        <div class="detail-row" style="margin: 16px 0;">
+                            <span class="detail-label">Transaction path</span>
+                        </div>
+                        <div id="tx-path" class="transaction-path"></div>
+                
+                        <div id="tx-actions" class="">
+                            <button id="validate-tx" class="option-button primary">✓ Approve</button>
+                            <button id="block-tx" class="option-button" style="background: rgba(255, 62, 62, 0.2);">✕ Block</button>
+                            <button id="analyze-tx" class="option-button">🔍 Analyze </button>
+                        </div>
+                    </div>
+                </div>
             </div>
         </aside>
     </div>
@@ -304,6 +334,14 @@
             <button id="fast">⏩️</button>
         </div>
     </div>
+
+    <!-- Transaction template for JavaScript use -->
+    <template id="transaction-template">
+        <div class="transaction-item" data-tx-index="">
+            <div class="transaction-amount"></div>
+            <div class="transaction-parties"></div>
+        </div>
+    </template>
 
     <script src="main.js" type="module"></script>
 </body>

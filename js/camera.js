@@ -245,7 +245,10 @@ export function cinematicCenterMap(activeNodes, offset = 0) {
 }
 
 
-function cinematicPanAndZoom(x, y, targetZoom) {
+export function cinematicPanAndZoom(x, y, targetZoom) {
+    if (targetZoom === 0) {
+        targetZoom = getDefaultZoom()
+    }
     const startX = camera.x
     const startY = camera.y
     const startZoom = camera.zoom

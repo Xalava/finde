@@ -2,6 +2,7 @@
 import { towerOptions, actionOptions, countries, legalityOptions, legalityColorMap } from './config.js'
 import * as tech from './tech.js'
 import { uiFont } from './graphics.js'
+import * as Camera from './camera.js'
 
 let indicators = null
 let controls = null
@@ -11,7 +12,10 @@ let policy = null
 let research = null
 let userDetails = null
 let analytics = null
+let transactions = null
 let panels = null
+let txButtons = null
+let txActions = null
 
 let selectedNode = null
 
@@ -21,7 +25,8 @@ export function initUI() {
         gdp: document.getElementById('gdp'),
         maintenance: document.getElementById('maintenance'),
         day: document.getElementById('day'),
-        holiday: document.getElementById('holiday')
+        holiday: document.getElementById('holiday'),
+        // txCounter: document.getElementById('tx-counter'),
     }
 
     controls = {
@@ -33,6 +38,7 @@ export function initUI() {
         fastBtn: document.getElementById('fast'),
         restartBtn: document.getElementById('restart-game'),
         gdpStatItem: document.getElementById('gdp-stat-item'),
+        txStatItem: document.getElementById('tx-stat-item'),
         maintenanceStatItem: document.getElementById('maintenance-stat-item'),
         debugControls: document.getElementById('debug-controls'),
         policyBtn: document.getElementById('policy-button'),
@@ -68,8 +74,34 @@ export function initUI() {
         actionOptions: document.getElementById('action-options'),
         close: document.getElementById('close-panel')
     }
+    txActions = document.getElementById('tx-actions')
+    txButtons = {
+        validate: document.getElementById('validate-tx'),
+        block: document.getElementById('block-tx'),
+        analyze: document.getElementById('analyze-tx'),
+    }
 
     nodeDetails.close.addEventListener('click', hideNodeDetails)
+
+    // Transaction detail handlers
+    document.getElementById('back-to-transactions').addEventListener('click', () => {
+        // Clear transaction update interval
+        if (currentTransactionUpdateInterval) {
+            clearInterval(currentTransactionUpdateInterval)
+            currentTransactionUpdateInterval = null
+        }
+
+        // Clear selection from all transactions
+        if (window.transactions) {
+            window.transactions.forEach(tx => tx.isSelected = false)
+        }
+
+        transactions.listSection.classList.remove('hidden')
+        transactions.detailsSection.classList.add('hidden')
+
+        // Refresh the transaction list to update visual state
+        updateTransactionsList()
+    })
 
     // User details panel
     userDetails = {
@@ -98,39 +130,45 @@ export function initUI() {
         chartContainer: document.getElementById('gdp-chart-container'),
         volumeBtn: document.getElementById('volume-btn'),
         countBtn: document.getElementById('count-btn'),
-        chartTab: document.getElementById('chart-tab'),
-        transactionsTab: document.getElementById('transactions-tab'),
-        chartSection: document.getElementById('chart-section'),
-        transactionsSection: document.getElementById('transactions-section'),
+        currentView: 'volume'
+    }
+
+    transactions = {
+        panel: document.getElementById('transactions-panel'),
+        close: document.getElementById('close-transactions'),
         allTransactions: document.getElementById('all-transactions'),
-        currentView: 'volume',
-        currentTab: 'transactions'
+        listSection: document.getElementById('transactions-list-section'),
+        detailsSection: document.getElementById('transaction-details')
     }
 
 
-    if (analytics.close) {
-        analytics.close.addEventListener('click', () => hide(analytics.panel))
-    }
+    analytics.close.addEventListener('click', () => hide(analytics.panel))
 
-    if (analytics.volumeBtn && analytics.countBtn) {
-        analytics.volumeBtn.addEventListener('click', () => switchGDPView('volume'))
-        analytics.countBtn.addEventListener('click', () => switchGDPView('count'))
-    }
+    analytics.volumeBtn.addEventListener('click', () => switchGDPView('volume'))
+    analytics.countBtn.addEventListener('click', () => switchGDPView('count'))
 
-    if (analytics.chartTab && analytics.transactionsTab) {
-        analytics.chartTab.addEventListener('click', () => switchAnalyticsTab('chart'))
-        analytics.transactionsTab.addEventListener('click', () => switchAnalyticsTab('transactions'))
-    }
+    transactions.close.addEventListener('click', () => {
+        if (transactionListUpdateInterval) {
+            clearInterval(transactionListUpdateInterval)
+            transactionListUpdateInterval = null
+        }
+        hide(transactions.panel)
+    })
 
     // Make GDP stat item clickable
-    const gdpStatItem = document.getElementById('gdp-stat-item')
-    if (gdpStatItem) {
-        gdpStatItem.style.cursor = 'pointer'
-        gdpStatItem.addEventListener('click', (e) => {
-            e.stopPropagation()
-            showGDPPanel()
-        })
-    }
+    controls.gdpStatItem.style.cursor = 'pointer'
+    controls.gdpStatItem.addEventListener('click', (e) => {
+        e.stopPropagation()
+        showGDPPanel()
+    })
+
+
+    // Make transactions stat item clickable
+    controls.txStatItem.style.cursor = 'pointer'
+    controls.txStatItem.addEventListener('click', (e) => {
+        e.stopPropagation()
+        showTransactionsPanel()
+    })
 
     // helper array for iterations on panels
     panels = [
@@ -139,7 +177,8 @@ export function initUI() {
         policy.panel,
         research.panel,
         userDetails.panel,
-        analytics.panel
+        analytics.panel,
+        transactions.panel
     ]
 }
 
@@ -169,6 +208,7 @@ export function updateIndicators(budget, gdp, maintenance) {
     indicators.budget.textContent = budget.toFixed(0);
     indicators.gdp.textContent = gdp.toFixed(0);
     indicators.maintenance.textContent = maintenance;
+    // indicators.txCounter.textContent = window.transactions.length
 }
 
 export function updateDate(day, holiday) {
@@ -361,44 +401,58 @@ export function hideNodeDetails() {
     return selectedNode
 }
 
-function formatTransactionList(transactions, userId = null) {
-    const emptyMessage = 'No transactions found'
+function formatTransaction(tx, userId = null, isClickable = false) {
+    const template = document.getElementById('transaction-template')
+    const clone = template.content.cloneNode(true)
 
-    if (!transactions || transactions.length === 0) {
-        return `<div class="no-transactions">${emptyMessage}</div>`
+    const statusColor = legalityColorMap[tx.legality]
+    const sender = window.users.find(u => u.id === tx.path?.[0])
+    const receiver = window.users.find(u => u.id === tx.path?.[tx.path.length - 1])
+
+    const senderCountry = countries[sender.country].flag 
+    const receiverCountry = countries[receiver.country].flag 
+
+    // Configure the template elements
+    const itemEl = clone.querySelector('.transaction-item')
+    const amountEl = clone.querySelector('.transaction-amount')
+    const partiesEl = clone.querySelector('.transaction-parties')
+
+    itemEl.setAttribute('data-tx-index', tx.index || 0)
+    if (isClickable) itemEl.classList.add('clickable-transaction')
+
+    amountEl.style.color = statusColor
+    amountEl.textContent = `$${tx.amount}`
+
+    if (userId) {
+        // User-specific: show only counterparty with direction
+        let counterparty, arrow, counterpartyCountry
+        if (tx.path[0] === userId) {
+            counterparty = receiver
+            arrow = '→'
+            counterpartyCountry = receiverCountry
+        } else {
+            counterparty = sender
+            arrow = '←'
+            counterpartyCountry = senderCountry
+        }
+        partiesEl.textContent = `${arrow} ${counterparty?.name || 'Unknown'} ${counterpartyCountry}`
+    } else {
+        // General format: show both parties with countries
+ 
+        partiesEl.innerHTML = `${sender.name } ${senderCountry} <span class="arrow">→</span> ${receiver.name} ${receiverCountry}`
+    }
+    return itemEl.outerHTML
+}
+
+function formatTransactionList(txs, userId = null, isClickable = false) {
+
+    if (!txs || txs.length === 0) {
+        return `<div class="no-transactions">No transactions found</div>`
     }
 
-    return transactions.map(tx => {
-        const statusColor = legalityColorMap[tx.legality]
-
-        let displayContent = `<div class="transaction-amount" style="color: ${statusColor}">$${tx.amount}</div>`
-
-        if (userId) {
-            // User-specific view: show counterparty and direction
-            let counterparty, arrow
-            if (tx.path[0] === userId) {
-                counterparty = window.users?.find(u => u.id === tx.path[tx.path.length - 1])
-                arrow = '→'
-            } else {
-                counterparty = window.users?.find(u => u.id === tx.path[0])
-                arrow = '←'
-            }
-            displayContent += `
-                <div class="transaction-counterparty">${arrow} ${counterparty?.name}</div>
-            `
-        } else {
-            // All transactions view: show sender → receiver
-            const sender = window.users?.find(u => u.id === tx.path?.[0])
-            const receiver = window.users?.find(u => u.id === tx.path?.[tx.path.length - 1])
-            const senderName = sender?.name || 'Unknown'
-            const receiverName = receiver?.name || 'Unknown'
-
-            displayContent += `
-                <div class="transaction-counterparty">${senderName} (${countries[sender.country].flag}) \t→\t ${receiverName} (${countries[receiver.country].flag})</div>
-            `
-        }
-
-        return `<div class="transaction-item">${displayContent}</div>`
+    return txs.map((tx, index) => {
+        tx.order = index // Add index for clickable functionality
+        return formatTransaction(tx, userId, isClickable)
     }).join('')
 }
 
@@ -407,11 +461,14 @@ export function showUserDetails(user) {
     userDetails.country.textContent = countries[user.country].flag
     userDetails.type.textContent = user.type
 
-    const userTransactions = window.transactions.filter(tx =>
-        tx.active && tx.path && (tx.path[0] === user.id || tx.path[tx.path.length - 1] === user.id)
-    )
+    // Store user ID for refresh functionality
+    userDetails.panel.setAttribute('data-user-id', user.id)
 
-    userDetails.userTransactions.innerHTML = formatTransactionList(userTransactions, user.id)
+    const userTransactions = window.transactions?.filter(tx =>
+        tx.active && tx.path && (tx.path[0] === user.id || tx.path[tx.path.length - 1] === user.id)
+    ) || []
+
+    userDetails.userTransactions.innerHTML = formatTransactionList(userTransactions, user.id, false)
 
     show(userDetails.panel)
 }
@@ -455,7 +512,30 @@ export function showGDPPanel() {
     closeAllPanels(analytics.panel)
     show(analytics.panel)
 
-    updateAnalyticsPanel()
+    updateGDPChart()
+}
+
+export function showTransactionsPanel() {
+    if (!transactions || !transactions.panel) {
+        return
+    }
+    closeAllPanels(transactions.panel)
+    show(transactions.panel)
+
+    // Show the list section and hide details
+    show(transactions.listSection)
+    hide(transactions.detailsSection)
+
+    updateTransactionsList()
+    
+    // Start simple interval to update every 500ms
+    if (!transactionListUpdateInterval) {
+        transactionListUpdateInterval = setInterval(() => {
+            if (!transactions.panel.classList.contains('hidden')) {
+                updateTransactionsList()
+            }
+        }, 500)
+    }
 }
 
 
@@ -525,13 +605,10 @@ function updateGDPChart() {
 
 export function updateAnalyticsPanel() {
     if (analytics && !analytics.panel.classList.contains('hidden')) {
-        if (analytics.currentTab === 'chart') {
-            updateGDPChart()
-        } else if (analytics.currentTab === 'transactions') {
-            updateTransactionsList()
-        }
+        updateGDPChart()
     }
 }
+
 function capitalizeFirstLetter(val) {
     return String(val).charAt(0).toUpperCase() + String(val).slice(1);
 }
@@ -695,28 +772,29 @@ function drawTransactionChart(buckets, viewMode) {
     }
 }
 
-function switchAnalyticsTab(tab) {
-    if (!analytics) return
-
-    analytics.currentTab = tab
-
-    // Update tab button states
-    analytics.chartTab.classList.toggle('active', tab === 'chart')
-    analytics.transactionsTab.classList.toggle('active', tab === 'transactions')
-
-    // Show/hide sections
-    analytics.chartSection.classList.toggle('hidden', tab !== 'chart')
-    analytics.transactionsSection.classList.toggle('hidden', tab !== 'transactions')
-
-    updateAnalyticsPanel()
-}
+// Analytics tab switching removed - now only shows chart
 
 function updateTransactionsList() {
-    if (!analytics || !analytics.allTransactions) return
+    if (!transactions || !transactions.allTransactions) return
 
     const allTransactions = window.transactions || []
 
-    analytics.allTransactions.innerHTML = formatTransactionList(allTransactions)
+
+    transactions.allTransactions.innerHTML = formatTransactionList(allTransactions, null, true)
+
+    // Add click handlers for transaction items
+    transactions.allTransactions.querySelectorAll('.clickable-transaction').forEach((item, index) => {
+        item.addEventListener('click', (e) => {
+            e.preventDefault()
+            e.stopPropagation()
+            const transaction = allTransactions[index]
+            if (transaction) {
+                showTransactionDetails(transaction)
+            }
+        })
+    })
+
+
 }
 
 // Keyboard shortcuts for towers (numbers) and actions (letters)
@@ -751,6 +829,169 @@ export function activatePolicy() {
     show(controls.policyBtn)
 }
 
+// Node transactions functionality removed - now using dedicated transactions panel
+
+function showTransactionDetails(tx) {
+    // Mark this transaction as selected
+    tx.isSelected = true
+    if (tx.active) {
+        Camera.cinematicPanAndZoom(tx.x, tx.y, 2)
+    }
+
+    // Hide transaction list, show details
+    hide(transactions.listSection)
+    show(transactions.detailsSection)
+
+    // Show transaction summary at top using unified format
+    const summaryEl = document.getElementById('tx-summary')
+    summaryEl.innerHTML = formatTransaction(tx, null, false)
+
+    // Show enhanced path with current position
+    displayTransactionPath(tx)
+
+    // Show action buttons only if transaction is active and relevant to current node
+    if (tx.active) {
+        show(txActions)
+        // Update button handlers with current transaction
+        txButtons.validate.onclick = () => handleTransactionAction(tx, 'validate')
+        txButtons.block.onclick = () => handleTransactionAction(tx, 'block')
+        txButtons.analyze.onclick = () => handleTransactionAction(tx, 'analyze')
+    } else {
+        hide(txActions)
+        tx.isSelected = false
+
+    }
+}
+
+let currentTransactionUpdateInterval = null
+let transactionListUpdateInterval = null
+
+function displayTransactionPath(tx) {
+    const pathDiv = document.getElementById('tx-path')
+
+    if (!tx.path || tx.path.length === 0) {
+        pathDiv.innerHTML = '<div class="path-node">Direct transfer</div>'
+        return
+    }
+
+    // Clear any existing update interval
+    if (currentTransactionUpdateInterval) {
+        clearInterval(currentTransactionUpdateInterval)
+    }
+
+    // Function to update the path display
+    const updatePath = () => {
+        if (!tx.active) {
+            hide(txActions)
+            tx.isSelected = false
+        }
+
+        const currentStepIndex = tx.active ? tx.index : tx.path.length
+
+        // Clear existing content
+        pathDiv.innerHTML = ''
+
+        tx.path.forEach((pathId, stationIndex) => {
+            const user = window.users.find(u => u.id === pathId)
+            const node = window.nodes.find(n => n.id === pathId)
+            const name = user?.name || node?.name || pathId
+
+            const isCompleted = stationIndex < currentStepIndex
+            const isCurrent = stationIndex === currentStepIndex
+            const isValidated = stationIndex <= currentStepIndex
+            const isPending = stationIndex > currentStepIndex
+
+            // Create step container
+            const stepDiv = document.createElement('div')
+            stepDiv.className = 'path-step'
+
+            // Add dot if current position and active
+            const showDot = tx.active && stationIndex === currentStepIndex
+            if (showDot) {
+                const dotDiv = document.createElement('div')
+                dotDiv.className = 'path-dot'
+                stepDiv.appendChild(dotDiv)
+            }
+
+            // Create node span
+            const nodeSpan = document.createElement('span')
+            nodeSpan.textContent = name
+            nodeSpan.className = 'path-node'
+            
+            if (isCurrent) nodeSpan.classList.add('current')
+            if (isCompleted || isValidated) nodeSpan.classList.add('completed')
+            if (isPending) nodeSpan.classList.add('pending')
+            
+            if (user || node) {
+                nodeSpan.classList.add('clickable-user')
+                nodeSpan.addEventListener('click', (e) => {
+                    e.stopPropagation()
+                    if (user) {
+                        showUserDetails(user)
+                    } else if (node) {
+                        showNodeDetailsByID(pathId)
+                    }
+                })
+            }
+
+            stepDiv.appendChild(nodeSpan)
+            pathDiv.appendChild(stepDiv)
+
+            // Add connector line between steps (except after last step)
+            if (stationIndex < tx.path.length - 1) {
+                const connectorDiv = document.createElement('div')
+                connectorDiv.className = 'path-connector'
+                pathDiv.appendChild(connectorDiv)
+            }
+        })
+    }
+
+    // Initial update
+    updatePath()
+
+    // Set up real-time updates if transaction is active
+    if (tx.active) {
+        currentTransactionUpdateInterval = setInterval(updatePath, 500) // Update every 500 ms
+    }
+}
+
+function handleTransactionAction(tx, action) {
+    const actions = {
+        validate: {
+            message: 'Transaction validated and approved',
+            class: 'success',
+            do: () => {
+                console.log('Transaction validated')// TODO further consequences
+                tx.legality = 'legit'
+            },
+        },
+        block: {
+            message: 'Transaction blocked',
+            class: 'error',
+            do: () => {
+                console.log('Transaction blocked')
+                tx.endTransaction('blocked')
+            }
+        },
+        analyze: {
+            message: 'Transaction sent for further analysis',
+            class: 'info',
+            do: () => {
+                console.log('Transaction sent for analysis')// TODO further consequences
+            }
+        }
+    }
+
+    showToast('Transaction Action', actions[action].message, actions[action].class)
+    actions[action].do()
+    tx.isSelected = false
+    show(transactions.listSection)
+    hide(transactions.detailsSection)
+
+    // Refresh the transaction list to update visual state
+    updateTransactionsList()
+}
+
 export function hideFullInterface() {
     // Simplified interface when using the tutorial
     hide(controls.gdpStatItem)
@@ -762,4 +1003,12 @@ export function showFullInterface() {
     show(controls.gdpStatItem)
     show(controls.maintenanceStatItem)
     show(controls.gameControls)
+}
+
+// Helper function to show node details by ID  
+export function showNodeDetailsByID(nodeId) {
+    const node = window.nodes?.find(n => n.id === nodeId)
+    if (node) {
+        showNodeDetails(node)
+    }
 }

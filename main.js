@@ -647,16 +647,19 @@ class Transaction {
         this.path = path
         this.index = 0
         this.issuanceDate = Date.now()
-        this.terminationDate = null
         this.x = sourceUser.x
         this.y = sourceUser.y
         this.sourceUser = sourceUser
         this.active = true
+        this.isSelected = false
+        this.endDate = null
+        this.endReason = null
 
         const sourceBank = nodes[sourceUser.bankId]
         this.legality = this._calculateLegality(sourceUser, targetUser, sourceBank)
 
-        this.amount = Math.round(Math.exp(Math.random() * 4.2)) // 15 on average with log-normal distribution
+        // TODO : Updat formula depending on users sizes and for more vairation in amounts. 
+        this.amount = Math.round(Math.exp(Math.random() * 4.2)) // 15 on average with log-normal distribution and exponent 4.2 
         this.size = getTransactionSizeName(this.amount) // kept for comptaibility, in the future, we could use directly amount
         this.speed = 0.5 + Math.random() * Math.min(15 / this.amount, 1)
     }

@@ -230,7 +230,16 @@ export function drawTransaction(tx) {
 
     // Create gradient
     const gradient = ctx.createRadialGradient(tx.x, tx.y, 1, tx.x, tx.y, radius * 2)
-    gradient.addColorStop(0, 'rgb(255, 255, 255)')
+    if (tx.isSelected) {
+        const now = Date.now();
+        if (Math.floor(now / 50) % 5 === 0) {
+            gradient.addColorStop(0, 'rgba(255, 255, 255, 0.32)');
+        } else {
+            gradient.addColorStop(0, 'rgb(255, 255, 255)');
+        }
+    } else {
+        gradient.addColorStop(0, 'rgb(255, 255, 255)')
+    }
     gradient.addColorStop(1, 'rgba(145, 145, 145, 0)')
 
     ctx.fillStyle = gradient

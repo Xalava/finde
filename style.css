@@ -198,6 +198,14 @@ canvas {
 
 }
 
+#transactions-panel {
+    position: fixed;
+    top: 50px;
+    right: 10px;
+    width: 300px;
+    max-height: 80vh;
+}
+
 .transaction-section {
     margin-top: 15px;
     border-top: 1px solid rgba(255, 255, 255, 0.1);
@@ -219,18 +227,101 @@ canvas {
 
 .transaction-item {
     display: grid;
-    grid-template-columns: 1fr 2fr;
+    grid-template-columns: 1fr 4fr;
     gap: 8px;
     padding: 6px 8px;
     margin-bottom: 4px;
     background: rgba(85, 85, 85, 0.3);
     border-radius: var(--radius);
     font-size: 12px;
+    /* border: 1px solid var(--border); */
 }
 
-.transaction-counterparty {
+.transaction-parties {
     color: #ccc;
     font-size: 11px;
+}
+
+.clickable-transaction {
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.clickable-transaction:hover {
+    background: rgba(255, 255, 255, 0.18);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+
+
+/* Transaction Path - Simplified & Improved */
+.transaction-path {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: var(--spacing);
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    font-size: 13px;
+}
+
+.path-step {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 4px 0;
+}
+
+.path-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 8px var(--accent);
+    animation: pulse 2s ease-in-out infinite;
+    flex-shrink: 0;
+}
+
+.path-connector {
+    width: 4px;
+    height: 8px;
+    background: var(--text);
+    margin-left: 26px;
+    opacity: 0.9;
+}
+
+.path-node {
+    padding: 4px 8px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid var(--border);
+    font-weight: 500;
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.path-node.completed {
+    background: rgba(0, 204, 102, 0.15);
+    border-color: var(--success);
+    color: var(--success);
+}
+
+.path-node.pending {
+    opacity: 0.6;
+    background: rgba(255, 255, 255, 0.05);
+}
+
+
+.transaction-progress-info {
+    margin: 12px 0;
+    padding: 8px 12px;
+    background: rgba(58, 123, 213, 0.1);
+    border-radius: 4px;
+    border-left: 3px solid var(--accent);
+    font-size: 12px;
+    color: var(--text-dim);
 }
 
 .transaction-status {
@@ -367,11 +458,26 @@ details {
     color: var(--text-dim);
 }
 
+#tx-actions {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    margin: 10px;
+}
+
+#tx-actions button {
+
+    cursor: pointer;
+    text-align: center;
+
+}
+
 .options-section {
     display: flex;
     flex-direction: column;
     gap: 10px;
 }
+
 
 .option-button {
     display: flex;
@@ -724,6 +830,14 @@ button.primary:hover:not(:disabled) {
 .tab-button.active {
     border-bottom: 2px solid var(--accent);
     color: var(--text);
+}
+
+.tab-content {
+    display: block;
+}
+
+.tab-content.hidden {
+    display: none;
 }
 
 #tech-tree-container {
