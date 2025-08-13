@@ -1,5 +1,6 @@
 // Module for pure UI management. 
 import { towerOptions, actionOptions, countries, legalityOptions, legalityColorMap } from './config.js'
+import * as config from './config.js'
 import * as tech from './tech.js'
 import { uiFont } from './graphics.js'
 import * as Camera from './camera.js'
@@ -13,11 +14,13 @@ let research = null
 let userDetails = null
 let analytics = null
 let transactions = null
+let tooltip = null
 let panels = null
 let txButtons = null
 let txActions = null
 
 let selectedNode = null
+let selectedTransaction = null
 
 export function initUI() {
     indicators = {
@@ -141,6 +144,17 @@ export function initUI() {
         detailsSection: document.getElementById('transaction-details')
     }
 
+    tooltip = {
+        panel: document.getElementById('transaction-tooltip'),
+        title: document.getElementById('tooltip-title'),
+        content: document.getElementById('tooltip-content'),
+        actions: document.getElementById('tooltip-actions'),
+        close: document.getElementById('close-tooltip'),
+        allowBtn: document.getElementById('tooltip-allow'),
+        blockBtn: document.getElementById('tooltip-block'),
+        analyzeBtn: document.getElementById('tooltip-analyze')
+    }
+
 
     analytics.close.addEventListener('click', () => hide(analytics.panel))
 
@@ -178,8 +192,25 @@ export function initUI() {
         research.panel,
         userDetails.panel,
         analytics.panel,
-        transactions.panel
+        transactions.panel,
+        tooltip.panel
     ]
+
+    // Setup HTML tooltip button handlers
+    tooltip.allowBtn.addEventListener('click', () => {
+        getSelectedTransaction().validate()
+        clearAllSelections()
+    })
+
+    tooltip.blockBtn.addEventListener('click', () => {
+        getSelectedTransaction().block()
+        clearAllSelections()
+    })
+
+    tooltip.analyzeBtn.addEventListener('click', () => {
+        getSelectedTransaction().analyze()
+        clearAllSelections()
+    })
 }
 
 export function isClickInsideAnyPanel({ clientX, clientY }) {
@@ -204,10 +235,22 @@ export function closeAllPanels(exceptPanel) {
     });
 }
 
+export function clearAllSelections() {
+    // Clear transaction selection and tooltip
+    clearTransactionSelection()
+    // Clear all UI panels
+    closeAllPanels()
+}
+
 export function updateIndicators(budget, gdp, maintenance) {
-    indicators.budget.textContent = budget.toFixed(0);
-    indicators.gdp.textContent = gdp.toFixed(0);
-    indicators.maintenance.textContent = maintenance;
+    if (maintenance > 0) {
+
+        indicators.budget.textContent = `${budget.toFixed(0)} (- ${maintenance.toFixed(0)})`
+    } else {
+        indicators.budget.textContent = budget.toFixed(0)
+    }
+    // indicators.gdp.textContent = gdp.toFixed(0);
+    // indicators.maintenance.textContent = maintenance;
     // indicators.txCounter.textContent = window.transactions.length
 }
 
@@ -409,8 +452,8 @@ function formatTransaction(tx, userId = null, isClickable = false) {
     const sender = window.users.find(u => u.id === tx.path?.[0])
     const receiver = window.users.find(u => u.id === tx.path?.[tx.path.length - 1])
 
-    const senderCountry = countries[sender.country].flag 
-    const receiverCountry = countries[receiver.country].flag 
+    const senderCountry = countries[sender.country].flag
+    const receiverCountry = countries[receiver.country].flag
 
     // Configure the template elements
     const itemEl = clone.querySelector('.transaction-item')
@@ -438,8 +481,8 @@ function formatTransaction(tx, userId = null, isClickable = false) {
         partiesEl.textContent = `${arrow} ${counterparty?.name || 'Unknown'} ${counterpartyCountry}`
     } else {
         // General format: show both parties with countries
- 
-        partiesEl.innerHTML = `${sender.name } ${senderCountry} <span class="arrow">→</span> ${receiver.name} ${receiverCountry}`
+
+        partiesEl.innerHTML = `${sender.name} ${senderCountry} <br><span class="arrow">→</span> ${receiver.name} ${receiverCountry}`
     }
     return itemEl.outerHTML
 }
@@ -527,7 +570,7 @@ export function showTransactionsPanel() {
     hide(transactions.detailsSection)
 
     updateTransactionsList()
-    
+
     // Start simple interval to update every 500ms
     if (!transactionListUpdateInterval) {
         transactionListUpdateInterval = setInterval(() => {
@@ -612,6 +655,7 @@ export function updateAnalyticsPanel() {
 function capitalizeFirstLetter(val) {
     return String(val).charAt(0).toUpperCase() + String(val).slice(1);
 }
+
 function drawTransactionChart(buckets, viewMode) {
     const canvas = analytics.chart
     const ctx = canvas.getContext('2d')
@@ -835,7 +879,7 @@ function showTransactionDetails(tx) {
     // Mark this transaction as selected
     tx.isSelected = true
     if (tx.active) {
-        Camera.cinematicPanAndZoom(tx.x, tx.y, 2)
+        Camera.cinematicPanAndZoom(tx.x, tx.y, 3)
     }
 
     // Hide transaction list, show details
@@ -917,11 +961,11 @@ function displayTransactionPath(tx) {
             const nodeSpan = document.createElement('span')
             nodeSpan.textContent = name
             nodeSpan.className = 'path-node'
-            
+
             if (isCurrent) nodeSpan.classList.add('current')
             if (isCompleted || isValidated) nodeSpan.classList.add('completed')
             if (isPending) nodeSpan.classList.add('pending')
-            
+
             if (user || node) {
                 nodeSpan.classList.add('clickable-user')
                 nodeSpan.addEventListener('click', (e) => {
@@ -960,25 +1004,17 @@ function handleTransactionAction(tx, action) {
         validate: {
             message: 'Transaction validated and approved',
             class: 'success',
-            do: () => {
-                console.log('Transaction validated')// TODO further consequences
-                tx.legality = 'legit'
-            },
+            do: tx.validate(),
         },
         block: {
             message: 'Transaction blocked',
             class: 'error',
-            do: () => {
-                console.log('Transaction blocked')
-                tx.endTransaction('blocked')
-            }
+            do: tx.block()
         },
         analyze: {
             message: 'Transaction sent for further analysis',
             class: 'info',
-            do: () => {
-                console.log('Transaction sent for analysis')// TODO further consequences
-            }
+            do: tx.analyze()
         }
     }
 
@@ -1000,8 +1036,8 @@ export function hideFullInterface() {
 }
 
 export function showFullInterface() {
-    show(controls.gdpStatItem)
-    show(controls.maintenanceStatItem)
+    // show(controls.gdpStatItem)
+    // show(controls.maintenanceStatItem)
     show(controls.gameControls)
 }
 
@@ -1011,4 +1047,36 @@ export function showNodeDetailsByID(nodeId) {
     if (node) {
         showNodeDetails(node)
     }
+}
+
+// Transaction tooltip functions
+export function showTransactionTooltip(tx) {
+    selectedTransaction = tx
+  
+    tooltip.content.innerHTML = formatTransaction(tx, null, false)
+
+    // Position tooltip
+    const screenPos = Camera.getScreenPos(tx.x, tx.y)
+    tooltip.panel.style.left = (screenPos.x + 30) + 'px'
+    tooltip.panel.style.top = (screenPos.y - 40) + 'px'
+
+    // Show tooltip and store transaction
+    show(tooltip.panel)
+}
+
+export function hideTransactionTooltip() {
+    hide(tooltip.panel)
+    selectedTransaction = null
+}
+
+export function getSelectedTransaction() {
+    return selectedTransaction
+}
+
+export function clearTransactionSelection() {
+    if (selectedTransaction) {
+        selectedTransaction.isSelected = false
+        selectedTransaction = null
+    }
+    hideTransactionTooltip()
 }

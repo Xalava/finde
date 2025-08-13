@@ -1,5 +1,6 @@
 import * as UI from './ui-manager.js'
 import * as config from './config.js'
+import * as Camera from './camera.js'
 
 // Font constant
 export const uiFont = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
@@ -231,11 +232,22 @@ export function drawTransaction(tx) {
     // Create gradient
     const gradient = ctx.createRadialGradient(tx.x, tx.y, 1, tx.x, tx.y, radius * 2)
     if (tx.isSelected) {
-        const now = Date.now();
-        if (Math.floor(now / 50) % 5 === 0) {
-            gradient.addColorStop(0, 'rgba(255, 255, 255, 0.32)');
+        const seq = Math.floor(Date.now() / 18) % 60
+        // if (seq >= 0 && seq < 5) {
+        //     gradient.addColorStop(0, 'rgba(255, 255, 255, 0.50)')
+        // } else 
+
+        if (seq < 40) {
+            gradient.addColorStop(0, `rgba(255, 255, 255, ${1 - Math.abs(seq - 30) / 100})`);
+
         } else {
-            gradient.addColorStop(0, 'rgb(255, 255, 255)');
+            gradient.addColorStop(0, 'rgb(255, 255, 255)')
+
+        }
+        //we can use "isFollowed" to selectively have this effect. 
+        if (tx.isSelected) {
+            // Center camera on selected transaction. Might be intense
+            Camera.panAndZoom(tx.x, tx.y, 0) 
         }
     } else {
         gradient.addColorStop(0, 'rgb(255, 255, 255)')

@@ -245,14 +245,14 @@ export function cinematicCenterMap(activeNodes, offset = 0) {
 }
 
 
-export function cinematicPanAndZoom(x, y, targetZoom) {
+export function cinematicPanAndZoom(x, y, targetZoom, duration = 800) {
     if (targetZoom === 0) {
         targetZoom = getDefaultZoom()
     }
     const startX = camera.x
     const startY = camera.y
     const startZoom = camera.zoom
-    const duration = 800
+    // const duration = 800
     const startTime = Date.now()
 
     const targetX = canvas.width / 2 - x * targetZoom
@@ -270,6 +270,17 @@ export function cinematicPanAndZoom(x, y, targetZoom) {
     }
 
     animate()
+}
+
+export function panAndZoom(x, y, targetZoom) {
+    if (targetZoom === 0) {
+        targetZoom = getZoom() // Neutral zoom if specified as 0
+    }
+    const targetX = canvas.width / 2 - x * targetZoom
+    const targetY = canvas.height / 2 - y * targetZoom
+    camera.x = targetX
+    camera.y = targetY
+    camera.zoom = targetZoom
 }
 
 export function getZoom() {

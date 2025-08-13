@@ -59,13 +59,30 @@
 
         <main id="game-container">
             <canvas id="game"></canvas>
+            <!-- Transaction Tooltip Overlay -->
+            <div id="transaction-tooltip" class="panel hidden">
+                <div id="tooltip-content" class="panel-content"></div>
+                <div id="tooltip-actions" class="panel-content">
+                    <button id="tooltip-allow" class="tx-button primary">
+                        <span class="tx-button-icon">✓</span>
+                        <span class="tx-button-name">Allow</span>
+                    </button>
+                    <button id="tooltip-block" class="tx-button" style="background: rgba(255, 62, 62, 0.2);">
+                        <span class="tx-button-icon">✕</span>
+                        <span class="tx-button-name">Block</span>
+                    </button>
+                    <button id="tooltip-analyze" class="tx-button">
+                        <span class="tx-button-icon">🔍</span>
+                        <span class="tx-button-name">Analyze</span>
+                    </button>
+                </div>
+            </div>
 
             <aside id="node-details-panel" class="panel hidden">
                 <div class="panel-header">
                     <h2 id="panel-title">Node Name</h2>
                     <button id="close-panel" class="close-button">×</button>
                 </div>
-                <!-- Removed transactions tab - now using dedicated transactions panel -->
                 <div class="panel-content">
                     <div id="overview-tab" class="tab-content">
                         <section class="panel-section">
@@ -77,7 +94,7 @@
                             <div class="bar-container">
                                 <div class="bar-fill good" id="reputation-bar" style="width: 80%"></div>
                             </div>
-                            </section>
+                        </section>
 
                         <details class="node-details">
                             <summary>Details</summary>
@@ -101,7 +118,7 @@
                                 <span class="detail-label">Illegal Funds Seized</span>
                                 <span>$ <span class="detail-value" id="panel-detected">0</span></span>
                             </div>
-                            </details>
+                        </details>
 
                         <section class="panel-section">
                             <h3>Control Systems</h3>
@@ -110,7 +127,7 @@
                             <h3>Enforcement</h3>
                             <div id="action-options" class="options-section"></div>
                         </section>
-                        </div>
+                    </div>
                     </div>
             </aside>
 
@@ -276,40 +293,47 @@
                     </div>
                 </section>
             </div>
-            </aside>
-            
-            <aside id="transactions-panel" class="panel  hidden">
-                <div class="panel-header">
-                    <h2>Transactions</h2>
-                    <button id="close-transactions" class="close-button">×</button>
-                </div>
-                <div class="panel-content">
-                    <section class="panel-section" id="transactions-list-section">
+        </aside>
+
+        <aside id="transactions-panel" class="panel hidden">
+            <div class="panel-header">
+                <h2>Transactions</h2>
+                <button id="close-transactions" class="close-button">×</button>
+            </div>
+            <div class="panel-content">
+                <section class="panel-section" id="transactions-list-section">
                     <h3>All Transactions</h3>
                     <div id="all-transactions" class="transaction-list">
                         <div class="no-transactions">No transactions found</div>
                     </div>
                 </section>
-                <div id="transaction-details" class="hidden">
-                    <div class="panel-section">
-                        <button id="back-to-transactions" class="option-button" style="margin-bottom: 16px; width: 100%;">← Back to List</button>
+                <section id="transaction-details" class="panel-section hidden">
+                    <button id="back-to-transactions" class="option-button" style="margin-bottom: 16px; width: 100%;">← Back to List</button>
                 
-                        <div id="tx-summary">
-                            <!-- Transaction summary will be populated here -->
-                        </div>
-                
-                        <div class="detail-row" style="margin: 16px 0;">
-                            <span class="detail-label">Transaction path</span>
-                        </div>
-                        <div id="tx-path" class="transaction-path"></div>
-                
-                        <div id="tx-actions" class="">
-                            <button id="validate-tx" class="option-button primary">✓ Approve</button>
-                            <button id="block-tx" class="option-button" style="background: rgba(255, 62, 62, 0.2);">✕ Block</button>
-                            <button id="analyze-tx" class="option-button">🔍 Analyze </button>
-                        </div>
+                    <div id="tx-summary">
+                        <!-- Transaction summary will be populated here -->
                     </div>
-                </div>
+                
+                    <div class="detail-row" style="margin: 16px 0;">
+                        <span class="detail-label">Transaction path</span>
+                    </div>
+                    <div id="tx-path" class="transaction-path"></div>
+                
+                    <div id="tx-actions" class="">
+                        <button id="validate-tx" class="tx-button primary">
+                            <span class="tx-button-icon">✓</span>
+                            <span class="tx-button-name">Approve</span>
+                        </button>
+                        <button id="block-tx" class="tx-button" style="background: rgba(255, 62, 62, 0.2);">
+                            <span class="tx-button-icon">✕</span>
+                            <span class="tx-button-name">Block</span>
+                        </button>
+                        <button id="analyze-tx" class="tx-button">
+                            <span class="tx-button-icon">🔍</span>
+                            <span class="tx-button-name">Analyze</span>
+                        </button>
+                        </div>
+                </section>
             </div>
         </aside>
     </div>

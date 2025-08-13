@@ -44,6 +44,26 @@ function getEventCoordinates(e) {
     return { clientX: e.clientX, clientY: e.clientY }
 }
 
+function findTransactionAt(screenX, screenY) {
+    const worldPos = Camera.getWorldPosition(screenX, screenY)
+    const activeTransactions = transactions.filter(t => t.active)
+
+    return activeTransactions.find(tx => {
+        const dx = tx.x - worldPos.x
+        const dy = tx.y - worldPos.y
+        const radius = tx.size === 'small' ? 2 : tx.size === 'medium' ? 4 : 6
+        return Math.hypot(dx, dy) < Math.max(CLICK_DETECTION_RADIUS, radius * 3)
+    })
+}
+
+function normalRandom(max) {
+    // Ideally, we look for a normal distribution, with a spike in low / medium
+    // Returns a random number between 1 and 100, with 50% below 10
+    let normalDice = Math.pow(1.5849, Math.random() * 10)
+    let result = Math.ceil(normalDice / 100 * max)
+    return result
+}
+
 function findUserAt(screenX, screenY) {
     const worldPos = Camera.getWorldPosition(screenX, screenY)
     const activeUsers = users.filter(u => u.active)
@@ -109,6 +129,17 @@ document.addEventListener('DOMContentLoaded', () => {
     window.nodes = nodes
     window.gdpLog = gdpLog
 
+
+    // Potential follow button :Active by default
+    // document.getElementById('tooltip-follow').addEventListener('click', () => {
+    //     const tooltip = document.getElementById('transaction-tooltip')
+    //     const tx = tooltip._currentTransaction
+    //     if (tx) {
+    //         tx.isFollowed = !tx.isFollowed
+    //         Camera.panAndZoom(tx.x, tx.y, 3)
+    //     }
+    // })
+
     // Hacky budget access
     Object.defineProperty(window, 'budget', {
         get: () => budget,
@@ -136,10 +167,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // Unified click handler for canvas
     canvas.addEventListener('mousedown', (e) => {
         isDragging = false
+        const transaction = findTransactionAt(e.clientX, e.clientY)
         const node = findNodeAt(e.clientX, e.clientY)
         const user = findUserAt(e.clientX, e.clientY)
 
-        if (node || user) {
+        if (transaction || node || user) {
             // Don't start dragging when clicking on interactive elements
             return
         } else {
@@ -153,20 +185,41 @@ document.addEventListener('DOMContentLoaded', () => {
 
         e.stopPropagation() // Prevent document click handler from interfering
 
+        // HTML tooltip handles its own clicks, no need to check here
+
+        const tx = findTransactionAt(e.clientX, e.clientY)
+        if (tx) {
+            // Clear previously selected transaction
+            if (selectedTransaction) {
+                selectedTransaction.isSelected = false
+            }
+            // Close any open panels but keep transaction selected
+            UI.closeAllPanels()
+            // Select new transaction
+            tx.isSelected = true
+            Camera.cinematicPanAndZoom(tx.x, tx.y, 3, 1)
+            // Camera.adjustZoom(3)
+            UI.showTransactionTooltip(tx)
+
+            return
+        }
+
         const user = findUserAt(e.clientX, e.clientY)
         if (user) {
+            UI.clearAllSelections()
             UI.showUserDetails(user)
             return
         }
 
         const node = findNodeAt(e.clientX, e.clientY)
         if (node) {
+            UI.clearAllSelections()
             UI.showNodeDetails(node, budget, placeTower, enforceAction)
             return
         }
 
-        // Empty space clicked - hide all panels
-        UI.closeAllPanels()
+        // Empty space clicked - clear everything
+        UI.clearAllSelections()
     })
 
     // Handle node approval
@@ -296,6 +349,8 @@ let activeNodes = []
 // Gameplay
 let speedControl = 1
 let hoverNode = null
+let selectedTransaction = null
+let tooltipButtons = [] // Store button coordinates for click detection
 let isFirstNewNode = false
 
 // Endgame 
@@ -650,8 +705,10 @@ class Transaction {
         this.x = sourceUser.x
         this.y = sourceUser.y
         this.sourceUser = sourceUser
+        this.targetUser = targetUser
         this.active = true
         this.isSelected = false
+        this.isFollowed = false
         this.endDate = null
         this.endReason = null
 
@@ -750,6 +807,65 @@ class Transaction {
         let lostTransactions = transactions.filter(tx => tx.endReason === 'lost').length
         if (lostTransactions < 2 || lostTransactions % 10 === 0) {
             UI.showToast('∅ Lost transaction', message, 'error')
+        }
+    }
+    validate() {
+        let reward = normalRandom(20)
+
+        switch (this.legality) {
+            case 'legit':
+                UI.showToast('✅ Transaction validated', `Legit transaction from ${this.sourceUser.name}. No effect`, 'success')
+                break;
+            case 'questionable':
+                if (Math.random() < 0.5) {
+                    UI.showToast('✅ Questionable transaction validated', `It was risky, but there seems to be no consequences`, 'warning')
+                } else {
+                    UI.showToast('✅ Questionable transaction validated', `Later reports show that it was par part of an illegal scheme, damaging your reputation (-${reward}).`, 'error')
+                    policy.changePopularity(-reward)
+                }
+                break;
+            case 'illegal':
+                UI.showToast('✅ Illegal transaction validated', `Strongly damaging your reputation (-${reward * 2})`, 'error')
+                policy.changePopularity(-reward * 2)
+                break;
+        }
+        this.legality = 'legit'
+    }
+    analyze() {
+        let reward = normalRandom(20)
+        switch (this.legality) {
+            case 'legit':
+                UI.showToast('🔎 Transaction analyzed', `Legit transaction from ${this.sourceUser.name}. Damage in global popularity`, 'error')
+                policy.changePopularity(-2)
+                break;
+            case 'questionable':
+                UI.showToast('🔎 Transaction analyzed', `Questionable transaction from ${this.sourceUser.name}. Gathering ${reward} in intelligence `, 'error')
+                tech.addResearchPoints(reward)
+                break;
+            case 'illegal':
+                UI.showToast('🔎 Transaction analyzed', `Illegal transaction from ${this.sourceUser.name}. Gathering intelligence, but the transaction may still cause damage`, 'warning')
+                tech.addResearchPoints(reward)
+
+                break;
+        }
+    }
+    block() {
+        console.log('Transaction blocked')
+        this.endTransaction('blocked')
+        addEffect(this.x - 2, this.y, "🚫", "insitus")
+        let reward = normalRandom(20)
+        switch (this.legality) {
+            case 'legit':
+                UI.showToast('🚫 Legit transaction blocked', `Heaving damage in global popularity (-${reward})`, 'error')
+                policy.changePopularity(-reward)
+                break;
+            case 'questionable':
+                UI.showToast('🚫 Transaction blocked', `Questionable transaction from ${this.sourceUser.name}. No consequences`, 'warning')
+                break;
+            case 'illegal':
+                UI.showToast('🚫 Transaction blocked', `Illegal transaction from ${this.sourceUser.name}has been blocked. Gaining popularity (+${reward})`, 'success')
+                policy.changePopularity(reward)
+                break;
         }
     }
     endTransaction(reason) {
@@ -1161,7 +1277,7 @@ function drawGame() {
 
     ctx.clearRect(0, 0, canvas.width, canvas.height)
     if (debug) Camera.drawCameraInfo(ctx)
-    if (debug) {
+    if (debug || window.showFPS) {
         const newDeltaTime = now - priorNow
         priorNow = now
         ctx.font = '18px sans-serif'
@@ -1188,6 +1304,16 @@ function drawGame() {
     Camera.restoreCamera(ctx)
     if (!isFirstPlay()) {
         graphics.drawCorruptionMeter(corruptionSpread)
+    }
+
+    // Draw tooltips in screen space (after camera restore)
+    if (UI.getSelectedTransaction()) {
+        UI.showTransactionTooltip(UI.getSelectedTransaction())
+    } else {
+        UI.hideTransactionTooltip()
+        if (hoverNode && !UI.getSelectedNode()) {
+            graphics.drawTooltip(hoverNode)
+        }
     }
 }
 
@@ -1229,6 +1355,12 @@ function gameLoop() {
     }
     transactions = transactions.filter(t => t.active);
     window.transactions = transactions // Keep global reference updated
+
+    // Clear selected transaction if it's no longer active
+    const selectedTx = UI.getSelectedTransaction()
+    if (selectedTx && !selectedTx.active) {
+        UI.clearTransactionSelection()
+    }
     if (transactions.length === 0) {
         // ensure there is always a transaction going
         spawnTransaction()
@@ -1286,13 +1418,6 @@ function gameLoop() {
     UI.updateIndicators(budget, gdp, maintenance * tech.bonus.maintenance)
     // Update Analytics panel (function will check if visible)
     UI.updateAnalyticsPanel()
-    if (hoverNode && !UI.getSelectedNode()) {
-        graphics.drawTooltip(hoverNode)
-    } else {
-        // const worldPos = Camera.getWorldPosition(lastMouseX, lastMouseY)
-        // const hoveredUser = users.find(user => Math.hypot(worldPos.x - user.x, worldPos.y - user.y) < 15)
-        // if (hoveredUser) drawUserTooltip(hoveredUser)
-    }
 
     // == Draw the game ==
     drawGame()

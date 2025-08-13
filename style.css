@@ -240,6 +240,7 @@ canvas {
 .transaction-parties {
     color: #ccc;
     font-size: 11px;
+    font-weight: bold;
 }
 
 .clickable-transaction {
@@ -1258,4 +1259,50 @@ small {
 
 .status-completed {
     color: var(--text-dim);
+}
+/* Transaction Tooltip Overlay - */
+#transaction-tooltip {
+    position: absolute;
+    width: 240px;
+    z-index: 800;
+    pointer-events: auto;
+}
+
+.transaction-item-tooltip {
+    font-size: 16px;
+    /* font-weight: bold; */
+    /* padding-top:  40px; */
+
+}
+
+.transaction-amount {
+    padding-top: 5px;
+    font-size: 14px;
+    font-weight: bold;
+}
+
+
+
+#tooltip-actions {
+    display: flex;
+    gap: 8px;
+    padding-top: 0px;
+}
+
+/* Transaction buttons - minimal vertical layout extending base button */
+.tx-button {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    padding: 6px 8px;
+    min-width: 62px;
+}
+
+.tx-button-icon {
+    font-size: 16px;
+}
+
+.tx-button-name {
+    font-size: 12px;
 }
