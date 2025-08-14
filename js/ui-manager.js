@@ -2,8 +2,10 @@
 import { towerOptions, actionOptions, countries, legalityOptions, legalityColorMap } from './config.js'
 import * as config from './config.js'
 import * as tech from './tech.js'
-import { uiFont } from './graphics.js'
+import { uiFont, isMobile } from './graphics.js'
 import * as Camera from './camera.js'
+import { selectRandomly } from './utils.js'
+
 
 let indicators = null
 let controls = null
@@ -152,7 +154,7 @@ export function initUI() {
         close: document.getElementById('close-tooltip'),
         allowBtn: document.getElementById('tooltip-allow'),
         blockBtn: document.getElementById('tooltip-block'),
-        analyzeBtn: document.getElementById('tooltip-analyze')
+        freezeBtn: document.getElementById('tooltip-freeze')
     }
 
 
@@ -207,8 +209,8 @@ export function initUI() {
         clearAllSelections()
     })
 
-    tooltip.analyzeBtn.addEventListener('click', () => {
-        getSelectedTransaction().analyze()
+    tooltip.freezeBtn.addEventListener('click', () => {
+        getSelectedTransaction().freeze()
         clearAllSelections()
     })
 
@@ -221,7 +223,7 @@ export function initUI() {
         clearAllSelections()
     }
     txButtons.analyze.onclick = () => {
-        getSelectedTransaction().analyze()
+        getSelectedTransaction().freeze()
         clearAllSelections()
     }
 
@@ -243,6 +245,8 @@ export function closeAllPanels(exceptPanel) {
         if (panel && !panel.classList.contains('hidden') && panel.id !== exceptId) {
             if (panel.id === 'node-details-panel') {
                 hideNodeDetails()
+            } else if (panel.id === 'transaction-tooltip') {
+                hideTransactionTooltip()
             } else {
                 hide(panel)
             }
@@ -857,12 +861,22 @@ function updateTransactionsList() {
 
 }
 
-// Keyboard shortcuts for towers (numbers) and actions (letters)
 window.addEventListener('keydown', (e) => {
-    if (!getSelectedNode()) return
-
     const key = e.key.toLowerCase()
+    if (key === 'tab') {
+        e.preventDefault()
+        if (selectedTransaction) {
+            clearTransactionSelection()
+        }
+        let tx = selectRandomly(window.transactions)
+        tx.isSelected = true
+        selectedTransaction = tx
+        return
+    }
 
+    // Keyboard shortcuts for towers (numbers) and actions (letters)
+
+    if (!getSelectedNode()) return
     // Numbers 1-9 for towers (in UI order)
     if (/^[1-9]$/.test(key)) {
         const towerButtons = document.querySelectorAll('#tower-options .option-button')
@@ -1040,39 +1054,47 @@ export function showNodeDetailsByID(nodeId) {
 }
 
 // Transaction tooltip functions
+
 export function showTransactionTooltip(tx) {
     setSelectedTransaction(tx)
   
     tooltip.content.innerHTML = formatTransaction(tx, null, false)
 
     // Position tooltip
-    const isMobile = window.innerWidth < 920 // navigator?.userAgentData?.mobile
     if (isMobile) {
         // For mobile, offset the tx to be above any tutorial
-        Camera.panAndZoom(tx.x, tx.y + 40, 3)
         const screenPos = Camera.getScreenPos(tx.x, tx.y)
         // position below the transaction
         tooltip.panel.style.left = (screenPos.x - 120) + 'px'
         tooltip.panel.style.top = (screenPos.y + 30) + 'px'
     } else {
-        Camera.panAndZoom(tx.x, tx.y, 3)
 
         const screenPos = Camera.getScreenPos(tx.x, tx.y)
-
         // For desktop, position to the right
         tooltip.panel.style.left = (screenPos.x + 35) + 'px'
         tooltip.panel.style.top = (screenPos.y - 35) + 'px'
     }
 
+    if (tx.freezed) {
+        tooltip.allowBtn.disabled = true
+        tooltip.blockBtn.disabled = true
+        tooltip.freezeBtn.disabled = true
+    } else {
+        tooltip.allowBtn.disabled = tx.validated
+        tooltip.blockBtn.disabled = false
+        tooltip.freezeBtn.disabled = tx.wasFreezed
+    }
 
     // Show tooltip and store transaction
     show(tooltip.panel)
 }
 
+export function isTransactionTooltipVisible() {
+    return tooltip.panel.classList.contains('hidden')
+}
+
 export function hideTransactionTooltip() {
     hide(tooltip.panel)
-
-    clearTransactionSelection()
 }
 
 
@@ -1081,7 +1103,7 @@ export function getSelectedTransaction() {
     return selectedTransaction
 }
 
-function setSelectedTransaction(tx) {
+export function setSelectedTransaction(tx) {
     if (selectedTransaction) {
         selectedTransaction.isSelected = false
     }
@@ -1092,6 +1114,6 @@ function setSelectedTransaction(tx) {
 export function clearTransactionSelection() {
     if (selectedTransaction) {
         selectedTransaction.isSelected = false
-        selectedTransaction = null
     }
+    selectedTransaction = null
 }

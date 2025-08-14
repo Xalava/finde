@@ -59,7 +59,7 @@ export function setCameraActions() {
             const touch = e.touches[0]
             startDrag(touch)
         }
-    }, { passive: true })
+    })
 
     canvas.addEventListener('wheel', (e) => {
         e.preventDefault()

@@ -5,7 +5,8 @@ Object.assign(window, config) // (Made for compatibility with prior versions)
 import * as graphics from './js/graphics.js'
 import * as tech from './js/tech.js'
 import * as techUI from './js/tech-ui.js'
-import { showTutorial, isFirstPlay } from './js/tutorial.js'
+import { showTutorial, isFirstPlay, unlock } from './js/tutorial.js'
+import { selectRandomly, normalRandom } from './js/utils.js'
 
 import * as policy from './js/policy.js'
 import * as events from './js/events.js'
@@ -57,13 +58,7 @@ function findTransactionAt(screenX, screenY) {
     })
 }
 
-function normalRandom(max) {
-    // Ideally, we look for a normal distribution, with a spike in low / medium
-    // Returns a random number between 1 and 100, with 50% below 10
-    let normalDice = Math.pow(1.5849, Math.random() * 10)
-    let result = Math.ceil(normalDice / 100 * max)
-    return result
-}
+
 
 function findUserAt(screenX, screenY) {
     const worldPos = Camera.getWorldPosition(screenX, screenY)
@@ -121,37 +116,31 @@ function handlePanelClose(e) {
 }
 
 function handleCanvasClick(screenX, screenY) {
-    const node = findNodeAt(screenX, screenY)
-    if (node) {
-        UI.clearAllSelections()
-        UI.showNodeDetails(node, budget, placeTower, enforceAction)
-        return
+    if (unlock.nodes) {
+        const node = findNodeAt(screenX, screenY)
+        if (node) {
+            UI.clearAllSelections()
+            UI.showNodeDetails(node, budget, placeTower, enforceAction)
+            return
+        }
     }
     const tx = findTransactionAt(screenX, screenY)
     if (tx) {
-        // Clear previously selected transaction
-        if (selectedTransaction) {
-            selectedTransaction.isSelected = false
-        }
-        // Close any open panels but keep transaction selected
+        // Close any open panels
         UI.closeAllPanels()
         // Select new transaction
-        tx.isSelected = true
+        UI.setSelectedTransaction(tx)
         Camera.cinematicPanAndZoom(tx.x, tx.y, 3, 1)
         // Camera.adjustZoom(3)
         UI.showTransactionTooltip(tx)
-
         return
     }
-
     const user = findUserAt(screenX, screenY)
     if (user) {
         UI.clearAllSelections()
         UI.showUserDetails(user)
         return
     }
-
-
     // Empty space clicked - clear everything
     UI.clearAllSelections()
 }
@@ -220,7 +209,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     canvas.addEventListener('click', (e) => {
         // canvas.onClick = (e) => {
-        if (isDragging) return
 
         e.stopPropagation() // Prevent document click handler from interfering
 
@@ -259,7 +247,6 @@ document.addEventListener('DOMContentLoaded', () => {
         tech.addResearchPoints(8000)
         budget += 20000
         if (nodes[5]) nodes[5].reputation = 0
-        speedControl = 0.5
         NEW_NODE_FREQUENCY = 20
     })
     ctrls.countriesBtn.addEventListener('click', () => {
@@ -302,13 +289,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Zoom in slightly when the game starts
     if (isFirstPlay()) {
-        speedControl = 0.5
+        speedControl = 0.4
         spawnControl = 0.5
         // Restauring default after a while
         setTimeout(() => {
             spawnControl = 1
             speedControl = 1
-        }, 20000)
+        }, 40000)
         showTutorial()
         Camera.centerView(activeNodes, -70)
     } else {
@@ -467,7 +454,8 @@ function initNodes() {
             if (node.reputation < 0) {
                 node.reputation = REPUTATION.POSTFAILURE
 
-                UI.showToast('Bankruptcy', `Due to its plummeting reputation ${node.name} closes its doors`, 'error')
+                UI.showToast('🚪 Bankruptcy', `Due to its plummeting reputation ${node.name} closes its doors`, 'error')
+                policy.changePopularity(-100)
                 node.active = false
                 node.tower = null
                 // Update cached activeNodes immediately since bank failed
@@ -634,9 +622,7 @@ function realignUsersBanks() {
 }
 
 
-function selectRandomly(array) {
-    return array[Math.floor(Math.random() * array.length)];
-}
+
 
 // == Transaction Management ==
 
@@ -718,6 +704,7 @@ class Transaction {
         this.isFollowed = false
         this.endDate = null
         this.endReason = null
+        this.validated = false
 
         const sourceBank = nodes[sourceUser.bankId]
         this.legality = this._calculateLegality(sourceUser, targetUser, sourceBank)
@@ -744,6 +731,8 @@ class Transaction {
         // Should be updated for P2P tx
         // We are already at the last node. Should not happen
         if (this.index >= this.path.length - 1)
+            return
+        if (this.freezed)
             return
         const nextId = this.path[this.index + 1]
         const next = this.index + 1 === this.path.length - 1 ?
@@ -792,6 +781,12 @@ class Transaction {
 
                 addEffect(next.x, next.y, '', 'pulse')
                 this.endTransaction('completed')
+
+                // Clear selection if this transaction was selected
+                if (this.isSelected) {
+                    UI.hideTransactionTooltip()
+                    UI.clearTransactionSelection()
+                }
             }
 
         } else {
@@ -817,70 +812,99 @@ class Transaction {
         }
     }
     validate() {
-        let reward = normalRandom(20)
+        let reward = normalRandom(30)
+        if (this.validated) {
+            UI.showToast('✅ Transaction already validated', `No effect`, 'success')
+            return
 
+        }
         switch (this.legality) {
             case 'legit':
-                UI.showToast('✅ Transaction validated', `Legit transaction from ${this.sourceUser.name}.`, 'success')
+                UI.showToast('✅ Transaction validated', `Legit transaction from ${this.sourceUser.name}. `, 'success')
                 budget += 1
-                // Hack to trigger end of tutorial screen
-                policy.changePopularity(1)
-                setTimeout(() => {
-                    policy.changePopularity(-1)
-                }, 1000);          
+                addEffect(this.x, this.y, "+1", "budget")
+                policy.changePopularity(2)
+                this.validated = true
+
                 break;
             case 'questionable':
                 if (Math.random() < 0.5) {
                     UI.showToast('✅ Questionable transaction validated', `It was risky, but there with limited consequences`, 'warning')
-                    let change = Math.random() < 0.5 ? 1 : -1
+                    let change = Math.random() < 0.5 ? 5 : -7
                     policy.changePopularity(change)
+                    this.validated = true
+                    this.legality = 'legit'
                 } else {
-                    UI.showToast('✅ Questionable transaction validated', `Later reports show that it was par part of an illegal scheme, damaging your reputation and budget (-${reward}💰️).`, 'error')
-                    let adjustedReward = Math.round(reward / 2)
-                    policy.changePopularity(-adjustedReward)
+                    UI.showToast('✅ Questionable transaction validated', `Later reports show that it was part of an illegal scheme, damaging your reputation and budget (-${reward}💰️).`, 'error')
+                    policy.changePopularity(reward)
                     budget -= reward
+                    this.legality = 'illegal'
+                    // (This one is now a normal illegal that could be validated again.)
                 }
                 break;
             case 'illegal':
-                UI.showToast('✅ Illegal transaction validated', `Strongly damaging your reputation (-${reward * 2})`, 'error')
-                policy.changePopularity(-reward * 2)
+                UI.showToast('✅ Illegal transaction validated', `${reward>9?"Strongly damaging":"Damaging"} damaging your reputation (-${reward * 5})`, 'error')
+                policy.changePopularity(-reward * 5)
+                this.validated = true
                 break;
         }
         this.legality = 'legit'
     }
-    analyze() {
-        let reward = normalRandom(20)
-        switch (this.legality) {
-            case 'legit':
-                UI.showToast('🔎 Transaction analyzed', `Legit transaction from ${this.sourceUser.name}. Damage in global popularity`, 'error')
-                policy.changePopularity(-2)
-                break;
-            case 'questionable':
-                UI.showToast('🔎 Transaction analyzed', `Questionable transaction from ${this.sourceUser.name}. Gathering ${reward} in intelligence `, 'error')
-                tech.addResearchPoints(reward)
-                break;
-            case 'illegal':
-                UI.showToast('🔎 Transaction analyzed', `Illegal transaction from ${this.sourceUser.name}. Gathering intelligence, but the transaction may still cause damage`, 'warning')
-                tech.addResearchPoints(reward)
-
-                break;
+    freeze() {
+        let reward = normalRandom(30)
+        if (this.wasFreezed) {
+            UI.showToast('🧊 Transaction already analyzed', `No effect`, 'warning')
+            return
         }
+        this.wasFreezed = true
+        this.freezed = true
+        // addEffect(this.x , this.y, "🧊", "freeze")
+
+        setTimeout(() => {
+            this.freezed = false
+            switch (this.legality) {
+                case 'legit':
+                    UI.showToast('🧊 Transaction freezed and analyzed', `Damage in global popularity for freezing a legitimate operation from ${this.sourceUser.name}`, 'error')
+                    policy.changePopularity(- reward)
+                    break;
+                case 'questionable':
+                    UI.showToast('🧊 Transaction freezed and analyzed', `Questionable transaction from ${this.sourceUser.name}. Gathering ${reward} in intelligence `, 'error')
+                    tech.addResearchPoints(reward)
+                    if (Math.random() > 0.5) {
+                        this.legality = 'legit'
+                    } else {
+                        this.legality = 'illegal'
+                    }
+                    break;
+                case 'illegal':
+                    UI.showToast('🧊 Transaction freezed and analyzed', `Illegal transaction from ${this.sourceUser.name}. Gathering intelligence ( ${reward * 2}), but the transaction may still cause damage`, 'warning')
+                    tech.addResearchPoints(reward * 2)
+                    break;
+            }
+
+        }, 3000);
     }
     block() {
         console.log('Transaction blocked')
         this.endTransaction('blocked')
-        addEffect(this.x - 2, this.y, "🚫", "insitus")
-        let reward = normalRandom(20)
+        addEffect(this.x - 2, this.y, "❌", "insitus")
+        let reward = normalRandom(30)
         switch (this.legality) {
             case 'legit':
-                UI.showToast('🚫 Legit transaction blocked', `Heavy damage in global popularity (-${reward})`, 'error')
-                policy.changePopularity(-reward)
+                UI.showToast('🛑 Legit transaction blocked', `${reward>9?"Heavy damage":"Damage"} in global popularity (-${reward * 5})`, 'error')
+                policy.changePopularity(-reward * 5)
                 break;
             case 'questionable':
-                UI.showToast('🚫 Transaction blocked', `Questionable transaction from ${this.sourceUser.name}. No consequences`, 'warning')
+                if (Math.random() < 0.5) {
+                    UI.showToast('🛑 Transaction blocked', `Questionable transaction from ${this.sourceUser.name}. Limited consequences`, 'warning')
+                    let change = Math.random() < 0.5 ? 1 : -1
+                    policy.changePopularity(change)
+                } else {
+                    UI.showToast('🛑 Transaction blocked', `Questionable transaction from ${this.sourceUser.name}. Later report show it was part of an illegal scheme, boosting your reputation 🌟 by ${reward}`, 'warning')
+                }
                 break;
             case 'illegal':
-                UI.showToast('🚫 Transaction blocked', `Illegal transaction from ${this.sourceUser.name}has been blocked. Gaining popularity (+${reward})`, 'success')
+                UI.showToast('🛑 Transaction blocked', `Illegal transaction from ${this.sourceUser.name}has been blocked. Gaining popularity (+${reward})`, 'success')
                 policy.changePopularity(reward)
                 break;
         }
@@ -988,12 +1012,12 @@ function detect(node, tx) {
                 // console.log("We check a legit tx with chance ", detectionChance)
                 // small chance of false flag, inversely proportional to accuracy, then 10% unless robust tech
                 if (Math.random() > detectionChance && Math.random() < towerOptions[node.tower].errors * 0.01 * tech.bonus.falsePositive * fpMod) {
-                    addEffect(node.x, node.y, '🛑', "tower")
+                    addEffect(node.x, node.y, '🔴', "tower")
                     tx.endTransaction("falsePositive")
-                    console.log(`🛑 False postive at`, node.name)
+                    console.log(`🔴 False postive at`, node.name)
                     node.changeReputation(-5) // harmful for reputation, but not for corruption. Also the transaction ends when it shouldn't have, reducing income
                     if (!firstFalsePositive) {
-                        UI.showToast(`🛑 First false postive at`, `Reputation damaged at ${node.name}`, 'error')
+                        UI.showToast(`🔴 First false postive at`, `Reputation damaged at ${node.name}`, 'error')
                         firstFalsePositive = true
                     }
                     return true
@@ -1012,7 +1036,7 @@ function detect(node, tx) {
                     return true
                     // Questionable tx are more likely to be detected as false positive
                 } else if (Math.random() > detectionChance / 2 && Math.random() < towerOptions[node.tower].errors * 0.01 * tech.bonus.falsePositive * fpMod) {
-                    console.log(`Suspricious: 🛑 Potential false positive at #${node.id}`)
+                    console.log(`Suspicious: 🛑 Potential false positive at #${node.id}`)
                     return true
                 }
             }
@@ -1051,6 +1075,7 @@ function detect(node, tx) {
     }
 }
 
+// TODO : restructure with options or an object of effects
 function addEffect(x, y, emoji, type = 'default', color = null) {
     let timer = 0
     switch (type) {
@@ -1060,9 +1085,12 @@ function addEffect(x, y, emoji, type = 'default', color = null) {
         case 'invertedPulse':
         case 'pulseNode':
             timer = 10
-            break;
+            break
         case 'pulse':
             timer = 8
+            break
+        case 'freeze':
+            timer = 180
             break
         default:
             timer = 15 // small text notifications)
@@ -1193,10 +1221,10 @@ function checkEndGame() {
         if (corruptionSpread >= 80 && corruptionSpread < 100) {
             UI.showToast('⚠️ Critical Warning', 'Corruption is dangerously high!', 'error');
             lastWarningTime = now;
-        } else if (budget < -50 && budget >= -100) {
+        } else if (budget < 0 && budget >= -100) {
             UI.showToast('💰 Financial Warning', 'Budget is critically low!', 'error');
             lastWarningTime = now;
-        } else if (policy.popularity <= 20 && policy.popularity > 0) {
+        } else if (policy.popularity <= 100 && policy.popularity > 0) {
             UI.showToast('😡 Sentiment Warning', 'Your popularity is very low!', 'error');
             lastWarningTime = now;
         }
@@ -1319,18 +1347,30 @@ function drawGame() {
         graphics.drawCountries(nodes, users)
     }
     Camera.restoreCamera(ctx)
-    if (!isFirstPlay()) {
+    if (unlock.corruption) {
         graphics.drawCorruptionMeter(corruptionSpread)
+    }
+    if (unlock.reputation) {
+        graphics.drawPopularityMeter(policy.popularity)
     }
 
     // Draw tooltips in screen space (after camera restore)
-    if (UI.getSelectedTransaction()) {
-        UI.showTransactionTooltip(UI.getSelectedTransaction())
-    } else {
-        UI.hideTransactionTooltip()
-        if (hoverNode && !UI.getSelectedNode()) {
-            graphics.drawTooltip(hoverNode)
+    const selectedTx = UI.getSelectedTransaction()
+    if (selectedTx) {
+        if (graphics.isMobile) {
+            Camera.panAndZoom(selectedTx.x, selectedTx.y + 40, 3)
+        } else {
+            Camera.panAndZoom(selectedTx.x, selectedTx.y, 3)
         }
+        // Only show tooltip if it's not already visible
+        // if (!UI.isTransactionTooltipVisible()) {
+        UI.showTransactionTooltip(selectedTx)
+        // }
+    } else {
+        // UI.hideTransactionTooltip()
+        // if (hoverNode && !UI.getSelectedNode()) {
+        //     graphics.drawTooltip(hoverNode)
+        // }
     }
 }
 

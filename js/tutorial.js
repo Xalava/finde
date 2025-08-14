@@ -3,8 +3,39 @@ import * as tech from './tech.js'
 import * as camera from './camera.js'
 import * as policy from './policy.js'
 
+
+// Unlocks game mechanics. 
+// TODO : 
+//  Replace isFirstPlay and other firstXX mechanisms
+//  Provide some hierachical structure
+//  Own file
+export const unlock = {
+    // tutorial
+    corruption: false,
+    reputation: false,
+    nodes: false,
+    users: false,
+    // During the game
+    research: false,
+    policy: false,
+}
+
+function unlockAll() {
+    for (const key in unlock) {
+        unlock[key] = true;
+    }
+}
+
 // Returns yes once the tutorial is completed
-export const isFirstPlay = () => !localStorage.getItem('hasPlayedBefore')
+export const isFirstPlay = () => {
+    if (localStorage.getItem('hasPlayedBefore')) {
+        unlockAll()
+        return false
+    } else {
+        return true
+    }
+}
+isFirstPlay() // Legacy : To be sure we unlock if not called..
 
 const tutorialContainer = document.getElementById('tutorial')
 const tutorialHeader = tutorialContainer?.querySelector('#tutorial-title')
@@ -112,12 +143,31 @@ const TUTORIAL_STEPS = [
     },
     {
         title: 'Choose an action',
-        content: 'While approving ✅ a legitimate transaction is safe, blocking 🛑 it may have consequences. And vice-versa for illegal ones. Analysis 🔍️ can help gather intelligence.',
+        content: 'Approving ✅ a legitimate transaction is recommended. Blocking ❌ it may have consequences. And vice-versa for illegal ones. Suspicious transactions are less predictable',
         onEnter: () => {
 
         },
         waitFor: () => {
-            return policy.popularity !== 90 || tech.getResearchPoints() > 0
+            return policy.popularity !== policy.POPULARITY.INIT || tech.getResearchPoints() > 0
+        },
+    },
+    {
+        title: 'Increase popularity and intelligence',
+        content: 'You popularity depend on your accurate and quick judgement. Freezing helps gather intelligence. Reach 900 in popularity and 50 in intelligence',
+        onEnter: () => {
+            unlock.reputation = true
+            unlock.research
+            setTimeout(() => {
+                UI.hide(tutorialContainer)
+            }, 10000)
+        },
+        waitFor: () => {
+            if (policy.popularity >= (policy.POPULARITY.INIT + policy.POPULARITY.MAX) / 2 && tech.getResearchPoints() >= 50) {
+                UI.show(tutorialContainer)
+                return true
+            } else {
+                return false
+            }
         },
     },
 
@@ -126,7 +176,7 @@ const TUTORIAL_STEPS = [
         content: 'Corrupt financial institutions produce more illegal transactions. They appear with a <span class="text-yellow-glow">light</span> glow, or <span class="text-red-glow">red</span> for the most serious cases.',
         onEnter: () => {
             //ensure there is a corrupt node
-            const corruptNode = window.nodes.find(n => n.active && !n.tower);
+            const corruptNode = window.nodes.find(n => n.active && !n.tower)
             if (corruptNode.corruption < 3)
                 corruptNode.corruption = 4
             camera.cinematicCenterPoint(corruptNode.x, corruptNode.y + 50, 3)
@@ -139,6 +189,8 @@ const TUTORIAL_STEPS = [
             if (budget < 160) {
                 budget = 160
             }
+            unlock.corruption = true
+            unlock.nodes = true
         },
         waitFor: () => {
             if (window.nodes.some(node => node.enforcementAction === 'audit')) {
@@ -234,7 +286,10 @@ const TUTORIAL_STEPS = [
     {
         title: 'Et voilà!',
         content: `The rest is your history. You will win if corruption stays below 2% or if the economy booms... Good luck!`,
-    }
+        onEnter: () => {
+            unlock.users = true
+        }
+    },
 ];
 
 

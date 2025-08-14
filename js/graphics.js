@@ -7,6 +7,9 @@ export const uiFont = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sa
 
 let canvas, ctx
 
+export const isMobile = window.innerWidth < 920 // navigator?.userAgentData?.mobile
+
+
 export function init(canvasEl, context) {
     canvas = canvasEl
     ctx = context
@@ -66,6 +69,11 @@ export function drawEffects(effects) {
                 ctx.fillStyle = 'black'
                 ctx.fillText(e.emoji, e.x + 5, e.y + 30)
                 break
+            case 'freeze':
+                ctx.font = `8px ${uiFont}`
+                ctx.fillStyle = 'black'
+                ctx.fillText(e.emoji, e.x, e.y)
+                break          
             default:
                 ctx.font = `24px ${uiFont}`
                 ctx.fillStyle = 'black'
@@ -227,6 +235,12 @@ export function drawTransaction(tx) {
     // Set shadow based on legality
     ctx.shadowColor = config.legalityColorMap[tx.legality]
 
+    if (tx.freezed) {
+        const seq = Math.floor(Date.now() / 18) % 60
+        if (seq < 30) {
+            ctx.shadowColor = 'rgba(0, 8, 255, 0.5)'
+        }
+    }
     ctx.shadowBlur = 4
 
     // Create gradient
@@ -263,10 +277,16 @@ export function drawTransaction(tx) {
 
 export function drawCorruptionMeter(spread) {
     ctx.save()
-    const meterX = canvas.width - 230
-    const meterY = 10
-    const meterWidth = 220
-    const meterHeight = 20
+    let meterX, meterY, meterWidth, meterHeight
+    if (isMobile) {
+        meterWidth = 150
+
+    } else {
+        meterWidth = 240
+    }
+    meterX = canvas.width - (meterWidth + 10)
+    meterY = 10
+    meterHeight = 20
 
     // Draw background with rounded corners
     ctx.fillStyle = 'rgba(0, 0, 0, 0.8)'
@@ -294,7 +314,52 @@ export function drawCorruptionMeter(spread) {
     ctx.font = `12px ${uiFont}`
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
-    ctx.fillText(`Corruption: ${Math.floor(spread)}%`, meterX + meterWidth / 2, meterY + meterHeight / 2)
+    ctx.fillText(`Corruption  ${Math.floor(spread)}%`, meterX + meterWidth / 2, meterY + meterHeight / 2)
+
+    ctx.restore()
+}
+
+export function drawPopularityMeter(reputation) {
+    ctx.save()
+    let meterX, meterY, meterWidth, meterHeight
+
+    if (isMobile) {
+        meterWidth = 150
+    } else {
+        meterWidth = 240
+    }
+    meterHeight = 20
+    meterX = 10 //canvas.width - 230
+    meterY = 10 //40
+
+    // Draw background with rounded corners
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.8)'
+    ctx.beginPath()
+    ctx.roundRect(meterX, meterY, meterWidth, meterHeight, 6)
+    ctx.fill()
+
+    ctx.strokeStyle = 'rgba(0, 0, 0, 0.1)'
+    ctx.lineWidth = 1
+    ctx.stroke()
+    // Draw corruption bar
+    const barWidth = (meterWidth * Math.min(reputation, 100)) / 100
+    const gradient = ctx.createLinearGradient(meterX, meterY, meterX + meterWidth, meterY)
+    gradient.addColorStop(0, '#000040ff')
+    gradient.addColorStop(0.4, '#000050ff')
+    gradient.addColorStop(0.8, '#000060ff')
+    gradient.addColorStop(1, '#3b3ba0ff')
+    ctx.fillStyle = gradient
+    ctx.beginPath()
+    ctx.roundRect(meterX, meterY, barWidth, meterHeight, 6)
+    ctx.fill()
+
+
+    // Draw text
+    ctx.fillStyle = 'white'
+    ctx.font = `12px ${uiFont}`
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    ctx.fillText(`Popularity  ${Math.floor(reputation)}`, meterX + meterWidth / 2, meterY + meterHeight / 2)
 
     ctx.restore()
 }

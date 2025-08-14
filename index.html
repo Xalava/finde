@@ -61,19 +61,19 @@
             <canvas id="game"></canvas>
             <!-- Transaction Tooltip Overlay -->
             <div id="transaction-tooltip" class="panel hidden">
-                <div id="tooltip-content" class="panel-content"></div>
-                <div id="tooltip-actions" class="panel-content">
+                <div id="tooltip-content" class=""></div>
+                <div id="tooltip-actions">
                     <button id="tooltip-allow" class="tx-button primary">
-                        <span class="tx-button-icon">✓</span>
+                        <span class="tx-button-icon">✅</span>
                         <span class="tx-button-name">Allow</span>
                     </button>
-                    <button id="tooltip-block" class="tx-button" style="background: rgba(255, 62, 62, 0.2);">
-                        <span class="tx-button-icon">✕</span>
-                        <span class="tx-button-name">Block</span>
+                    <button id="tooltip-freeze" class="tx-button">
+                        <span class="tx-button-icon">🥶</span>
+                        <span class="tx-button-name">Freeze</span>
                     </button>
-                    <button id="tooltip-analyze" class="tx-button">
-                        <span class="tx-button-icon">🔍</span>
-                        <span class="tx-button-name">Analyze</span>
+                    <button id="tooltip-block" class="tx-button errory">
+                        <span class="tx-button-icon">🛑</span>
+                        <span class="tx-button-name">Block</span>
                     </button>
                 </div>
             </div>
@@ -324,7 +324,7 @@
                             <span class="tx-button-icon">✓</span>
                             <span class="tx-button-name">Approve</span>
                         </button>
-                        <button id="block-tx" class="tx-button" style="background: rgba(255, 62, 62, 0.2);">
+                        <button id="block-tx" class="tx-button errory">
                             <span class="tx-button-icon">✕</span>
                             <span class="tx-button-name">Block</span>
                         </button>
