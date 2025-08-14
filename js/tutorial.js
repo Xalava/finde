@@ -1,6 +1,7 @@
 import * as UI from './ui-manager.js'
 import * as tech from './tech.js'
 import * as camera from './camera.js'
+import * as policy from './policy.js'
 
 // Returns yes once the tutorial is completed
 export const isFirstPlay = () => !localStorage.getItem('hasPlayedBefore')
@@ -74,6 +75,8 @@ const TUTORIAL_STEPS = [
         title: `<span class="glow glow-green"></span><span class="glow glow-orange">  <span class="glow glow-red"></span></span> `,
         content: `Successful transactions move money and generate tax revenue for you.`,
     },
+
+
     // {
     //     title: `<span class="glow" style="font-size:0.3em"></span> <span class="glow"></span> <span class="glow" style="font-size:1.3em"></span> `,
     //     content: `Transaction have different sizes and speed.`,
@@ -85,43 +88,42 @@ const TUTORIAL_STEPS = [
             <br><span class="glow glow-orange"></span> <strong>Suspicious</strong> - Could be reviewed
             <br><span class="glow glow-red"></span> <strong>Illegal</strong> - Must be stopped
       `,
+        //   waitFor: () => {
+        //   return true
+        // TODO: wait for the player to click on an action before moving on
+        //   }
     },
     {
         title: `<span class="glow glow-red"></span> <span class="glow glow-red"></span>`,
         content: 'Illegal transactions damage banks\' reputation and increase corruption.',
+        onEnter: () => {
+
+            // camera.cinematicCenterMap(window.nodes.filter(n => n.active), 100)
+
+        }
         // TODO : spawn a large illegal transaction (implies refactoring main.js)
     },
     {
-        title: 'Your turn',
-        content: 'To catch illegal transactions, 👆 click on any bank and place a 🔍 Basic Filter ',
+        title: 'Observe a transaction',
+        content: 'Click 👆️ on any transaction. ',
         waitFor: () => {
-            let towerNode = window.nodes.find(node => node.tower)
-            if (towerNode) {
-
-                camera.cinematicCenterPoint(towerNode.x, towerNode.y + 50, 3)
-                UI.closeAllPanels()
-
-                return true
-            } else {
-                return false
-            }
+            return window.transactions.some(t => t.isSelected)
         }
     },
     {
-        title: '🔍️?',
-        content: 'Each transaction passing through this bank will now be monitored. This filter has a 50% chance of detecting illegal transactions. Some legitimate transactions might be erroneously flagged.',
+        title: 'Choose an action',
+        content: 'While approving ✅ a legitimate transaction is safe, blocking 🛑 it may have consequences. And vice-versa for illegal ones. Analysis 🔍️ can help gather intelligence.',
         onEnter: () => {
-        }
+
+        },
+        waitFor: () => {
+            return policy.popularity !== 90 || tech.getResearchPoints() > 0
+        },
     },
-    {
-        title: '<span><span class="glow glow-red"></span>✔️</span>',
-        content: 'When an illegal transaction is caught, you collect intelligence that can be used for research.',
-        onEnter: () => {
-        }
-    },
+
     {
         title: 'Corruption',
-        content: 'Corrupt financial institutions produce more illegal transactions. They appear with a yellow or red glow for the most serious cases.',
+        content: 'Corrupt financial institutions produce more illegal transactions. They appear with a <span class="text-yellow-glow">light</span> glow, or <span class="text-red-glow">red</span> for the most serious cases.',
         onEnter: () => {
             //ensure there is a corrupt node
             const corruptNode = window.nodes.find(n => n.active && !n.tower);
@@ -134,8 +136,8 @@ const TUTORIAL_STEPS = [
         title: 'Enforcement Actions',
         content: 'Take direct action to reduce corruption. Click on the corrupt bank and select Audit 🕵️‍♂️',
         onEnter: () => {
-            if (window.budget < 160) {
-                window.budget = 160
+            if (budget < 160) {
+                budget = 160
             }
         },
         waitFor: () => {
@@ -170,6 +172,41 @@ const TUTORIAL_STEPS = [
         title: 'Reputation & Bankruptcy ',
         content: 'When banks are not trusted enough, they will lose business and eventually go bust.',
     },
+    {
+        title: 'Automatisation',
+        content: 'To catch automatically illegal transactions, click on any bank and place a 🔍 Basic Filter ',
+        onEnter: () => {
+
+            if (budget < 50) {
+                budget = 50
+            }
+        },
+        waitFor: () => {
+            let towerNode = window.nodes.find(node => node.tower)
+            if (towerNode) {
+
+                camera.cinematicCenterPoint(towerNode.x, towerNode.y + 50, 3)
+                UI.closeAllPanels()
+
+                return true
+            } else {
+                return false
+            }
+        }
+    },
+    {
+        title: '🔍️?',
+        content: 'Each transaction passing through this bank will now be monitored. This filter has a 50% chance of detecting illegal transactions. It may make some mistakes too.',
+        onEnter: () => {
+        }
+    },
+    {
+        title: '<span><span class="glow glow-red"></span>✔️</span>',
+        content: 'When an illegal transaction is caught, you collect intelligence that can be used for research.',
+        onEnter: () => {
+        }
+    },
+
     {
         title: 'Research <span class="oscillate">🧪</span>',
         content: 'It is time for improvements. Open the research panel and develop a technology.',

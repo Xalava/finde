@@ -36,6 +36,7 @@ function findNodeAt(screenX, screenY) {
     })
 }
 
+//to be deprecated
 function getEventCoordinates(e) {
     if (e.type.startsWith('touch')) {
         const touch = e.touches?.[0] || e.changedTouches?.[0]
@@ -97,6 +98,7 @@ function findUserAt(screenX, screenY) {
     return found
 }
 
+// TO BE DEPRECATED
 function handlePanelClose(e) {
     // Don't handle the event if it's a click on or inside a panel toggle button
     if (e.target.closest('.panel-toggle, .panel-close, .option-button, .game-controls button, .command-button, [role="button"], #gdp-stat-item, .stat-item, select, .compliance-select, .tab-button')) {
@@ -116,6 +118,42 @@ function handlePanelClose(e) {
             UI.closeAllPanels()
         }
     }, 50)
+}
+
+function handleCanvasClick(screenX, screenY) {
+    const node = findNodeAt(screenX, screenY)
+    if (node) {
+        UI.clearAllSelections()
+        UI.showNodeDetails(node, budget, placeTower, enforceAction)
+        return
+    }
+    const tx = findTransactionAt(screenX, screenY)
+    if (tx) {
+        // Clear previously selected transaction
+        if (selectedTransaction) {
+            selectedTransaction.isSelected = false
+        }
+        // Close any open panels but keep transaction selected
+        UI.closeAllPanels()
+        // Select new transaction
+        tx.isSelected = true
+        Camera.cinematicPanAndZoom(tx.x, tx.y, 3, 1)
+        // Camera.adjustZoom(3)
+        UI.showTransactionTooltip(tx)
+
+        return
+    }
+
+    const user = findUserAt(screenX, screenY)
+    if (user) {
+        UI.clearAllSelections()
+        UI.showUserDetails(user)
+        return
+    }
+
+
+    // Empty space clicked - clear everything
+    UI.clearAllSelections()
 }
 
 // Initialization of UI elements, waiting for the DOM (and actually the game data)
@@ -140,7 +178,7 @@ document.addEventListener('DOMContentLoaded', () => {
     //     }
     // })
 
-    // Hacky budget access
+    // Hacky budget global access.
     Object.defineProperty(window, 'budget', {
         get: () => budget,
         set: (value) => {
@@ -181,45 +219,12 @@ document.addEventListener('DOMContentLoaded', () => {
     })
 
     canvas.addEventListener('click', (e) => {
+        // canvas.onClick = (e) => {
         if (isDragging) return
 
         e.stopPropagation() // Prevent document click handler from interfering
 
-        // HTML tooltip handles its own clicks, no need to check here
-
-        const tx = findTransactionAt(e.clientX, e.clientY)
-        if (tx) {
-            // Clear previously selected transaction
-            if (selectedTransaction) {
-                selectedTransaction.isSelected = false
-            }
-            // Close any open panels but keep transaction selected
-            UI.closeAllPanels()
-            // Select new transaction
-            tx.isSelected = true
-            Camera.cinematicPanAndZoom(tx.x, tx.y, 3, 1)
-            // Camera.adjustZoom(3)
-            UI.showTransactionTooltip(tx)
-
-            return
-        }
-
-        const user = findUserAt(e.clientX, e.clientY)
-        if (user) {
-            UI.clearAllSelections()
-            UI.showUserDetails(user)
-            return
-        }
-
-        const node = findNodeAt(e.clientX, e.clientY)
-        if (node) {
-            UI.clearAllSelections()
-            UI.showNodeDetails(node, budget, placeTower, enforceAction)
-            return
-        }
-
-        // Empty space clicked - clear everything
-        UI.clearAllSelections()
+        handleCanvasClick(e.clientX, e.clientY)
     })
 
     // Handle node approval
@@ -232,17 +237,19 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     })
 
-    // Handle touch interactions
+    // // Handle touch interactions
     canvas.addEventListener('touchend', (e) => {
         const touch = e.changedTouches[0]
-        const node = findNodeAt(touch.clientX, touch.clientY)
-        if (node) {
-            UI.showNodeDetails(node, budget, placeTower, enforceAction)
-        }
+
+        handleCanvasClick(touch.clientX, touch.clientY)
+        // const node = findNodeAt(touch.clientX, touch.clientY)
+        // if (node) {
+        //     UI.showNodeDetails(node, budget, placeTower, enforceAction)
+        // }
     })
 
-    document.addEventListener('click', handlePanelClose)
-    document.addEventListener('touchstart', handlePanelClose, { passive: false })
+    // document.addEventListener('click', handlePanelClose)
+    // document.addEventListener('touchstart', handlePanelClose, { passive: false })
 
 
     ctrls.centerBtn.addEventListener('click', () => Camera.cinematicCenterMap(activeNodes))
@@ -814,14 +821,24 @@ class Transaction {
 
         switch (this.legality) {
             case 'legit':
-                UI.showToast('✅ Transaction validated', `Legit transaction from ${this.sourceUser.name}. No effect`, 'success')
+                UI.showToast('✅ Transaction validated', `Legit transaction from ${this.sourceUser.name}.`, 'success')
+                budget += 1
+                // Hack to trigger end of tutorial screen
+                policy.changePopularity(1)
+                setTimeout(() => {
+                    policy.changePopularity(-1)
+                }, 1000);          
                 break;
             case 'questionable':
                 if (Math.random() < 0.5) {
-                    UI.showToast('✅ Questionable transaction validated', `It was risky, but there seems to be no consequences`, 'warning')
+                    UI.showToast('✅ Questionable transaction validated', `It was risky, but there with limited consequences`, 'warning')
+                    let change = Math.random() < 0.5 ? 1 : -1
+                    policy.changePopularity(change)
                 } else {
-                    UI.showToast('✅ Questionable transaction validated', `Later reports show that it was par part of an illegal scheme, damaging your reputation (-${reward}).`, 'error')
-                    policy.changePopularity(-reward)
+                    UI.showToast('✅ Questionable transaction validated', `Later reports show that it was par part of an illegal scheme, damaging your reputation and budget (-${reward}💰️).`, 'error')
+                    let adjustedReward = Math.round(reward / 2)
+                    policy.changePopularity(-adjustedReward)
+                    budget -= reward
                 }
                 break;
             case 'illegal':
@@ -856,7 +873,7 @@ class Transaction {
         let reward = normalRandom(20)
         switch (this.legality) {
             case 'legit':
-                UI.showToast('🚫 Legit transaction blocked', `Heaving damage in global popularity (-${reward})`, 'error')
+                UI.showToast('🚫 Legit transaction blocked', `Heavy damage in global popularity (-${reward})`, 'error')
                 policy.changePopularity(-reward)
                 break;
             case 'questionable':

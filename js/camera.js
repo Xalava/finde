@@ -8,7 +8,9 @@ const camera = {
     zoom: 1,
     dragging: false,
     lastX: 0,
-    lastY: 0
+    lastY: 0,
+    lastPinchDistance: 0,
+    isPinching: false
 }
 
 export function initCamera(canvasEl) {
@@ -30,18 +32,33 @@ export function setCameraActions() {
 
     canvas.addEventListener('touchstart', (e) => {
         e.preventDefault()
-        const touch = e.touches[0]
-        startDrag(touch)
+        if (e.touches.length === 2) {
+            startPinch(e)
+        } else if (e.touches.length === 1) {
+            const touch = e.touches[0]
+            startDrag(touch)
+        }
     }, { passive: false })
 
     canvas.addEventListener('touchmove', (e) => {
         e.preventDefault()
-        const touch = e.touches[0]
-        moveCamera(touch)
+        if (e.touches.length === 2) {
+            handlePinch(e)
+        } else if (e.touches.length === 1 && !camera.isPinching) {
+            const touch = e.touches[0]
+            moveCamera(touch)
+        }
     }, { passive: false })
 
-    canvas.addEventListener('touchend', () => {
-        endDrag()
+    canvas.addEventListener('touchend', (e) => {
+        if (e.touches.length === 0) {
+            endDrag()
+            endPinch()
+        } else if (e.touches.length === 1 && camera.isPinching) {
+            endPinch()
+            const touch = e.touches[0]
+            startDrag(touch)
+        }
     }, { passive: true })
 
     canvas.addEventListener('wheel', (e) => {
@@ -142,6 +159,57 @@ export function startDrag(e) {
 export function endDrag() {
     camera.dragging = false
     canvas.style.cursor = 'default'
+}
+
+function getPinchDistance(e) {
+    const touch1 = e.touches[0]
+    const touch2 = e.touches[1]
+    const dx = touch2.clientX - touch1.clientX
+    const dy = touch2.clientY - touch1.clientY
+    return Math.sqrt(dx * dx + dy * dy)
+}
+
+function getPinchCenter(e) {
+    const touch1 = e.touches[0]
+    const touch2 = e.touches[1]
+    return {
+        x: (touch1.clientX + touch2.clientX) / 2,
+        y: (touch1.clientY + touch2.clientY) / 2
+    }
+}
+
+function startPinch(e) {
+    camera.isPinching = true
+    camera.dragging = false
+    camera.lastPinchDistance = getPinchDistance(e)
+}
+
+function handlePinch(e) {
+    if (!camera.isPinching) return
+    
+    const currentDistance = getPinchDistance(e)
+    const zoomFactor = currentDistance / camera.lastPinchDistance
+    
+    const center = getPinchCenter(e)
+    const rect = canvas.getBoundingClientRect()
+    const mouseX = center.x - rect.left
+    const mouseY = center.y - rect.top
+    
+    const worldX = (mouseX - camera.x) / camera.zoom
+    const worldY = (mouseY - camera.y) / camera.zoom
+    
+    camera.zoom *= zoomFactor
+    camera.zoom = Math.min(Math.max(MIN_ZOOM, camera.zoom), MAX_ZOOM)
+    
+    camera.x = mouseX - worldX * camera.zoom
+    camera.y = mouseY - worldY * camera.zoom
+    
+    camera.lastPinchDistance = currentDistance
+}
+
+function endPinch() {
+    camera.isPinching = false
+    camera.lastPinchDistance = 0
 }
 
 export function cinematicZoom(zoomTarget) {

@@ -528,7 +528,7 @@ details {
     transform: translateX(-50%);
     width: 90vw;
     max-width: 500px;
-    z-index: 10000;
+    z-index: 1000;
     display: grid;
     padding: 8px;
     place-content: center;
@@ -571,6 +571,17 @@ details {
     animation: pulse 2.5s infinite;
 }
 
+.text-yellow-glow {
+    text-shadow: 
+        0 0 6px #ffa500,
+        0 0 12px #ffa500;
+}
+
+.text-red-glow {
+    text-shadow: 
+        0 0 6px #ff0000,
+        0 0 12px #ff0000;
+}
 
 @keyframes pulse {
     0% {

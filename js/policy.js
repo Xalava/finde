@@ -10,7 +10,7 @@ import { showToast, hide, show, togglePanel } from './ui-manager.js'
 const policyPoints = document.getElementById('policy-points')
 
 const POPULARITY_MAX = 100
-export let popularity = 100                          // starts full
+export let popularity = 90                          // starts almost full.
 
 // +3 lenient, +1 balanced, –1 stringent, –1 if approvals ON
 // TODO Delta could be udated via change popularity

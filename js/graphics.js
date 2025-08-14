@@ -246,8 +246,8 @@ export function drawTransaction(tx) {
         }
         //we can use "isFollowed" to selectively have this effect. 
         if (tx.isSelected) {
-            // Center camera on selected transaction. Might be intense
-            Camera.panAndZoom(tx.x, tx.y, 0) 
+            // Center camera on selected transaction. Might be intense (done in ui-manager.js)
+            // Camera.panAndZoom(tx.x, tx.y, 0) 
         }
     } else {
         gradient.addColorStop(0, 'rgb(255, 255, 255)')

@@ -211,6 +211,21 @@ export function initUI() {
         getSelectedTransaction().analyze()
         clearAllSelections()
     })
+
+    txButtons.validate.onclick = () => {
+        getSelectedTransaction().validate()
+        clearAllSelections()
+    }
+    txButtons.block.onclick = () => {
+        getSelectedTransaction().block()
+        clearAllSelections()
+    }
+    txButtons.analyze.onclick = () => {
+        getSelectedTransaction().analyze()
+        clearAllSelections()
+    }
+
+
 }
 
 export function isClickInsideAnyPanel({ clientX, clientY }) {
@@ -236,8 +251,9 @@ export function closeAllPanels(exceptPanel) {
 }
 
 export function clearAllSelections() {
-    // Clear transaction selection and tooltip
+    // Clear transaction selection 
     clearTransactionSelection()
+    // tooltip 
     // Clear all UI panels
     closeAllPanels()
 }
@@ -877,7 +893,8 @@ export function activatePolicy() {
 
 function showTransactionDetails(tx) {
     // Mark this transaction as selected
-    tx.isSelected = true
+    setSelectedTransaction(tx)
+
     if (tx.active) {
         Camera.cinematicPanAndZoom(tx.x, tx.y, 3)
     }
@@ -897,11 +914,11 @@ function showTransactionDetails(tx) {
     if (tx.active) {
         show(txActions)
         // Update button handlers with current transaction
-        txButtons.validate.onclick = () => handleTransactionAction(tx, 'validate')
-        txButtons.block.onclick = () => handleTransactionAction(tx, 'block')
-        txButtons.analyze.onclick = () => handleTransactionAction(tx, 'analyze')
+
     } else {
         hide(txActions)
+        // SHould rarely happen
+        console.warn('Transaction is not active, hiding actions')
         tx.isSelected = false
 
     }
@@ -999,34 +1016,7 @@ function displayTransactionPath(tx) {
     }
 }
 
-function handleTransactionAction(tx, action) {
-    const actions = {
-        validate: {
-            message: 'Transaction validated and approved',
-            class: 'success',
-            do: tx.validate(),
-        },
-        block: {
-            message: 'Transaction blocked',
-            class: 'error',
-            do: tx.block()
-        },
-        analyze: {
-            message: 'Transaction sent for further analysis',
-            class: 'info',
-            do: tx.analyze()
-        }
-    }
 
-    showToast('Transaction Action', actions[action].message, actions[action].class)
-    actions[action].do()
-    tx.isSelected = false
-    show(transactions.listSection)
-    hide(transactions.detailsSection)
-
-    // Refresh the transaction list to update visual state
-    updateTransactionsList()
-}
 
 export function hideFullInterface() {
     // Simplified interface when using the tutorial
@@ -1051,14 +1041,29 @@ export function showNodeDetailsByID(nodeId) {
 
 // Transaction tooltip functions
 export function showTransactionTooltip(tx) {
-    selectedTransaction = tx
+    setSelectedTransaction(tx)
   
     tooltip.content.innerHTML = formatTransaction(tx, null, false)
 
     // Position tooltip
-    const screenPos = Camera.getScreenPos(tx.x, tx.y)
-    tooltip.panel.style.left = (screenPos.x + 30) + 'px'
-    tooltip.panel.style.top = (screenPos.y - 40) + 'px'
+    const isMobile = window.innerWidth < 920 // navigator?.userAgentData?.mobile
+    if (isMobile) {
+        // For mobile, offset the tx to be above any tutorial
+        Camera.panAndZoom(tx.x, tx.y + 40, 3)
+        const screenPos = Camera.getScreenPos(tx.x, tx.y)
+        // position below the transaction
+        tooltip.panel.style.left = (screenPos.x - 120) + 'px'
+        tooltip.panel.style.top = (screenPos.y + 30) + 'px'
+    } else {
+        Camera.panAndZoom(tx.x, tx.y, 3)
+
+        const screenPos = Camera.getScreenPos(tx.x, tx.y)
+
+        // For desktop, position to the right
+        tooltip.panel.style.left = (screenPos.x + 35) + 'px'
+        tooltip.panel.style.top = (screenPos.y - 35) + 'px'
+    }
+
 
     // Show tooltip and store transaction
     show(tooltip.panel)
@@ -1066,11 +1071,22 @@ export function showTransactionTooltip(tx) {
 
 export function hideTransactionTooltip() {
     hide(tooltip.panel)
-    selectedTransaction = null
+
+    clearTransactionSelection()
 }
 
+
+// Little transaction selection management
 export function getSelectedTransaction() {
     return selectedTransaction
+}
+
+function setSelectedTransaction(tx) {
+    if (selectedTransaction) {
+        selectedTransaction.isSelected = false
+    }
+    tx.isSelected = true
+    selectedTransaction = tx
 }
 
 export function clearTransactionSelection() {
@@ -1078,5 +1094,4 @@ export function clearTransactionSelection() {
         selectedTransaction.isSelected = false
         selectedTransaction = null
     }
-    hideTransactionTooltip()
 }
