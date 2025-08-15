@@ -3,7 +3,6 @@ import * as tech from './tech.js'
 import * as camera from './camera.js'
 import * as policy from './policy.js'
 
-
 // Unlocks game mechanics. 
 // TODO : 
 //  Replace isFirstPlay and other firstXX mechanisms
@@ -56,7 +55,6 @@ export function resetTutorial() {
     window.location.reload()
 }
 
-
 function nextStep() {
     UI.hide(tutorialContainer);
     currentStep++;
@@ -66,9 +64,7 @@ export function showTutorial() {
 
     // Set tutorial content
     tutorialHeader.innerHTML = `Welcome to Financial Defense `
-    tutorialContent.innerHTML = `Facilitate economic growth while defending the financial network against illegal transactions.
-        `
-
+    tutorialContent.innerHTML = `Facilitate economic growth while defending the financial network against illegal transactions.`
     // Create and add buttons
     tutorialButtons.innerHTML = `
             <button id="tutorial-skip">Skip</button>
@@ -106,12 +102,6 @@ const TUTORIAL_STEPS = [
         title: `<span class="glow glow-green"></span><span class="glow glow-orange">  <span class="glow glow-red"></span></span> `,
         content: `Successful transactions move money and generate tax revenue for you.`,
     },
-
-
-    // {
-    //     title: `<span class="glow" style="font-size:0.3em"></span> <span class="glow"></span> <span class="glow" style="font-size:1.3em"></span> `,
-    //     content: `Transaction have different sizes and speed.`,
-    // },
     {
         title: 'Legality',
         content: `Each transaction has a legality status:
@@ -119,18 +109,11 @@ const TUTORIAL_STEPS = [
             <br><span class="glow glow-orange"></span> <strong>Suspicious</strong> - Could be reviewed
             <br><span class="glow glow-red"></span> <strong>Illegal</strong> - Must be stopped
       `,
-        //   waitFor: () => {
-        //   return true
-        // TODO: wait for the player to click on an action before moving on
-        //   }
     },
     {
         title: `<span class="glow glow-red"></span> <span class="glow glow-red"></span>`,
         content: 'Illegal transactions damage banks\' reputation and increase corruption.',
         onEnter: () => {
-
-            // camera.cinematicCenterMap(window.nodes.filter(n => n.active), 100)
-
         }
         // TODO : spawn a large illegal transaction (implies refactoring main.js)
     },
@@ -143,7 +126,7 @@ const TUTORIAL_STEPS = [
     },
     {
         title: 'Choose an action',
-        content: 'Approving ✅ a legitimate transaction is recommended. Blocking ❌ it may have consequences. And vice-versa for illegal ones. Suspicious transactions are less predictable',
+        content: 'Approving ✅ a legitimate transaction is recommended. Blocking 🛑 it may have consequences. And vice-versa for illegal ones. Suspicious transactions are less predictable',
         onEnter: () => {
 
         },
@@ -153,7 +136,7 @@ const TUTORIAL_STEPS = [
     },
     {
         title: 'Increase popularity and intelligence',
-        content: 'You popularity depend on your accurate and quick judgement. Freezing helps gather intelligence. Reach 900 in popularity and 50 in intelligence',
+        content: 'You popularity depend on your accurate and quick judgement. Freezing helps gather intelligence. Reach 850 in popularity and 30 in intelligence',
         onEnter: () => {
             unlock.reputation = true
             unlock.research
@@ -162,7 +145,7 @@ const TUTORIAL_STEPS = [
             }, 10000)
         },
         waitFor: () => {
-            if (policy.popularity >= (policy.POPULARITY.INIT + policy.POPULARITY.MAX) / 2 && tech.getResearchPoints() >= 50) {
+            if (policy.popularity >= policy.POPULARITY.INIT + 50 && tech.getResearchPoints() >= 30) {
                 UI.show(tutorialContainer)
                 return true
             } else {
@@ -170,7 +153,6 @@ const TUTORIAL_STEPS = [
             }
         },
     },
-
     {
         title: 'Corruption',
         content: 'Corrupt financial institutions produce more illegal transactions. They appear with a <span class="text-yellow-glow">light</span> glow, or <span class="text-red-glow">red</span> for the most serious cases.',
@@ -199,7 +181,6 @@ const TUTORIAL_STEPS = [
                     camera.cinematicCenterMap(window.nodes.filter(n => n.active), 100)
                 }, 300)
                 return true
-
             }
         }
     },
@@ -207,16 +188,11 @@ const TUTORIAL_STEPS = [
         title: 'Audits🕵️‍♂️ ',
         content: 'Audits take 10 days. When completed, they reduce corruption at the bank. However, audits damage the bank\'s reputation.',
         onEnter: () => {
-
             UI.closeAllPanels()
-
         },
         waitFor: () => {
             if (!window.nodes.some(node => node.enforcementAction === 'audit')) {
-
-                // camera.cinematicCenterMap(window.nodes.filter(n => n.active), 100)
                 return true
-
             }
         }
     },
@@ -264,8 +240,6 @@ const TUTORIAL_STEPS = [
         content: 'It is time for improvements. Open the research panel and develop a technology.',
         onEnter: () => {
             tech.addResearchPoints(100)
-            //we reset the camera
-            // camera.cinematicCenterMap(window.nodes.filter(n => n.active))
         },
         waitFor: () => {
             const progress = tech.getResearchProgress()
@@ -291,7 +265,6 @@ const TUTORIAL_STEPS = [
         }
     },
 ];
-
 
 export function showTutorialStep() {
     if (currentStep >= TUTORIAL_STEPS.length) {
@@ -340,14 +313,9 @@ export function showTutorialStep() {
 
     UI.show(tutorialContainer)
 
-
 }
-
 
 function getTutorialProgress() {
     return ((currentStep + 1) / TUTORIAL_STEPS.length * 100)
 }
-
-
-
 

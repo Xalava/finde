@@ -189,14 +189,6 @@ function createTechElement(tech) {
     return techElement
 }
 
-function findTech(techId) {
-    for (const branch of Object.values(techTree)) {
-        const tech = branch.find(t => t.id === techId)
-        if (tech) return tech
-    }
-    return null
-}
-
 export function updateResearchUI() {
     updateResearchPointsDisplay()
 

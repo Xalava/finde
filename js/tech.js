@@ -85,8 +85,6 @@ export function researchTechnology(techId) {
         UI.activatePolicy()
 
     }
-
-
     return true;
 }
 

@@ -1,11 +1,8 @@
-// Module for pure UI management. 
 import { towerOptions, actionOptions, countries, legalityOptions, legalityColorMap } from './config.js'
-import * as config from './config.js'
 import * as tech from './tech.js'
 import { uiFont, isMobile } from './graphics.js'
 import * as Camera from './camera.js'
 import { selectRandomly } from './utils.js'
-
 
 let indicators = null
 let controls = null
@@ -31,7 +28,6 @@ export function initUI() {
         maintenance: document.getElementById('maintenance'),
         day: document.getElementById('day'),
         holiday: document.getElementById('holiday'),
-        // txCounter: document.getElementById('tx-counter'),
     }
 
     controls = {
@@ -157,7 +153,6 @@ export function initUI() {
         freezeBtn: document.getElementById('tooltip-freeze')
     }
 
-
     analytics.close.addEventListener('click', () => hide(analytics.panel))
 
     analytics.volumeBtn.addEventListener('click', () => switchGDPView('volume'))
@@ -177,7 +172,6 @@ export function initUI() {
         e.stopPropagation()
         showGDPPanel()
     })
-
 
     // Make transactions stat item clickable
     controls.txStatItem.style.cursor = 'pointer'
@@ -226,8 +220,6 @@ export function initUI() {
         getSelectedTransaction().freeze()
         clearAllSelections()
     }
-
-
 }
 
 export function isClickInsideAnyPanel({ clientX, clientY }) {
@@ -240,7 +232,7 @@ export function isClickInsideAnyPanel({ clientX, clientY }) {
 }
 
 export function closeAllPanels(exceptPanel) {
-    const exceptId = exceptPanel?.id || null;
+    const exceptId = exceptPanel?.id || null
     panels.forEach(panel => {
         if (panel && !panel.classList.contains('hidden') && panel.id !== exceptId) {
             if (panel.id === 'node-details-panel') {
@@ -251,7 +243,7 @@ export function closeAllPanels(exceptPanel) {
                 hide(panel)
             }
         }
-    });
+    })
 }
 
 export function clearAllSelections() {
@@ -275,8 +267,8 @@ export function updateIndicators(budget, gdp, maintenance) {
 }
 
 export function updateDate(day, holiday) {
-    indicators.day.textContent = day;
-    indicators.holiday.textContent = holiday ? ' 🎉' : '';
+    indicators.day.textContent = day
+    indicators.holiday.textContent = holiday ? ' 🎉' : ''
 }
 
 export function showToast(title, message, type = 'info') {
@@ -319,7 +311,6 @@ export function togglePanel(panelId, updateCallback = null) {
     }
 }
 
-
 export function showNodeDetails(node, budget, placeTower, enforceAction) {
     selectedNode = node
     nodeDetails.title.textContent = node.name
@@ -354,17 +345,17 @@ function updateActionOptions(node, budget, enforceAction) {
     let foundOption = false
 
     // Get research progress
-    const progress = tech.getResearchProgress();
+    const progress = tech.getResearchProgress()
 
     Object.keys(actionOptions).forEach(actionType => {
         // Check if technology requirement is met
         const techRequirement = actionOptions[actionType].techRequirement
-        const techUnlocked = !techRequirement || progress[techRequirement]?.researched;
+        const techUnlocked = !techRequirement || progress[techRequirement]?.researched
 
         // Only show actions that have been unlocked through research
         if (techUnlocked) {
-            createActionButton(actionType, node, budget, enforceAction);
-            foundOption = true;
+            createActionButton(actionType, node, budget, enforceAction)
+            foundOption = true
         }
     })
     if (!foundOption) {
@@ -415,22 +406,21 @@ function createActionButton(actionType, node, budget, enforceAction) {
 
 function updateTowerOptions(node, budget, placeTower) {
     nodeDetails.towerOptions.innerHTML = ''
-    const progress = tech.getResearchProgress();
+    const progress = tech.getResearchProgress()
 
-
-    let foundOption = false;
+    let foundOption = false
     Object.keys(towerOptions).forEach(towerType => {
         // Check if this tower depends on the current tower and is not already installed
-        const validUpgrade = towerOptions[towerType].depend === node.tower && node.tower !== towerType;
+        const validUpgrade = towerOptions[towerType].depend === node.tower && node.tower !== towerType
 
         // Check if technology requirement is met (if any)
         const techRequirement = towerOptions[towerType].techRequirement
-        const techUnlocked = !techRequirement || progress[techRequirement]?.researched;
+        const techUnlocked = !techRequirement || progress[techRequirement]?.researched
 
         // Only show options that are valid upgrades and have their tech requirements met
         if (validUpgrade && techUnlocked) {
-            createTowerButton(towerType, node, budget, placeTower);
-            foundOption = true;
+            createTowerButton(towerType, node, budget, placeTower)
+            foundOption = true
         }
     })
     if (!foundOption) {
@@ -536,7 +526,6 @@ export function showUserDetails(user) {
     show(userDetails.panel)
 }
 
-
 export function showRestartButton() {
     show(controls.restartBtn)
 }
@@ -601,8 +590,6 @@ export function showTransactionsPanel() {
     }
 }
 
-
-
 // Store historical chart data - each bucket represents a fixed time period (e.g., 10 days)
 let historicalBuckets = []
 let lastProcessedLogIndex = 0
@@ -648,7 +635,6 @@ function calculateBuckets() {
         lastProcessedLogIndex = window.gdpLog.length
     }
 
-
     return [...historicalBuckets, currentBucket]
 }
 
@@ -673,7 +659,7 @@ export function updateAnalyticsPanel() {
 }
 
 function capitalizeFirstLetter(val) {
-    return String(val).charAt(0).toUpperCase() + String(val).slice(1);
+    return String(val).charAt(0).toUpperCase() + String(val).slice(1)
 }
 
 function drawTransactionChart(buckets, viewMode) {
@@ -843,7 +829,6 @@ function updateTransactionsList() {
 
     const allTransactions = window.transactions || []
 
-
     transactions.allTransactions.innerHTML = formatTransactionList(allTransactions, null, true)
 
     // Add click handlers for transaction items
@@ -857,7 +842,6 @@ function updateTransactionsList() {
             }
         })
     })
-
 
 }
 
@@ -1030,8 +1014,6 @@ function displayTransactionPath(tx) {
     }
 }
 
-
-
 export function hideFullInterface() {
     // Simplified interface when using the tutorial
     hide(controls.gdpStatItem)
@@ -1057,7 +1039,7 @@ export function showNodeDetailsByID(nodeId) {
 
 export function showTransactionTooltip(tx) {
     setSelectedTransaction(tx)
-  
+
     tooltip.content.innerHTML = formatTransaction(tx, null, false)
 
     // Position tooltip
@@ -1096,7 +1078,6 @@ export function isTransactionTooltipVisible() {
 export function hideTransactionTooltip() {
     hide(tooltip.panel)
 }
-
 
 // Little transaction selection management
 export function getSelectedTransaction() {

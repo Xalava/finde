@@ -1,6 +1,5 @@
 import * as UI from './ui-manager.js'
 import * as config from './config.js'
-import * as Camera from './camera.js'
 
 // Font constant
 export const uiFont = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
@@ -487,34 +486,6 @@ function getExpandedConvexHull(points, distance) {
     }
 
     return expanded
-}
-
-export function drawTooltip(hoverNode) {
-    const tooltip = [
-        { text: hoverNode.name, bold: true },
-        { text: `Type: ${hoverNode.type}` },
-        { text: `Controls: ${hoverNode.tower ? config.towerOptions[hoverNode.tower].name : "None"}` },
-        { text: `Click for details` }
-    ]
-    ctx.font = `14px ${uiFont}`
-    ctx.fillStyle = 'rgba(15, 15, 20, 0.85)'
-    const tooltipX = hoverNode.x + 25
-    const tooltipY = hoverNode.y
-    const lineHeight = 18
-    const tooltipWidth = 180
-    const tooltipHeight = tooltip.length * lineHeight + 8
-
-    ctx.beginPath()
-    ctx.roundRect(tooltipX - 5, tooltipY - 15, tooltipWidth, tooltipHeight, 6)
-    ctx.fill()
-    ctx.strokeStyle = 'rgba(58, 123, 213, 0.5)'
-    ctx.stroke()
-
-    tooltip.forEach((line, index) => {
-        ctx.font = line.bold ? `bold 14px ${uiFont}` : `14px ${uiFont}`
-        ctx.fillStyle = '#fff'
-        ctx.fillText(line.text, tooltipX, tooltipY + index * lineHeight)
-    })
 }
 
 export function drawEndGame(condition, win = false) {

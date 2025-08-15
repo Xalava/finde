@@ -83,7 +83,6 @@ canvas {
     margin-left: auto;
 }
 
-
 .stat-item {
     display: flex;
     flex-direction: row;
@@ -136,7 +135,6 @@ canvas {
 #maintenance {
     color: var(--error);
 }
-
 
 .panel {
     position: fixed;
@@ -255,8 +253,6 @@ canvas {
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
-
-
 /* Transaction Path - Simplified & Improved */
 .transaction-path {
     display: flex;
@@ -315,7 +311,6 @@ canvas {
     background: rgba(255, 255, 255, 0.05);
 }
 
-
 .transaction-progress-info {
     margin: 12px 0;
     padding: 8px 12px;
@@ -357,7 +352,6 @@ canvas {
     margin-left: auto;
 
 } */
-
 
 .panel-title {
     font-size: 18px;
@@ -412,7 +406,6 @@ canvas {
 #country-name:hover {
     color: var(--text);
 }
-
 
 .bar-container {
     height: 12px;
@@ -481,7 +474,6 @@ details {
     gap: 10px;
 }
 
-
 .option-button {
     display: flex;
     align-items: center;
@@ -521,7 +513,6 @@ details {
     font-size: 14px;
     color: var(--text-dim);
 }
-
 
 /* instance of panel */
 #tutorial {
@@ -650,7 +641,6 @@ details {
     position: relative;
 }
 
-
 button {
     background: rgba(35, 35, 50, 0.7);
     border: 1px solid var(--border);
@@ -701,7 +691,6 @@ button.errory:hover:not(:disabled) {
 .hidden {
     display: none !important;
 }
-
 
 .instruction-content {
     padding: var(--spacing);
@@ -1021,8 +1010,6 @@ label[for="taxation-slider"] {
     height: 4px;
 }
 
-
-
 .approval-item {
     display: flex;
     flex-direction: row;
@@ -1115,7 +1102,6 @@ small {
     button {
         padding: 10px 10px;
     }
-
 
     #node-details-panel {
         position: fixed;
@@ -1285,6 +1271,7 @@ small {
     position: absolute;
     width: 204px;
     pointer-events: auto;
+    transition: all 0.1s ease;
 }
 
 .transaction-amount {
@@ -1292,7 +1279,6 @@ small {
     font-size: 14px;
     font-weight: bold;
 }
-
 
 #tooltip-actions {
     margin: 2px;

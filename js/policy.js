@@ -4,8 +4,7 @@ export const regulationLevels = {
     stringent: { detectMod: 1.3, fpMod: 0.5, icon: '🔒' }
 }
 
-import { showToast, hide, show, togglePanel } from './ui-manager.js'
-
+import { showToast, togglePanel } from './ui-manager.js'
 
 const policyPoints = document.getElementById('policy-points')
 
@@ -33,7 +32,6 @@ function popularityDelta() {
     }
     if (state.requireValidation) d -= 1
     d -= Math.round(getTaxRate() * 10 - 2)
-
 
     const deltaText = d > 0 ? `+${d}` : d < 0 ? `${d}` : ''
     policyPoints.innerText = deltaText
@@ -90,7 +88,6 @@ function setTaxRate(value) {
     taxRate = value
 
 }
-
 
 export function getTaxRate() {
     return taxRate
@@ -167,7 +164,6 @@ document.querySelectorAll('input[name="reg"]').forEach(el => {
     })
 })
 
-
 const taxSlider = document.getElementById('taxation-slider');
 const taxValueDisplay = document.getElementById('taxation-value');
 
@@ -190,7 +186,6 @@ document.getElementById('compliance-select')?.addEventListener('change', e => {
     showToast('Policy updated', `Minimum compliance set to ${levelName}`, 'info')
     changePopularity(level > 0 ? -1 : 0)
 })
-
 
 function displayPopularityBar() {
     const bar = document.getElementById('popularity-bar')

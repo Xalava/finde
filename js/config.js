@@ -22,28 +22,7 @@ export const towerOptions = {
         errors: 1,
         techRequirement: 'basic_compliance'
     },
-    // robust: {
-    //     name: 'Robust Filter',
-    //     cost: 125,
-    //     accuracy: 0.8,
-    //     maintenance: 1,
-    //     icon: '🔧',
-    //     description: 'Robust detection with 80% accuracy. Reduces false positives by 50%',
-    //     depend: 'medium',
-    //     errors: 0.5,
-    //     techRequirement: 'false_positive_reduction'
-    // },
-    // superRobust: {
-    //     name: 'Super Robust Filter',
-    //     cost: 375,
-    //     accuracy: 0.9,
-    //     maintenance: 3,
-    //     icon: '🔩',
-    //     description: 'Super robust detection with 90% accuracy. Reduces false positives by 99%',
-    //     depend: 'robust',
-    //     errors: 0.01,
-    //     techRequirement: 'false_positive_reduction'
-    // },
+
     advanced: {
         name: 'Advanced Filter',
         cost: 350,
@@ -144,7 +123,6 @@ export const legalityColorMap = {
     questionable: 'rgba(255, 165, 0, 0.7)',
     illegal: 'rgba(255, 0, 0, 0.9)'
 }
-
 
 export const nodeTypes = {
     bank: {

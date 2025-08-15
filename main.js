@@ -22,9 +22,7 @@ graphics.init(canvas, ctx)
 Camera.initCamera(canvas)
 window.addEventListener('resize', Camera.resizeCanvas.bind(null, ctx))
 
-
 let effects = []
-let animationFrameId
 
 // == UI/GAME helper functions ==
 function findNodeAt(screenX, screenY) {
@@ -35,15 +33,6 @@ function findNodeAt(screenX, screenY) {
 
         return node.active && Math.hypot(dx, dy) < CLICK_DETECTION_RADIUS
     })
-}
-
-//to be deprecated
-function getEventCoordinates(e) {
-    if (e.type.startsWith('touch')) {
-        const touch = e.touches?.[0] || e.changedTouches?.[0]
-        return touch ? { clientX: touch.clientX, clientY: touch.clientY } : null
-    }
-    return { clientX: e.clientX, clientY: e.clientY }
 }
 
 function findTransactionAt(screenX, screenY) {
@@ -57,8 +46,6 @@ function findTransactionAt(screenX, screenY) {
         return Math.hypot(dx, dy) < Math.max(CLICK_DETECTION_RADIUS, radius * 3)
     })
 }
-
-
 
 function findUserAt(screenX, screenY) {
     const worldPos = Camera.getWorldPosition(screenX, screenY)
@@ -93,28 +80,6 @@ function findUserAt(screenX, screenY) {
     return found
 }
 
-// TO BE DEPRECATED
-function handlePanelClose(e) {
-    // Don't handle the event if it's a click on or inside a panel toggle button
-    if (e.target.closest('.panel-toggle, .panel-close, .option-button, .game-controls button, .command-button, [role="button"], #gdp-stat-item, .stat-item, select, .compliance-select, .tab-button')) {
-        return
-    }
-
-    setTimeout(() => {
-        const coords = getEventCoordinates(e)
-        if (!coords) return
-
-        if (UI.isClickInsideAnyPanel(coords)) return
-
-        const clickedNode = findNodeAt(coords.clientX, coords.clientY)
-        if (clickedNode) {
-            UI.closeAllPanels(UI.getNodeDetailsPanel())
-        } else {
-            UI.closeAllPanels()
-        }
-    }, 50)
-}
-
 function handleCanvasClick(screenX, screenY) {
     if (unlock.nodes) {
         const node = findNodeAt(screenX, screenY)
@@ -131,7 +96,6 @@ function handleCanvasClick(screenX, screenY) {
         // Select new transaction
         UI.setSelectedTransaction(tx)
         Camera.cinematicPanAndZoom(tx.x, tx.y, 3, 1)
-        // Camera.adjustZoom(3)
         UI.showTransactionTooltip(tx)
         return
     }
@@ -155,17 +119,6 @@ document.addEventListener('DOMContentLoaded', () => {
     window.users = users
     window.nodes = nodes
     window.gdpLog = gdpLog
-
-
-    // Potential follow button :Active by default
-    // document.getElementById('tooltip-follow').addEventListener('click', () => {
-    //     const tooltip = document.getElementById('transaction-tooltip')
-    //     const tx = tooltip._currentTransaction
-    //     if (tx) {
-    //         tx.isFollowed = !tx.isFollowed
-    //         Camera.panAndZoom(tx.x, tx.y, 3)
-    //     }
-    // })
 
     // Hacky budget global access.
     Object.defineProperty(window, 'budget', {
@@ -239,7 +192,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // document.addEventListener('click', handlePanelClose)
     // document.addEventListener('touchstart', handlePanelClose, { passive: false })
 
-
     ctrls.centerBtn.addEventListener('click', () => Camera.cinematicCenterMap(activeNodes))
     ctrls.debugBtn.addEventListener('click', () => {
         debug = !debug
@@ -272,14 +224,6 @@ document.addEventListener('DOMContentLoaded', () => {
         window.location.reload()
     })
 
-    // canvas.addEventListener('mousemove', (e) => {
-    //     const rect = canvas.getBoundingClientRect();
-    //     lastMouseX = e.clientX - rect.left;
-    //     lastMouseY = e.clientY - rect.top;
-    //     Camera.moveCamera(e)
-    // })
-
-
     // Initialize the game
     tech.initTechTree()
     techUI.initTechUI()
@@ -306,7 +250,6 @@ document.addEventListener('DOMContentLoaded', () => {
     Camera.cinematicZoom(Camera.getDefaultZoom())
     gameLoop()
 })
-
 
 // == Game data ==
 // Game constants
@@ -342,9 +285,6 @@ let activeNodes = []
 
 // Gameplay
 let speedControl = 1
-let hoverNode = null
-let selectedTransaction = null
-let tooltipButtons = [] // Store button coordinates for click detection
 let isFirstNewNode = false
 
 // Endgame 
@@ -621,12 +561,7 @@ function realignUsersBanks() {
     })
 }
 
-
-
-
 // == Transaction Management ==
-
-
 
 function spawnTransaction() {
     const activeUsers = users.filter(u => u.active)
@@ -635,7 +570,6 @@ function spawnTransaction() {
     const sourceUser = selectRandomly(activeUsers)
     // let targetUser = selectRandomly(activeUsers.filter(u => u.country !== sourceUser.country))
     const targetUser = selectRandomly(activeUsers.filter(u => u.id !== sourceUser.id))
-
 
     if (!sourceUser || !targetUser) {
         // Should never happen
@@ -763,14 +697,12 @@ class Transaction {
                 return
             }
 
-
             if (this.index === this.path.length - 2) {
                 // We have reached the end of the path
                 // in the future, inspection could cost to budget
                 // Also, these effect could happen to all nodes, except taxes
                 // const isAudited = auditedNodes.some(a => a.id === next.id)
                 // if (isAudited) baseIncome = Math.floor(tx.amount / 2)
-
 
                 // damages will incur
                 next.completeTransaction(this)
@@ -816,16 +748,14 @@ class Transaction {
         if (this.validated) {
             UI.showToast('✅ Transaction already validated', `No effect`, 'success')
             return
-
         }
         switch (this.legality) {
             case 'legit':
                 UI.showToast('✅ Transaction validated', `Legit transaction from ${this.sourceUser.name}. `, 'success')
                 budget += 1
                 addEffect(this.x, this.y, "+1", "budget")
-                policy.changePopularity(2)
+                policy.changePopularity(3)
                 this.validated = true
-
                 break;
             case 'questionable':
                 if (Math.random() < 0.5) {
@@ -836,14 +766,14 @@ class Transaction {
                     this.legality = 'legit'
                 } else {
                     UI.showToast('✅ Questionable transaction validated', `Later reports show that it was part of an illegal scheme, damaging your reputation and budget (-${reward}💰️).`, 'error')
-                    policy.changePopularity(reward)
+                    policy.changePopularity(-reward)
                     budget -= reward
                     this.legality = 'illegal'
                     // (This one is now a normal illegal that could be validated again.)
                 }
                 break;
             case 'illegal':
-                UI.showToast('✅ Illegal transaction validated', `${reward>9?"Strongly damaging":"Damaging"} damaging your reputation (-${reward * 5})`, 'error')
+                UI.showToast('✅ Illegal transaction validated', `${reward > 9 ? "Strongly damaging" : "Damaging"} damaging your reputation (-${reward * 5})`, 'error')
                 policy.changePopularity(-reward * 5)
                 this.validated = true
                 break;
@@ -888,19 +818,20 @@ class Transaction {
         console.log('Transaction blocked')
         this.endTransaction('blocked')
         addEffect(this.x - 2, this.y, "❌", "insitus")
-        let reward = normalRandom(30)
+        let reward = normalRandom(120)
         switch (this.legality) {
             case 'legit':
-                UI.showToast('🛑 Legit transaction blocked', `${reward>9?"Heavy damage":"Damage"} in global popularity (-${reward * 5})`, 'error')
-                policy.changePopularity(-reward * 5)
+                UI.showToast('🛑 Legit transaction blocked', `${reward > 9 ? "Heavy damage" : "Damage"} in global popularity (-${reward * 2})`, 'error')
+                policy.changePopularity(-reward * 2)
                 break;
             case 'questionable':
                 if (Math.random() < 0.5) {
                     UI.showToast('🛑 Transaction blocked', `Questionable transaction from ${this.sourceUser.name}. Limited consequences`, 'warning')
-                    let change = Math.random() < 0.5 ? 1 : -1
+                    let change = Math.random() < 0.5 ? 3 : -4
                     policy.changePopularity(change)
                 } else {
                     UI.showToast('🛑 Transaction blocked', `Questionable transaction from ${this.sourceUser.name}. Later report show it was part of an illegal scheme, boosting your reputation 🌟 by ${reward}`, 'warning')
+                    policy.changePopularity(reward)
                 }
                 break;
             case 'illegal':
@@ -913,18 +844,17 @@ class Transaction {
         this.active = false
         this.endDate = Date.now()
         this.endReason = reason
-    // TODO Remove from transactions array 
-    // Alternatively we could keep tx for statistics
-    // const index = transactions.indexOf(this)
-    // if (index > -1) {
-    //     transactions.splice(index, 1)
-    // }
+        // TODO Remove from transactions array 
+        // Alternatively we could keep tx for statistics
+        // const index = transactions.indexOf(this)
+        // if (index > -1) {
+        //     transactions.splice(index, 1)
+        // }
     }
 }
 
 function placeTower(node, towerType) {
     const tower = towerOptions[towerType]
-
 
     // Only check if this tower has a tech requirement
     const requiredTech = tower.techRequirement
@@ -996,7 +926,6 @@ function detect(node, tx) {
     if (!node.tower)
         return false
 
-
     const { detectMod, fpMod } = policy.regulationLevels[policy.state.current]
     let detectionChance = node.accuracy * detectMod * events.detectMod
 
@@ -1009,7 +938,6 @@ function detect(node, tx) {
     switch (tx.legality) {
         case 'legit':
             if (!isFirstPlay()) {
-                // console.log("We check a legit tx with chance ", detectionChance)
                 // small chance of false flag, inversely proportional to accuracy, then 10% unless robust tech
                 if (Math.random() > detectionChance && Math.random() < towerOptions[node.tower].errors * 0.01 * tech.bonus.falsePositive * fpMod) {
                     addEffect(node.x, node.y, '🔴', "tower")
@@ -1040,7 +968,6 @@ function detect(node, tx) {
                     return true
                 }
             }
-
             return false
             break;
 
@@ -1062,7 +989,6 @@ function detect(node, tx) {
                 if (UI.getSelectedNode() && UI.getSelectedNode().id === node.id) {
                     UI.showNodeDetails(node, budget, placeTower, enforceAction)
                 }
-
                 return true
             } else {
                 return false
@@ -1317,7 +1243,6 @@ function checkForHoliday(currentDay) {
 }
 
 function drawGame() {
-    // == Updade the game display ==
     const now = Date.now()
 
     ctx.clearRect(0, 0, canvas.width, canvas.height)
@@ -1363,14 +1288,11 @@ function drawGame() {
             Camera.panAndZoom(selectedTx.x, selectedTx.y, 3)
         }
         // Only show tooltip if it's not already visible
-        // if (!UI.isTransactionTooltipVisible()) {
-        UI.showTransactionTooltip(selectedTx)
-        // }
+        if (!UI.isTransactionTooltipVisible()) {
+            UI.showTransactionTooltip(selectedTx)
+        }
     } else {
-        // UI.hideTransactionTooltip()
-        // if (hoverNode && !UI.getSelectedNode()) {
-        //     graphics.drawTooltip(hoverNode)
-        // }
+        UI.hideTransactionTooltip()
     }
 }
 
@@ -1410,8 +1332,9 @@ function gameLoop() {
         nbActiveNodes = activeNodes.length
         dailyDetectedTransactions = 0 // reinit at the end of a new day, tx will accumulate during the frames of the day. 
     }
-    transactions = transactions.filter(t => t.active);
-    window.transactions = transactions // Keep global reference updated
+    // TODO : save old tx. Also, could be done when tx end.
+    transactions = transactions.filter(t => t.active)
+    window.transactions = transactions // Keep global reference updated (why not unecesary as reference?)
 
     // Clear selected transaction if it's no longer active
     const selectedTx = UI.getSelectedTransaction()

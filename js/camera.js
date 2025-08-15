@@ -13,6 +13,35 @@ const camera = {
     isPinching: false
 }
 
+// Helper functions
+function normaliseZoom(z) {
+    return Math.min(Math.max(MIN_ZOOM, z), MAX_ZOOM)
+}
+
+function setZoomAt(clientX, clientY, newZoom) {
+    const rect = canvas.getBoundingClientRect()
+    const mouseX = clientX - rect.left
+    const mouseY = clientY - rect.top
+
+    // World coordinates under cursor before zoom
+    const worldX = (mouseX - camera.x) / camera.zoom
+    const worldY = (mouseY - camera.y) / camera.zoom
+
+    // Apply clamped zoom
+    camera.zoom = normaliseZoom(newZoom)
+
+    // Reposition so the same world point stays under the cursor
+    camera.x = mouseX - worldX * camera.zoom
+    camera.y = mouseY - worldY * camera.zoom
+}
+
+function targetScreenCoordsFor(worldX, worldY, zoom) {
+    return {
+        targetX: canvas.width / 2 - worldX * zoom,
+        targetY: canvas.height / 2 - worldY * zoom
+    }
+}
+
 export function initCamera(canvasEl) {
     canvas = canvasEl
 }
@@ -64,7 +93,7 @@ export function setCameraActions() {
     canvas.addEventListener('wheel', (e) => {
         e.preventDefault()
         const zoomFactor = e.deltaY < 0 ? 1.1 : 0.9
-        adjustZoom(e, zoomFactor)
+        setZoomAt(e.clientX, e.clientY, camera.zoom * zoomFactor)
     }, { passive: false })
 
     // Prevent context menu on right click
@@ -113,11 +142,9 @@ export function centerView(activeNodes, offset = 0) {
 
     const { centerX, centerY } = calculateCenter(activeNodes)
 
-    camera.x = canvas.width / 2 - centerX * camera.zoom
-    camera.y = canvas.height / 2 - centerY * camera.zoom + offset
-    // Todo: 
-    // - animate movement toward center 
-    // - adjust zoom to current needs
+    const { targetX: x, targetY: y } = targetScreenCoordsFor(centerX, centerY, camera.zoom)
+    camera.x = x
+    camera.y = y + offset
 }
 
 export function getWorldPosition(clientX, clientY) {
@@ -140,7 +167,7 @@ export function getScreenPos(worldX, worldY) {
     }
 }
 
-export function moveCamera(e) {
+function moveCamera(e) {
     if (camera.dragging) {
         camera.x += e.clientX - camera.lastX
         camera.y += e.clientY - camera.lastY // e.movementY / camera.zoom
@@ -186,24 +213,13 @@ function startPinch(e) {
 
 function handlePinch(e) {
     if (!camera.isPinching) return
-    
+
     const currentDistance = getPinchDistance(e)
     const zoomFactor = currentDistance / camera.lastPinchDistance
-    
     const center = getPinchCenter(e)
-    const rect = canvas.getBoundingClientRect()
-    const mouseX = center.x - rect.left
-    const mouseY = center.y - rect.top
-    
-    const worldX = (mouseX - camera.x) / camera.zoom
-    const worldY = (mouseY - camera.y) / camera.zoom
-    
-    camera.zoom *= zoomFactor
-    camera.zoom = Math.min(Math.max(MIN_ZOOM, camera.zoom), MAX_ZOOM)
-    
-    camera.x = mouseX - worldX * camera.zoom
-    camera.y = mouseY - worldY * camera.zoom
-    
+
+    setZoomAt(center.x, center.y, camera.zoom * zoomFactor)
+
     camera.lastPinchDistance = currentDistance
 }
 
@@ -235,60 +251,39 @@ export function cinematicZoom(zoomTarget) {
     animateZoom()
 }
 
-export function adjustZoom(e, zoomFactor) {
-    // Get mouse position relative to canvas
-    const rect = canvas.getBoundingClientRect();
-    const mouseX = e.clientX - rect.left;
-    const mouseY = e.clientY - rect.top;
-
-    // Convert mouse position to world coordinates before zoom change
-    const worldX = (mouseX - camera.x) / camera.zoom;
-    const worldY = (mouseY - camera.y) / camera.zoom;
-
-    // Apply zoom
-    camera.zoom *= zoomFactor
-
-    // Limit zoom range
-    camera.zoom = Math.min(Math.max(MIN_ZOOM, camera.zoom), MAX_ZOOM)
-    // Adjust camera position to zoom toward mouse cursor position
-    camera.x = mouseX - worldX * camera.zoom;
-    camera.y = mouseY - worldY * camera.zoom;
-}
-
-
 // Debugging functions
 export function drawCameraInfo(ctx) {
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
-    ctx.fillText(`Camera: x=${camera.x.toFixed(0)}, y=${camera.y.toFixed(0)}, zoom=${camera.zoom.toFixed(2)}`, 10, 30);
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.7)'
+    ctx.fillText(`Camera: x=${camera.x.toFixed(0)}, y=${camera.y.toFixed(0)}, zoom=${camera.zoom.toFixed(2)}`, 10, 30)
 }
 export function drawDebugGrid(ctx) {
     ctx.save()
     // Draw coordinate grid
-    const gridSize = 100;
-    ctx.strokeStyle = 'rgba(100, 100, 100, 0.2)';
-    ctx.lineWidth = 1;
+    const gridSize = 100
+    ctx.strokeStyle = 'rgba(100, 100, 100, 0.2)'
+    ctx.lineWidth = 1
 
     // Draw grid lines
     for (let x = 0; x < 1500; x += gridSize) {
-        ctx.beginPath();
-        ctx.moveTo(x, 0);
-        ctx.lineTo(x, 1500);
-        ctx.stroke();
+        ctx.beginPath()
+        ctx.moveTo(x, 0)
+        ctx.lineTo(x, 1500)
+        ctx.stroke()
 
         // Add coordinate labels
-        ctx.fillStyle = 'rgba(150, 150, 150, 0.7)';
-        ctx.font = '12px Arial';
-        ctx.fillText(x.toString(), x + 5, 15);
+        ctx.fillStyle = 'rgba(150, 150, 150, 0.7)'
+        ctx.font = '12px Arial'
+        ctx.fillText(x.toString(), x + 5, 15)
     }
 
     for (let y = 0; y < 1500; y += gridSize) {
-        ctx.beginPath();
-        ctx.moveTo(0, y);
-        ctx.lineTo(1500, y);
-        ctx.stroke();
+        ctx.beginPath()
+        ctx.moveTo(0, y)
+        ctx.lineTo(1500, y)
+        ctx.stroke()
 
         // Add coordinate labels
-        ctx.fillText(y.toString(), 5, y + 15);
+        ctx.fillText(y.toString(), 5, y + 15)
     }
 
     ctx.restore()
@@ -312,7 +307,6 @@ export function cinematicCenterMap(activeNodes, offset = 0) {
     cinematicPanAndZoom(centerX, centerY + offset, getDefaultZoom())
 }
 
-
 export function cinematicPanAndZoom(x, y, targetZoom, duration = 800) {
     if (targetZoom === 0) {
         targetZoom = getDefaultZoom()
@@ -323,8 +317,7 @@ export function cinematicPanAndZoom(x, y, targetZoom, duration = 800) {
     // const duration = 800
     const startTime = Date.now()
 
-    const targetX = canvas.width / 2 - x * targetZoom
-    const targetY = canvas.height / 2 - y * targetZoom
+    const { targetX, targetY } = targetScreenCoordsFor(x, y, targetZoom)
 
     function animate() {
         const progress = Math.min((Date.now() - startTime) / duration, 1)
@@ -344,8 +337,7 @@ export function panAndZoom(x, y, targetZoom) {
     if (targetZoom === 0) {
         targetZoom = getZoom() // Neutral zoom if specified as 0
     }
-    const targetX = canvas.width / 2 - x * targetZoom
-    const targetY = canvas.height / 2 - y * targetZoom
+    const { targetX, targetY } = targetScreenCoordsFor(x, y, targetZoom)
     camera.x = targetX
     camera.y = targetY
     camera.zoom = targetZoom
