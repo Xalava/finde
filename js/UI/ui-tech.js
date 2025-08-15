@@ -1,6 +1,6 @@
 // tech-ui.js - Simplified tech tree with fixed grid layout
-import { getResearchPoints, addResearchPoints, getResearchProgress, canResearch, researchTechnology } from './tech.js'
-import { techTree } from './config.js'
+import { getResearchPoints, addResearchPoints, getResearchProgress, canResearch, researchTechnology } from '../game/tech.js'
+import { techTree } from '../game/config.js'
 import { showToast, togglePanel, show } from './ui-manager.js'
 
 let currentTab = 'compliance'

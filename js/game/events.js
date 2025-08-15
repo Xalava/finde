@@ -1,4 +1,4 @@
-import * as UI from './ui-manager.js'
+import * as UI from '../UI/ui-manager.js'
 import * as config from './config.js'
 
 // Events System
@@ -7,7 +7,7 @@ let activeEvent = null
 let lastEventTime = 0
 export let detectMod = 1
 
-// Global variables for main.js to read
+// Global variables for main.js to read (to be converted in events)
 window.eventBudgetChange = 0
 window.eventMaintenanceChange = 0
 window.eventDuration = 0
@@ -39,7 +39,6 @@ export function checkForEvents(startTime) {
             break
         }
     }
-
     return
 }
 

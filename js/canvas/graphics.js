@@ -1,19 +1,18 @@
-import * as UI from './ui-manager.js'
-import * as config from './config.js'
+import * as UI from '../UI/ui-manager.js'
+import * as config from '../game/config.js'
 
-// Font constant
+// Utils
 export const uiFont = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-
-let canvas, ctx
-
 export const isMobile = window.innerWidth < 920 // navigator?.userAgentData?.mobile
 
+let canvas, ctx
 
 export function init(canvasEl, context) {
     canvas = canvasEl
     ctx = context
 }
 
+// Todo: modularise, create visual language
 export function drawEffects(effects) {
     effects.forEach(e => {
         e.timer -= 1
@@ -72,7 +71,7 @@ export function drawEffects(effects) {
                 ctx.font = `8px ${uiFont}`
                 ctx.fillStyle = 'black'
                 ctx.fillText(e.emoji, e.x, e.y)
-                break          
+                break
             default:
                 ctx.font = `24px ${uiFont}`
                 ctx.fillStyle = 'black'
@@ -251,7 +250,7 @@ export function drawTransaction(tx) {
         // } else 
 
         if (seq < 40) {
-            gradient.addColorStop(0, `rgba(255, 255, 255, ${1 - Math.abs(seq - 30) / 100})`);
+            gradient.addColorStop(0, `rgba(255, 255, 255, ${1 - Math.abs(seq - 30) / 100})`)
 
         } else {
             gradient.addColorStop(0, 'rgb(255, 255, 255)')
@@ -307,7 +306,6 @@ export function drawCorruptionMeter(spread) {
     ctx.roundRect(meterX, meterY, barWidth, meterHeight, 6)
     ctx.fill()
 
-
     // Draw text
     ctx.fillStyle = 'white'
     ctx.font = `12px ${uiFont}`
@@ -351,7 +349,6 @@ export function drawPopularityMeter(reputation) {
     ctx.beginPath()
     ctx.roundRect(meterX, meterY, barWidth, meterHeight, 6)
     ctx.fill()
-
 
     // Draw text
     ctx.fillStyle = 'white'
@@ -503,4 +500,36 @@ export function drawEndGame(condition, win = false) {
     ctx.font = `24px ${uiFont}`
     ctx.fillStyle = 'white'
     ctx.fillText(condition, canvas.width / 2, canvas.height / 2 + 20)
+}
+export function drawDebugGrid(ctx) {
+    ctx.save()
+    // Draw coordinate grid
+    const gridSize = 100
+    ctx.strokeStyle = 'rgba(100, 100, 100, 0.2)'
+    ctx.lineWidth = 1
+
+    // Draw grid lines
+    for (let x = 0; x < 1500; x += gridSize) {
+        ctx.beginPath()
+        ctx.moveTo(x, 0)
+        ctx.lineTo(x, 1500)
+        ctx.stroke()
+
+        // Add coordinate labels
+        ctx.fillStyle = 'rgba(150, 150, 150, 0.7)'
+        ctx.font = '12px Arial'
+        ctx.fillText(x.toString(), x + 5, 15)
+    }
+
+    for (let y = 0; y < 1500; y += gridSize) {
+        ctx.beginPath()
+        ctx.moveTo(0, y)
+        ctx.lineTo(1500, y)
+        ctx.stroke()
+
+        // Add coordinate labels
+        ctx.fillText(y.toString(), 5, y + 15)
+    }
+
+    ctx.restore()
 }

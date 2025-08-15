@@ -1,7 +1,7 @@
-import * as UI from './ui-manager.js'
-import * as tech from './tech.js'
-import * as camera from './camera.js'
-import * as policy from './policy.js'
+import * as UI from './UI/ui-manager.js'
+import * as tech from './game/tech.js'
+import * as camera from './canvas/camera.js'
+import * as policy from './game/policy.js'
 
 // Unlocks game mechanics. 
 // TODO : 
@@ -21,7 +21,7 @@ export const unlock = {
 
 function unlockAll() {
     for (const key in unlock) {
-        unlock[key] = true;
+        unlock[key] = true
     }
 }
 
@@ -56,9 +56,9 @@ export function resetTutorial() {
 }
 
 function nextStep() {
-    UI.hide(tutorialContainer);
-    currentStep++;
-    setTimeout(showTutorialStep, 600);
+    UI.hide(tutorialContainer)
+    currentStep++
+    setTimeout(showTutorialStep, 600)
 }
 export function showTutorial() {
 
@@ -145,6 +145,7 @@ const TUTORIAL_STEPS = [
             }, 10000)
         },
         waitFor: () => {
+            if (debug) return true
             if (policy.popularity >= policy.POPULARITY.INIT + 50 && tech.getResearchPoints() >= 30) {
                 UI.show(tutorialContainer)
                 return true
@@ -246,7 +247,7 @@ const TUTORIAL_STEPS = [
             if (progress && Object.values(progress).some(p => p.researched === true)) {
                 setTimeout(() => {
                     UI.closeAllPanels()
-                }, 500);
+                }, 500)
                 return true
             }
         }
@@ -264,11 +265,11 @@ const TUTORIAL_STEPS = [
             unlock.users = true
         }
     },
-];
+]
 
 export function showTutorialStep() {
     if (currentStep >= TUTORIAL_STEPS.length) {
-        completeTutorial();
+        completeTutorial()
         return
     }
 
@@ -297,7 +298,7 @@ export function showTutorialStep() {
             <button id="tutorial-reload">Restart Game</button>
             <button id="tutorial-continue" class="primary">Continue</button>
         `
-        document.getElementById('tutorial-continue').onclick = completeTutorial;
+        document.getElementById('tutorial-continue').onclick = completeTutorial
         document.getElementById('tutorial-reload').onclick = () => {
             completeTutorial()
             window.location.reload()

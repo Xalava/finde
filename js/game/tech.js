@@ -1,5 +1,5 @@
 import { techTree } from "./config.js"
-import * as UI from './ui-manager.js'
+import * as UI from '../UI/ui-manager.js'
 
 // Manage data
 const researchState = {
@@ -21,24 +21,24 @@ export let bonus = {
 }
 
 export function getResearchPoints() {
-    return researchState.points;
+    return researchState.points
 }
 
 export function addResearchPoints(amount) {
-    researchState.points += amount;
-    return researchState.points;
+    researchState.points += amount
+    return researchState.points
 }
 
 export function spendResearchPoints(amount) {
     if (researchState.points >= amount) {
-        researchState.points -= amount;
-        return true;
+        researchState.points -= amount
+        return true
     }
-    return false;
+    return false
 }
 
 export function getResearchProgress() {
-    return researchState.progress;
+    return researchState.progress
 }
 
 // Initialize technologies as locked
@@ -68,13 +68,13 @@ export function canResearch(techId) {
 
 // Research a technology
 export function researchTechnology(techId) {
-    if (!canResearch(techId)) return false;
+    if (!canResearch(techId)) return false
 
-    const tech = findTechnology(techId);
-    if (!spendResearchPoints(tech.cost)) return false;
+    const tech = findTechnology(techId)
+    if (!spendResearchPoints(tech.cost)) return false
 
-    researchState.progress[techId].researched = true;
-    researchState.cumulativePoints += tech.cost;
+    researchState.progress[techId].researched = true
+    researchState.cumulativePoints += tech.cost
 
     // Update availability of technologies that depend on this one
     updateAvailability()
@@ -85,7 +85,7 @@ export function researchTechnology(techId) {
         UI.activatePolicy()
 
     }
-    return true;
+    return true
 }
 
 // Update which technologies are available based on researched prerequisites
@@ -95,10 +95,10 @@ function updateAvailability() {
             if (!researchState.progress[tech.id].researched) {
                 researchState.progress[tech.id].available = tech.prerequisites.every(
                     prereqId => researchState.progress[prereqId]?.researched
-                );
+                )
             }
-        });
-    });
+        })
+    })
 }
 
 // Apply the effects of a technology
@@ -109,7 +109,7 @@ function applyTechnologyEffects(tech) {
         // adjust the bonus using the effect name, looking for if a matching property exists in the bonus object
         for (const [key, value] of Object.entries(tech.effects)) {
             if (bonus.hasOwnProperty(key)) {
-                bonus[key] = value;
+                bonus[key] = value
             }
         }
     }
@@ -118,17 +118,17 @@ function applyTechnologyEffects(tech) {
 // Find a technology by ID
 function findTechnology(techId) {
     for (const branch of Object.values(techTree)) {
-        const tech = branch.find(t => t.id === techId);
-        if (tech) return tech;
+        const tech = branch.find(t => t.id === techId)
+        if (tech) return tech
     }
-    return null;
+    return null
 }
 
 // Calculate research points gain (call this daily)
 export function calculateResearchPointsGain(gdp, detectedTransactions) {
-    const basePoints = 0;
+    const basePoints = 0
     const gdpBonus = 0 //Math.floor(gdp / 500);
-    const detectionBonus = detectedTransactions * 5;
+    const detectionBonus = detectedTransactions * 5
 
-    return basePoints + gdpBonus + detectionBonus;
+    return basePoints + gdpBonus + detectionBonus
 }

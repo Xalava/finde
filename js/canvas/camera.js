@@ -251,43 +251,6 @@ export function cinematicZoom(zoomTarget) {
     animateZoom()
 }
 
-// Debugging functions
-export function drawCameraInfo(ctx) {
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.7)'
-    ctx.fillText(`Camera: x=${camera.x.toFixed(0)}, y=${camera.y.toFixed(0)}, zoom=${camera.zoom.toFixed(2)}`, 10, 30)
-}
-export function drawDebugGrid(ctx) {
-    ctx.save()
-    // Draw coordinate grid
-    const gridSize = 100
-    ctx.strokeStyle = 'rgba(100, 100, 100, 0.2)'
-    ctx.lineWidth = 1
-
-    // Draw grid lines
-    for (let x = 0; x < 1500; x += gridSize) {
-        ctx.beginPath()
-        ctx.moveTo(x, 0)
-        ctx.lineTo(x, 1500)
-        ctx.stroke()
-
-        // Add coordinate labels
-        ctx.fillStyle = 'rgba(150, 150, 150, 0.7)'
-        ctx.font = '12px Arial'
-        ctx.fillText(x.toString(), x + 5, 15)
-    }
-
-    for (let y = 0; y < 1500; y += gridSize) {
-        ctx.beginPath()
-        ctx.moveTo(0, y)
-        ctx.lineTo(1500, y)
-        ctx.stroke()
-
-        // Add coordinate labels
-        ctx.fillText(y.toString(), 5, y + 15)
-    }
-
-    ctx.restore()
-}
 
 export function cinematicCenterPoint(x, y, targetZoom = 3) {
     if (camera.zoom === targetZoom) {
@@ -345,4 +308,10 @@ export function panAndZoom(x, y, targetZoom) {
 
 export function getZoom() {
     return camera.zoom
+}
+
+// Debugging functions
+export function drawCameraInfo(ctx) {
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.7)'
+    ctx.fillText(`Camera: x=${camera.x.toFixed(0)}, y=${camera.y.toFixed(0)}, zoom=${camera.zoom.toFixed(2)}`, 10, 30)
 }

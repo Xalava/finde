@@ -1,8 +1,10 @@
-import { towerOptions, actionOptions, countries, legalityOptions, legalityColorMap } from './config.js'
-import * as tech from './tech.js'
-import { uiFont, isMobile } from './graphics.js'
-import * as Camera from './camera.js'
-import { selectRandomly } from './utils.js'
+// Ideally provides the API to all other UI files
+import { towerOptions, actionOptions, countries, legalityOptions, legalityColorMap } from '../game/config.js'
+import * as tech from '../game/tech.js'
+import { isMobile, uiFont } from '../canvas/graphics.js'
+import * as Camera from '../canvas/camera.js'
+import { selectRandomly } from '../utils.js'
+import { formatTransaction } from './ui-transaction.js'
 
 let indicators = null
 let controls = null
@@ -56,7 +58,7 @@ export function initUI() {
     instructions.close.addEventListener('click', togglePanel('instructions'))
 
     document.getElementById('restart-tutorial').addEventListener('click', () => {
-        import('./tutorial.js').then(tutorial => {
+        import('../tutorial.js').then(tutorial => {
             tutorial.resetTutorial()
         })
     })
@@ -454,49 +456,6 @@ export function hideNodeDetails() {
     return selectedNode
 }
 
-function formatTransaction(tx, userId = null, isClickable = false) {
-    const template = document.getElementById('transaction-template')
-    const clone = template.content.cloneNode(true)
-
-    const statusColor = legalityColorMap[tx.legality]
-    const sender = window.users.find(u => u.id === tx.path?.[0])
-    const receiver = window.users.find(u => u.id === tx.path?.[tx.path.length - 1])
-
-    const senderCountry = countries[sender.country].flag
-    const receiverCountry = countries[receiver.country].flag
-
-    // Configure the template elements
-    const itemEl = clone.querySelector('.transaction-item')
-    const amountEl = clone.querySelector('.transaction-amount')
-    const partiesEl = clone.querySelector('.transaction-parties')
-
-    itemEl.setAttribute('data-tx-index', tx.index || 0)
-    if (isClickable) itemEl.classList.add('clickable-transaction')
-
-    amountEl.style.color = statusColor
-    amountEl.textContent = `$${tx.amount}`
-
-    if (userId) {
-        // User-specific: show only counterparty with direction
-        let counterparty, arrow, counterpartyCountry
-        if (tx.path[0] === userId) {
-            counterparty = receiver
-            arrow = '→'
-            counterpartyCountry = receiverCountry
-        } else {
-            counterparty = sender
-            arrow = '←'
-            counterpartyCountry = senderCountry
-        }
-        partiesEl.textContent = `${arrow} ${counterparty?.name || 'Unknown'} ${counterpartyCountry}`
-    } else {
-        // General format: show both parties with countries
-
-        partiesEl.innerHTML = `${sender.name} ${senderCountry} <br><span class="arrow">→</span> ${receiver.name} ${receiverCountry}`
-    }
-    return itemEl.outerHTML
-}
-
 function formatTransactionList(txs, userId = null, isClickable = false) {
 
     if (!txs || txs.length === 0) {
@@ -621,8 +580,8 @@ function calculateBuckets() {
 
     // Only process new transactions since last update
     // TODO: Update to use transacitons array instead of window.gdpLog
-    if (window.gdpLog && window.gdpLog.length > lastProcessedLogIndex) {
-        const newTransactions = window.gdpLog.slice(lastProcessedLogIndex)
+    if (gdpLog && window.length > lastProcessedLogIndex) {
+        const newTransactions = gdpLog.slice(lastProcessedLogIndex)
 
         newTransactions.forEach(logEntry => {
             if (logEntry.timestamp >= currentBucket.startTime) {
@@ -632,7 +591,7 @@ function calculateBuckets() {
             }
         })
 
-        lastProcessedLogIndex = window.gdpLog.length
+        lastProcessedLogIndex = gdpLog.length
     }
 
     return [...historicalBuckets, currentBucket]
@@ -1035,6 +994,33 @@ export function showNodeDetailsByID(nodeId) {
     }
 }
 
+export function isTransactionTooltipVisible() {
+    return tooltip.panel.classList.contains('hidden')
+}
+
+export function hideTransactionTooltip() {
+    hide(tooltip.panel)
+}
+
+// Little transaction selection management
+export function getSelectedTransaction() {
+    return selectedTransaction
+}
+
+export function setSelectedTransaction(tx) {
+    if (selectedTransaction) {
+        selectedTransaction.isSelected = false
+    }
+    tx.isSelected = true
+    selectedTransaction = tx
+}
+
+export function clearTransactionSelection() {
+    if (selectedTransaction) {
+        selectedTransaction.isSelected = false
+    }
+    selectedTransaction = null
+}
 // Transaction tooltip functions
 
 export function showTransactionTooltip(tx) {
@@ -1069,32 +1055,4 @@ export function showTransactionTooltip(tx) {
 
     // Show tooltip and store transaction
     show(tooltip.panel)
-}
-
-export function isTransactionTooltipVisible() {
-    return tooltip.panel.classList.contains('hidden')
-}
-
-export function hideTransactionTooltip() {
-    hide(tooltip.panel)
-}
-
-// Little transaction selection management
-export function getSelectedTransaction() {
-    return selectedTransaction
-}
-
-export function setSelectedTransaction(tx) {
-    if (selectedTransaction) {
-        selectedTransaction.isSelected = false
-    }
-    tx.isSelected = true
-    selectedTransaction = tx
-}
-
-export function clearTransactionSelection() {
-    if (selectedTransaction) {
-        selectedTransaction.isSelected = false
-    }
-    selectedTransaction = null
 }

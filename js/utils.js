@@ -1,6 +1,9 @@
 // Pure utility functions for convenience
 
 export function selectRandomly(array) {
+    if (array.length === 0) {
+        console.error("Empty array")
+    }
     return array[Math.floor(Math.random() * array.length)];
 }
 

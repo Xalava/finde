@@ -1,3 +1,16 @@
+// Game constants
+export const BASE_SPAWN_RATE = 0.002
+export const HOLIDAY_SPAWN_BONUS = 10
+export let NEW_NODE_FREQUENCY = 60
+export const DISTANCE = {
+    MAX_USERTONODE: 150,
+    MIN_USERTONODE: 30,
+    MIN_USERTOUSER: 25
+}
+export const REPUTATION = {
+    STARTING: 80,
+    POSTFAILURE: 50,
+}
 
 export const towerOptions = {
     basic: {
@@ -104,7 +117,7 @@ export const actionOptions = {
     },
 }
 
-export const HIGH_CORRUPTION_THRESHOLD = 4;
+export const HIGH_CORRUPTION_THRESHOLD = 4
 
 export const txSizeOptions = {
     small: { name: 'small', max: 10 },
@@ -426,7 +439,7 @@ export const techTree = {
             icon: '🖧',
         }
     ],
-};
+}
 
 export const countries = {
     kosi: {
@@ -481,4 +494,4 @@ export const countries = {
     }
 }
 
-export const countryKeys = Object.keys(countries)    
+export const countryKeys = Object.keys(countries)// == Game data ==
