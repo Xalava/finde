@@ -98,7 +98,7 @@ export function drawUser(user, debug = false) {
         // ctx.fill()
         // ctx.shadowBlur = 0
     }
-    const baseRadius = 1 + user.activity / 2
+    const baseRadius = 1 + Math.log(user.activity)
     ctx.beginPath()
     ctx.arc(user.x, user.y, baseRadius, 0, Math.PI * 2)
 
@@ -118,7 +118,7 @@ export function drawUser(user, debug = false) {
         ctx.beginPath()
         const ringRadius = baseRadius
         ctx.arc(user.x, user.y, ringRadius, 0, Math.PI * 2)
-        ctx.strokeStyle = selectionColor
+        ctx.strokeStyle = '#ffd900bd' // dimmer selectionColor
         ctx.lineWidth = 0.5
         ctx.stroke()
     }
@@ -127,7 +127,7 @@ export function drawUser(user, debug = false) {
         ctx.font = '6px sans-serif'
         ctx.fillText(user.id, user.x + 5, user.y - 2)
         ctx.fillStyle = 'red'
-        ctx.fillText(user.corruption, user.x + 5, user.y + 4)
+        ctx.fillText(user.riskLevel, user.x + 5, user.y + 4)
     }
     // Fun fact : the filder belwo destroys perforamnce
     // ctx.filter = "brightness(50%)";
@@ -148,7 +148,7 @@ export function drawUserEdge([userId, bankId], users, nodes) { //could be improv
     ctx.restore()
 }
 
-export function drawNode(node, debug = false) {
+export function drawNode(node) {
     const isSelected = node === UI.getSelectedNode()
     const nodeRadius = 20
     ctx.save()
@@ -284,6 +284,13 @@ export function drawTransaction(tx) {
     ctx.arc(tx.x, tx.y, radius * 2, 0, Math.PI * 2)
     ctx.fill()
     ctx.restore()
+    if (debug) {
+        ctx.font = '6px sans-serif'
+        ctx.fillStyle = 'gray'
+        ctx.fillText(tx.id, tx.x + 5, tx.y - 6)
+        ctx.fillStyle = config.legalityColorMap[tx.legality]
+        ctx.fillText(tx.riskLevel, tx.x + 5, tx.y + 6)
+    }
 }
 
 export function drawCorruptionMeter(spread) {

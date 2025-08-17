@@ -113,6 +113,7 @@ export function initUI() {
         name: document.getElementById('user-name'),
         country: document.getElementById('user-country'),
         type: document.getElementById('user-type'),
+        badge: document.getElementById('user-badge'),
         userTransactions: document.getElementById('user-transactions'),
         close: document.getElementById('close-user-panel')
     }
@@ -147,6 +148,7 @@ export function initUI() {
         panel: document.getElementById('transaction-tooltip'),
         title: document.getElementById('tooltip-title'),
         content: document.getElementById('tooltip-content'),
+        motive: document.getElementById('tooltip-motive'),
         actions: document.getElementById('tooltip-actions'),
         close: document.getElementById('close-tooltip'),
         allowBtn: document.getElementById('tooltip-allow'),

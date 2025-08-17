@@ -76,6 +76,7 @@ export function formatTransactionList(txs, userId = null, isClickable = false) {
 export function showTransactionTooltip(tx) {
 
     tooltip.content.innerHTML = formatTransaction(tx, null, false)
+    tooltip.motive.innerHTML = tx.motive
 
     // Position tooltip
     if (isMobile) {

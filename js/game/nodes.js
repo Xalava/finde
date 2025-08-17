@@ -133,9 +133,15 @@ export function initNodes() {
             node.receivedAmount += tx.amount
             if (tx.legality === 'illegal') {
                 addEffect(node.x, node.y, '', 'pulseNode', 'rgba(255, 0, 0, 0.2)')
-                // Medium and large transactions increase corruption
-                if (tx.size !== 'small') {
-                    node.corruption++
+
+                if (node.corruption < 9) {
+                    if (tx.size === 'small') {
+                        if (Math.random() < 0.3) {
+                            node.corruption++
+                        }
+                    } else {
+                        node.corruption++
+                    }
                 }
                 node.changeReputation(-5)
                 console.log(`💥 Breach #${node.id}`)
@@ -242,70 +248,47 @@ export function detect(node, tx) {
     }
 
     if (debug) console.log(`Detection rolls at ${node.id} with chance ${detectionChance} (Event mod:`, events.detectMod, "PolicyMod", detectMod, "False Positive Mod", fpMod, ").")
-
-    switch (tx.legality) {
-        case 'legit':
-            if (!isFirstPlay()) {
-                // small chance of false flag, inversely proportional to accuracy, then 10% unless robust tech
-                if (Math.random() > detectionChance && Math.random() < towerOptions[node.tower].errors * 0.01 * tech.bonus.falsePositive * fpMod) {
-                    addEffect(node.x, node.y, '🔴', "tower")
-                    tx.endTransaction("falsePositive")
-                    console.log(`🔴 False postive at`, node.name)
-                    node.changeReputation(-5) // harmful for reputation, but not for corruption. Also the transaction ends when it shouldn't have, reducing income
-                    if (!firstFalsePositive) {
-                        UI.showToast(`🔴 First false postive at`, `Reputation damaged at ${node.name}`, 'error')
-                        firstFalsePositive = true
-                    }
-                    return true
-                } else {
-                    return false
-                }
-            }
-            break
-
-        case 'questionable':
-            if (!isFirstPlay()) {
-                // TODO (with better logic on how to improve this tradeoff over time)
-                // Questionable tx can be detected as illegal
-                if (Math.random() < detectionChance / 2) {
-                    console.log(`Suspicious❗ Potential illegal tx detected at #${node.id}`)
-                    return true
-                    // Questionable tx are more likely to be detected as false positive
-                } else if (Math.random() > detectionChance / 2 && Math.random() < towerOptions[node.tower].errors * 0.01 * tech.bonus.falsePositive * fpMod) {
-                    console.log(`Suspicious: 🛑 Potential false positive at #${node.id}`)
-                    return true
-                }
-            }
-            return false
-            break
-
-        case 'illegal':
-            if (Math.random() < detectionChance) {
-                tx.endTransaction("detected")
-                addEffect(node.x, node.y, '✔️', "tower")
-                if (!firstDetection) {
-                    UI.showToast('First illegal transaction blocked!', `Detected at ${node.name} (${towerOptions[node.tower].name})`, 'success')
-                    firstDetection = true
-                }
-                console.log(`✔️ Illegal tx blocked #${node.id}`)
-                if (debug) console.log(tx)
-
-                // Gain reputation for successful detection
-                node.changeReputation(3)
-
-                // Update panel if the detection happens at the selected node
-                if (UI.getSelectedNode() && UI.getSelectedNode().id === node.id) {
-                    UI.showNodeDetails(node, budget, placeTower, enforceAction)
+    if (tx.legality < 6) {
+        // case 'legit': (suspicious tx can be caugh as illegal)
+        if (!isFirstPlay()) {
+            // small chance of false flag, inversely proportional to accuracy, then 10% unless robust tech
+            if (Math.random() > detectionChance && Math.random() < towerOptions[node.tower].errors * 0.01 * tech.bonus.falsePositive * fpMod) {
+                addEffect(node.x, node.y, '🔴', "tower")
+                tx.endTransaction("falsePositive")
+                console.log(`🔴 False postive at`, node.name)
+                node.changeReputation(-5) // harmful for reputation, but not for corruption. Also the transaction ends when it shouldn't have, reducing income
+                if (!firstFalsePositive) {
+                    UI.showToast(`🔴 First false postive at`, `Reputation damaged at ${node.name}`, 'error')
+                    firstFalsePositive = true
                 }
                 return true
             } else {
                 return false
             }
-            break
+        }
+    } else {
+        // case 'illegal':
+        if (Math.random() < detectionChance) {
+            tx.endTransaction("detected")
+            addEffect(node.x, node.y, '✔️', "tower")
+            if (!firstDetection) {
+                UI.showToast('First illegal transaction blocked!', `Detected at ${node.name} (${towerOptions[node.tower].name})`, 'success')
+                firstDetection = true
+            }
+            console.log(`✔️ Illegal tx blocked #${node.id}`)
+            if (debug) console.log(tx)
 
-        default:
-            console.error("Tx has no legality")
-            break
+            // Gain reputation for successful detection
+            node.changeReputation(3)
+
+            // Update panel if the detection happens at the selected node
+            if (UI.getSelectedNode() && UI.getSelectedNode().id === node.id) {
+                UI.showNodeDetails(node, budget, placeTower, enforceAction)
+            }
+            return true
+        } else {
+            return false
+        }
     }
 }
 export function removeExpiredEnforcementActions(now) {

@@ -141,8 +141,8 @@ document.addEventListener('DOMContentLoaded', () => {
     ctrls.debugBtn.addEventListener('click', () => {
         debug = !debug
         ctrls.debugBtn.style.backgroundColor = debug ? 'rgba(255, 0, 0, 0.2)' : ''
-        tech.addResearchPoints(8000)
-        budget += 20000
+        tech.addResearchPoints(10000)
+        budget += 10000
         if (nodes[5]) nodes[5].reputation = 0
     })
     ctrls.countriesBtn.addEventListener('click', () => {

@@ -118,6 +118,7 @@ export const actionOptions = {
 }
 
 export const HIGH_CORRUPTION_THRESHOLD = 4
+export const MAX_CORRUPTION = 9
 
 export const txSizeOptions = {
     small: { name: 'small', max: 10 },
@@ -449,7 +450,8 @@ export const countries = {
         flag: "🌊",
         corruptionRisk: 1,
         secrecy: 3,
-        activity: 3,
+        activity: 3, // nb of tx
+        gdpPerCapita: 7,
         description: "A developed democracy with strong institutions and pioneering digital transparency initiatives."
     },
     tafada: {
@@ -460,6 +462,7 @@ export const countries = {
         corruptionRisk: 6,
         secrecy: 5,
         activity: 7,
+        gdpPerCapita: 4,
         description: "A trading hub undergoing significant economic modernization."
     },
     valerian: {
@@ -470,6 +473,7 @@ export const countries = {
         corruptionRisk: 9,
         secrecy: 4,
         activity: 2,
+        gdpPerCapita: 2,
         description: "An island nation transitioning from traditional banking toward international standards."
     },
     drakmoor: {
@@ -480,6 +484,7 @@ export const countries = {
         corruptionRisk: 5,
         secrecy: 9,
         activity: 4,
+        gdpPerCapita: 9,
         description: "A mountainous nation that maintains financial privacy laws rooted in centuries-old principles."
     },
     ustah: {
@@ -490,6 +495,7 @@ export const countries = {
         corruptionRisk: 4,
         secrecy: 6,
         activity: 9,
+        gdpPerCapita: 6,
         description: "A manufacturing powerhouse combining informal economy activity and developed financial sector."
     }
 }

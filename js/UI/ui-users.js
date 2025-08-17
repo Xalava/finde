@@ -3,7 +3,6 @@ import { getUserTransactions } from '../game/users.js'
 import { userDetails, show, setSelectedTransaction, hide, closeAllPanels, setSelectedUser, clearSelectedUser } from './ui-manager.js'
 import { formatTransactionList } from './ui-transaction.js'
 
-
 // Keep handler refs to properly add/remove listeners
 let userTxClickHandler = null
 let userCloseHandler = null
@@ -12,7 +11,18 @@ let userRefreshInterval = null
 export function showUserDetails(user) {
     userDetails.name.textContent = user.name || 'John Doe'
     userDetails.country.textContent = countries[user.country].flag
-    userDetails.type.textContent = user.activity > 5 ? "large " : "" + user.type
+
+    // Set user type and add PEP badge if applicable
+    if (user.type === 'person') {
+        userDetails.type.textContent = user.job
+    } else {
+        userDetails.type.textContent = "A " + (user.activity > 5 ? "large " : "") + user.type
+    }
+
+    // Add PEP badge for politically exposed persons
+    if (user.PoliticallyExposedPerson) {
+        userDetails.baddge.innerHTML += '<span class="badge badge-warning">PEP</span>'
+    }
 
     // Store user ID for refresh functionality
     userDetails.panel.setAttribute('data-user-id', user.id)
@@ -49,7 +59,6 @@ export function showUserDetails(user) {
             userTransactions = newUserTransactions
         }
     }, 500)
-
 
     // Ensure we don't accumulate multiple close handlers
     if (userCloseHandler) {
