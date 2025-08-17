@@ -4,6 +4,7 @@ import * as config from '../game/config.js'
 // Utils
 export const uiFont = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
 export const isMobile = window.innerWidth < 920 // navigator?.userAgentData?.mobile
+const selectionColor = '#FFD700'
 
 let canvas, ctx
 
@@ -87,6 +88,7 @@ export function drawEffects(effects) {
 
 export function drawUser(user, debug = false) {
     ctx.save()
+    const isSelectedUser = user === UI.getSelectedUser()
     if (user.corruption > 1) {
         ctx.shadowColor = 'rgba(255,0,0,0.5)'
         ctx.shadowBlur = 10
@@ -96,8 +98,9 @@ export function drawUser(user, debug = false) {
         // ctx.fill()
         // ctx.shadowBlur = 0
     }
+    const baseRadius = 1 + user.activity / 2
     ctx.beginPath()
-    ctx.arc(user.x, user.y, 1 + user.activity / 2, 0, Math.PI * 2)
+    ctx.arc(user.x, user.y, baseRadius, 0, Math.PI * 2)
 
     ctx.fillStyle = config.userTypes[user.type].color
 
@@ -109,6 +112,16 @@ export function drawUser(user, debug = false) {
     ctx.shadowBlur = 10
 
     ctx.fill()
+
+    // Selection highlight 
+    if (isSelectedUser) {
+        ctx.beginPath()
+        const ringRadius = baseRadius
+        ctx.arc(user.x, user.y, ringRadius, 0, Math.PI * 2)
+        ctx.strokeStyle = selectionColor
+        ctx.lineWidth = 0.5
+        ctx.stroke()
+    }
 
     if (debug) {
         ctx.font = '6px sans-serif'
@@ -161,8 +174,8 @@ export function drawNode(node, debug = false) {
 
     // Add selection highlight
     if (isSelected) {
-        ctx.strokeStyle = '#FFD700'
-        ctx.lineWidth = 3
+        ctx.strokeStyle = selectionColor
+        ctx.lineWidth = 2
     } else {
         ctx.strokeStyle = '#222'
         ctx.lineWidth = 0.1

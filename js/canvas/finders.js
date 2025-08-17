@@ -36,7 +36,7 @@ export function findUserAt(screenX, screenY) {
         if (distance < CLICK_DETECTION_RADIUS) { // Increased click area for debugging
             // console.log(`User ${user.id} at ${user.x.toFixed(1)}, ${user.y.toFixed(1)} - distance: ${distance.toFixed(1)} - MATCH`)
         }
-        return distance < CLICK_DETECTION_RADIUS
+        return distance < 2 + user.activity / 3// CLICK_DETECTION_RADIUS
     })
 
     if (!found) {

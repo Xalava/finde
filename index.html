@@ -138,7 +138,7 @@
                     <button id="close-user-panel" class="close-button">×</button>
                 </div>
                 <div class="panel-content">
-                    <div id="user-details">
+                    <div id="user-summary">
                         A <span id="user-type"></span> in <span id="user-country"></span>
 
                     </div>
@@ -293,7 +293,7 @@
                 </section>
             </div>
         </aside>
-
+        <!-- Deprecated for the moment to favor direct map engagement
         <aside id="transactions-panel" class="panel hidden">
             <div class="panel-header">
                 <h2>Transactions</h2>
@@ -309,7 +309,6 @@
                 <section id="transaction-details" class="panel-section hidden">
                     <button id="back-to-transactions" class="option-button" style="margin-bottom: 16px; width: 100%;">← Back to List</button>
                     <div id="tx-summary">
-                        <!-- Transaction summary will be populated here -->
                     </div>
                     <div class="detail-row" style="margin: 16px 0;">
                         <span class="detail-label">Transaction path</span>
@@ -331,7 +330,7 @@
                     </div>
                 </section>
             </div>
-        </aside>
+        </aside> -->
     </div>
 
     <div id="toast-container">
@@ -357,7 +356,7 @@
 
     <!-- Transaction template for JavaScript use -->
     <template id="transaction-template">
-        <div class="transaction-item" data-tx-index="">
+        <div class="transaction-item" data-tx-id="">
             <div class="transaction-amount"></div>
             <div class="transaction-parties"></div>
         </div>

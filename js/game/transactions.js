@@ -6,9 +6,11 @@ import { selectRandomly, normalRandom } from '../utils.js'
 import { addEffect, getSpeedControl, dropProbability, incrementDailyDetectedTransactions } from '../main.js'
 import { detect } from './nodes.js'
 
+
+let txId = 0
 // == Transaction Management ==
 export function spawnTransaction() {
-    
+
     const sourceUser = selectRandomly(activeUsers)
     // let targetUser = selectRandomly(activeUsers.filter(u => u.country !== sourceUser.country))
     const targetUser = selectRandomly(activeUsers.filter(u => u.id !== sourceUser.id))
@@ -38,6 +40,7 @@ export function spawnTransaction() {
     }
 
     transactions.push(newTx)
+
     addEffect(sourceUser.x, sourceUser.y, '', 'invertedPulse')
 
 }
@@ -65,6 +68,7 @@ function getPathFrom(startId, targetId = null) {
 class Transaction {
     constructor(sourceUser, targetUser, path, nodes) {
         this.path = path
+        this.id = txId++
         this.index = 0
         this.issuanceDate = Date.now()
         this.x = sourceUser.x
@@ -85,6 +89,7 @@ class Transaction {
         this.amount = Math.round(Math.exp(Math.random() * 4.2)) // 15 on average with log-normal distribution and exponent 4.2 
         this.size = getTransactionSizeName(this.amount) // kept for comptaibility, in the future, we could use directly amount
         this.speed = 0.5 + Math.random() * Math.min(15 / this.amount, 1)
+        if (debug) console.log("Tx created", this)
     }
 
     _calculateLegality(sourceUser, targetUser, sourceBank) {

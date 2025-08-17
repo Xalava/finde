@@ -171,13 +171,13 @@ export const nodeTypes = {
 export const userTypes = {
     person: {
         name: 'Individual',
-        color: '#BBB',
+        color: '#119',
         icon: '👤',
         frequency: 0.6
     },
     business: {
         name: 'Business',
-        color: '#119',
+        color: '#BBB',
         icon: '🏢',
         frequency: 0.3
     },

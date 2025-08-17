@@ -10,9 +10,9 @@ import { spawnTransaction } from './game/transactions.js'
 import { placeTower, enforceAction, initNodes, removeExpiredEnforcementActions, activateNode, checkNodesCompliance, increaseAIaccuracy } from './game/nodes.js'
 // UI
 import * as UI from './UI/ui-manager.js'
-import * as showTransactionTooltip from './UI/ui-transaction.js'
-import * as uiManager from './UI/ui-manager.js'
-import * as techUI from './UI/ui-tech.js'
+import * as uiTransaction from './UI/ui-transaction.js'
+import * as uiUsers from './UI/ui-users.js'
+import * as uiTech from './UI/ui-tech.js'
 // Canvas
 import * as Camera from './canvas/camera.js'
 import * as graphics from "./canvas/graphics.js"
@@ -39,7 +39,7 @@ function handleCanvasClick(screenX, screenY) {
         // Select new transaction
         UI.setSelectedTransaction(tx)
         Camera.cinematicPanAndZoom(tx.x, tx.y, 3, 1)
-        uiManager.showTransactionTooltip(tx)
+        UI.setSelectedTransaction(tx)
         return
     }
     if (unlock.nodes) {
@@ -54,7 +54,7 @@ function handleCanvasClick(screenX, screenY) {
         const user = findUserAt(screenX, screenY)
         if (user) {
             UI.clearAllSelections()
-            UI.showUserDetails(user)
+            uiUsers.showUserDetails(user)
             return
         }
     }
@@ -69,7 +69,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initNodes()
     generateUsers()
     tech.initTechTree()
-    techUI.initTechUI()
+    uiTech.initTechUI()
     events.initializeEvents()
 
     // Initialize UI panels 
@@ -206,20 +206,20 @@ window.maintenance = 0
 window.transactions = []
 Object.defineProperty(window, 'activeTransactions', {
     get() {
-        return window.transactions.filter(n => n.active);
+        return transactions.filter(n => n.active)
     }
 })
 
 window.users = []
 Object.defineProperty(window, 'activeUsers', {
     get() {
-        return window.users.filter(n => n.active);
+        return users.filter(n => n.active)
     }
 })
 window.nodes = []
 Object.defineProperty(window, 'activeNodes', {
     get() {
-        return window.nodes.filter(n => n.active);
+        return nodes.filter(n => n.active)
     }
 })
 let gdp = 0
@@ -414,9 +414,9 @@ function drawGame() {
     userEdges.forEach(edge => graphics.drawUserEdge(edge, users, nodes))
     edges.filter(([a, b]) => nodes[a].active && nodes[b].active)
         .forEach(edge => graphics.drawEdge(edge, nodes))
-    nodes.filter(n => n.active).forEach(node => graphics.drawNode(node, debug))
-    users.filter(n => n.active).forEach(user => graphics.drawUser(user, debug))
-    transactions.forEach(tx => {
+    activeNodes.forEach(node => graphics.drawNode(node, debug))
+    activeUsers.forEach(user => graphics.drawUser(user, debug))
+    activeTransactions.forEach(tx => {
         graphics.drawTransaction(tx)
     })
     graphics.drawEffects(effects)
@@ -443,7 +443,7 @@ function drawGame() {
         }
         // Only show tooltip if it's not already visible
         if (!UI.isTransactionTooltipVisible()) {
-            uiManager.showTransactionTooltip(selectedTx)
+            uiTransaction.showTransactionTooltip(selectedTx)
         }
     } else {
         UI.hideTransactionTooltip()
@@ -471,7 +471,7 @@ function gameLoop() {
         if (!isFirstPlay()) {
             if (checkEndGame()) return
         }
-        techUI.updateResearchUI()
+        uiTech.updateResearchUI()
         if (UI.getSelectedNode()) {
             UI.updateCurrentNodeDetails(budget, placeTower, enforceAction)
         }
@@ -486,7 +486,7 @@ function gameLoop() {
         dailyDetectedTransactions = 0 // reinit at the end of a new day, tx will accumulate during the frames of the day. 
     }
     // TODO : save old tx. Also, could be done when tx end.
-    transactions = transactions.filter(t => t.active)
+    // transactions = transactions.filter(t => t.active)
     // window.transactions = transactions // Keep global reference updated (why not unecesary as reference?)
 
     // Clear selected transaction if it's no longer active

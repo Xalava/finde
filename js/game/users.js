@@ -37,7 +37,7 @@ function nameUser(type, country) {
 }
 export function generateUsers(target = false) {
     const targetNodes = target ? [target] : activeNodes.filter(n => n.type !== 'processor')
-    
+
     targetNodes.forEach(t => {
         const c = nodeTypes[t.type].usersCount
         const finalCount = Math.max(Math.floor(c / 2), Math.ceil(Math.random() * c * 2)) // count/2 to count*2 
@@ -45,7 +45,7 @@ export function generateUsers(target = false) {
             const random = Math.random()
             let type = ''
             if (t.type === 'bank')
-                type = random < 0.5 ? 'person' : random < 0.8 ? 'business' : 'government'
+                type = random < 0.6 ? 'person' : random < 0.9 ? 'business' : 'government'
 
             else
                 type = random < 0.7 ? 'person' : 'business'
@@ -64,8 +64,8 @@ export function generateUsers(target = false) {
                         y,
                         type: type,
                         country,
-                        corruption: Math.floor(Math.random() * countries[country].corruptionRisk), // 0 to 8
-                        activity: Math.floor(Math.random() * countries[country].activity),
+                        corruption: Math.round(Math.random() * countries[country].corruptionRisk), // 0 to 9
+                        activity: Math.round(Math.random() * countries[country].activity), // 0 to 9
                         active: true
                     }
                 }
@@ -81,7 +81,9 @@ export function generateUsers(target = false) {
             }
         }
     })
-} export function assignNearestBank(user) {
+}
+
+export function assignNearestBank(user) {
     let validNodes = []
     if (user.type === 'government') {
         validNodes = activeNodes.filter(n => n.type === 'bank')
@@ -106,3 +108,6 @@ export function realignUsersBanks() {
     })
 }
 
+export function getUserTransactions(userId) {
+    return activeTransactions.filter(tx => tx.sourceUser.id === userId || tx.targetUser.id === userId)
+}

@@ -1,10 +1,10 @@
 // Ideally provides the API to all other UI files
 import { towerOptions, actionOptions, countries, legalityOptions, legalityColorMap } from '../game/config.js'
 import * as tech from '../game/tech.js'
-import { isMobile, uiFont } from '../canvas/graphics.js'
-import * as Camera from '../canvas/camera.js'
+import { uiFont } from '../canvas/graphics.js'
 import { selectRandomly } from '../utils.js'
-import { formatTransaction } from './ui-transaction.js'
+import { showTransactionTooltip } from './ui-transaction.js'
+import { closeUserDetails } from './ui-users.js'
 
 let indicators = null
 let controls = null
@@ -12,16 +12,17 @@ let instructions = null
 let nodeDetails = null
 let policy = null
 let research = null
-let userDetails = null
+export let userDetails = null
 let analytics = null
-let transactions = null
-let tooltip = null
+// let transactionsPanel = null
+export let tooltip = null
 let panels = null
-let txButtons = null
-let txActions = null
+// let txButtons = null
+// let txActions = null
 
 let selectedNode = null
 let selectedTransaction = null
+let selectedUser = null
 
 export function initUI() {
     indicators = {
@@ -77,34 +78,34 @@ export function initUI() {
         actionOptions: document.getElementById('action-options'),
         close: document.getElementById('close-panel')
     }
-    txActions = document.getElementById('tx-actions')
-    txButtons = {
-        validate: document.getElementById('validate-tx'),
-        block: document.getElementById('block-tx'),
-        analyze: document.getElementById('analyze-tx'),
-    }
+    // txActions = document.getElementById('tx-actions')
+    // txButtons = {
+    //     validate: document.getElementById('validate-tx'),
+    //     block: document.getElementById('block-tx'),
+    //     analyze: document.getElementById('analyze-tx'),
+    // }
 
     nodeDetails.close.addEventListener('click', hideNodeDetails)
 
     // Transaction detail handlers
-    document.getElementById('back-to-transactions').addEventListener('click', () => {
-        // Clear transaction update interval
-        if (currentTransactionUpdateInterval) {
-            clearInterval(currentTransactionUpdateInterval)
-            currentTransactionUpdateInterval = null
-        }
+    // document.getElementById('back-to-transactions').addEventListener('click', () => {
+    //     // Clear transaction update interval
+    //     if (currentTransactionUpdateInterval) {
+    //         clearInterval(currentTransactionUpdateInterval)
+    //         currentTransactionUpdateInterval = null
+    //     }
 
-        // Clear selection from all transactions
-        if (window.transactions) {
-            window.transactions.forEach(tx => tx.isSelected = false)
-        }
+    //     // Clear selection from all transactions
+    //     if (window.transactions) {
+    //         window.transactions.forEach(tx => tx.isSelected = false)
+    //     }
 
-        transactions.listSection.classList.remove('hidden')
-        transactions.detailsSection.classList.add('hidden')
+    //     transactionsPanel.listSection.classList.remove('hidden')
+    //     transactionsPanel.detailsSection.classList.add('hidden')
 
-        // Refresh the transaction list to update visual state
-        updateTransactionsList()
-    })
+    //     // Refresh the transaction list to update visual state
+    //     updateTransactionsList()
+    // })
 
     // User details panel
     userDetails = {
@@ -115,8 +116,6 @@ export function initUI() {
         userTransactions: document.getElementById('user-transactions'),
         close: document.getElementById('close-user-panel')
     }
-
-    userDetails.close.addEventListener('click', () => hide(userDetails.panel))
 
     policy = {
         panel: document.getElementById('policy-panel'),
@@ -136,13 +135,13 @@ export function initUI() {
         currentView: 'volume'
     }
 
-    transactions = {
-        panel: document.getElementById('transactions-panel'),
-        close: document.getElementById('close-transactions'),
-        allTransactions: document.getElementById('all-transactions'),
-        listSection: document.getElementById('transactions-list-section'),
-        detailsSection: document.getElementById('transaction-details')
-    }
+    // transactionsPanel = {
+    //     panel: document.getElementById('transactions-panel'),
+    //     close: document.getElementById('close-transactions'),
+    //     allTransactions: document.getElementById('all-transactions'),
+    //     listSection: document.getElementById('transactions-list-section'),
+    //     detailsSection: document.getElementById('transaction-details')
+    // }
 
     tooltip = {
         panel: document.getElementById('transaction-tooltip'),
@@ -160,13 +159,13 @@ export function initUI() {
     analytics.volumeBtn.addEventListener('click', () => switchGDPView('volume'))
     analytics.countBtn.addEventListener('click', () => switchGDPView('count'))
 
-    transactions.close.addEventListener('click', () => {
-        if (transactionListUpdateInterval) {
-            clearInterval(transactionListUpdateInterval)
-            transactionListUpdateInterval = null
-        }
-        hide(transactions.panel)
-    })
+    // transactionsPanel.close.addEventListener('click', () => {
+    //     if (transactionListUpdateInterval) {
+    //         clearInterval(transactionListUpdateInterval)
+    //         transactionListUpdateInterval = null
+    //     }
+    //     hide(transactionsPanel.panel)
+    // })
 
     // Make GDP stat item clickable
     controls.gdpStatItem.style.cursor = 'pointer'
@@ -176,11 +175,11 @@ export function initUI() {
     })
 
     // Make transactions stat item clickable
-    controls.txStatItem.style.cursor = 'pointer'
-    controls.txStatItem.addEventListener('click', (e) => {
-        e.stopPropagation()
-        showTransactionsPanel()
-    })
+    // controls.txStatItem.style.cursor = 'pointer'
+    // controls.txStatItem.addEventListener('click', (e) => {
+    //     e.stopPropagation()
+    //     showTransactionsPanel()
+    // })
 
     // helper array for iterations on panels
     panels = [
@@ -190,7 +189,7 @@ export function initUI() {
         research.panel,
         userDetails.panel,
         analytics.panel,
-        transactions.panel,
+        // transactionsPanel.panel,
         tooltip.panel
     ]
 
@@ -210,18 +209,18 @@ export function initUI() {
         clearAllSelections()
     })
 
-    txButtons.validate.onclick = () => {
-        getSelectedTransaction().validate()
-        clearAllSelections()
-    }
-    txButtons.block.onclick = () => {
-        getSelectedTransaction().block()
-        clearAllSelections()
-    }
-    txButtons.analyze.onclick = () => {
-        getSelectedTransaction().freeze()
-        clearAllSelections()
-    }
+    // txButtons.validate.onclick = () => {
+    //     getSelectedTransaction().validate()
+    //     clearAllSelections()
+    // }
+    // txButtons.block.onclick = () => {
+    //     getSelectedTransaction().block()
+    //     clearAllSelections()
+    // }
+    // txButtons.analyze.onclick = () => {
+    //     getSelectedTransaction().freeze()
+    //     clearAllSelections()
+    // }
 }
 
 export function isClickInsideAnyPanel({ clientX, clientY }) {
@@ -239,8 +238,10 @@ export function closeAllPanels(exceptPanel) {
         if (panel && !panel.classList.contains('hidden') && panel.id !== exceptId) {
             if (panel.id === 'node-details-panel') {
                 hideNodeDetails()
-            } else if (panel.id === 'transaction-tooltip') {
-                hideTransactionTooltip()
+                // } else if (panel.id === 'transaction-tooltip') {
+                //     hideTransactionTooltip()
+            } else if (panel.id === 'user-details-panel') {
+                closeUserDetails()
             } else {
                 hide(panel)
             }
@@ -254,6 +255,9 @@ export function clearAllSelections() {
     // tooltip 
     // Clear all UI panels
     closeAllPanels()
+    // Clear selected user and node
+    selectedUser = null
+    selectedNode = null
 }
 
 export function updateIndicators(budget, gdp, maintenance) {
@@ -456,41 +460,26 @@ export function hideNodeDetails() {
     return selectedNode
 }
 
-function formatTransactionList(txs, userId = null, isClickable = false) {
-
-    if (!txs || txs.length === 0) {
-        return `<div class="no-transactions">No transactions found</div>`
-    }
-
-    return txs.map((tx, index) => {
-        tx.order = index // Add index for clickable functionality
-        return formatTransaction(tx, userId, isClickable)
-    }).join('')
-}
-
-export function showUserDetails(user) {
-    userDetails.name.textContent = user.name || 'John Doe'
-    userDetails.country.textContent = countries[user.country].flag
-    userDetails.type.textContent = user.type
-
-    // Store user ID for refresh functionality
-    userDetails.panel.setAttribute('data-user-id', user.id)
-
-    const userTransactions = window.transactions?.filter(tx =>
-        tx.active && tx.path && (tx.path[0] === user.id || tx.path[tx.path.length - 1] === user.id)
-    ) || []
-
-    userDetails.userTransactions.innerHTML = formatTransactionList(userTransactions, user.id, false)
-
-    show(userDetails.panel)
-}
-
 export function showRestartButton() {
     show(controls.restartBtn)
 }
 
 export function getSelectedNode() {
     return selectedNode
+}
+
+export function setSelectedUser(user) {
+    selectedUser = user
+    return selectedUser
+}
+
+export function getSelectedUser() {
+    return selectedUser
+}
+
+export function clearSelectedUser() {
+    selectedUser = null
+    return selectedUser
 }
 
 export function getControls() {
@@ -526,29 +515,31 @@ export function showGDPPanel() {
     updateGDPChart()
 }
 
-export function showTransactionsPanel() {
-    if (!transactions || !transactions.panel) {
-        return
-    }
-    closeAllPanels(transactions.panel)
-    show(transactions.panel)
+// export function showTransactionsPanel() {
+//     if (!transactionsPanel || !transactionsPanel.panel) {
+//         return
+//     }
+//     closeAllPanels(transactionsPanel.panel)
+//     show(transactionsPanel.panel)
 
-    // Show the list section and hide details
-    show(transactions.listSection)
-    hide(transactions.detailsSection)
+//     // Show the list section and hide details
+//     show(transactionsPanel.listSection)
+//     hide(transactionsPanel.detailsSection)
 
-    updateTransactionsList()
+//     updateTransactionsList()
 
-    // Start simple interval to update every 500ms
-    if (!transactionListUpdateInterval) {
-        transactionListUpdateInterval = setInterval(() => {
-            if (!transactions.panel.classList.contains('hidden')) {
-                updateTransactionsList()
-            }
-        }, 500)
-    }
-}
+//     // Start simple interval to update every 500ms
+//     if (!transactionListUpdateInterval) {
+//         transactionListUpdateInterval = setInterval(() => {
+//             if (!transactionsPanel.panel.classList.contains('hidden')) {
+//                 updateTransactionsList()
+//             }
+//         }, 500)
+//     }
+// }
 
+
+// Temporarely deprecated
 // Store historical chart data - each bucket represents a fixed time period (e.g., 10 days)
 let historicalBuckets = []
 let lastProcessedLogIndex = 0
@@ -781,29 +772,6 @@ function drawTransactionChart(buckets, viewMode) {
     }
 }
 
-// Analytics tab switching removed - now only shows chart
-
-function updateTransactionsList() {
-    if (!transactions || !transactions.allTransactions) return
-
-    const allTransactions = window.transactions || []
-
-    transactions.allTransactions.innerHTML = formatTransactionList(allTransactions, null, true)
-
-    // Add click handlers for transaction items
-    transactions.allTransactions.querySelectorAll('.clickable-transaction').forEach((item, index) => {
-        item.addEventListener('click', (e) => {
-            e.preventDefault()
-            e.stopPropagation()
-            const transaction = allTransactions[index]
-            if (transaction) {
-                showTransactionDetails(transaction)
-            }
-        })
-    })
-
-}
-
 window.addEventListener('keydown', (e) => {
     const key = e.key.toLowerCase()
     if (key === 'tab') {
@@ -848,130 +816,131 @@ export function activatePolicy() {
 
 // Node transactions functionality removed - now using dedicated transactions panel
 
-function showTransactionDetails(tx) {
-    // Mark this transaction as selected
-    setSelectedTransaction(tx)
+// function showTransactionDetails(tx) {
+//     // Mark this transaction as selected
+//     setSelectedTransaction(tx)
 
-    if (tx.active) {
-        Camera.cinematicPanAndZoom(tx.x, tx.y, 3)
-    }
+//     if (tx.active) {
+//         Camera.cinematicPanAndZoom(tx.x, tx.y, 3)
+//     }
 
-    // Hide transaction list, show details
-    hide(transactions.listSection)
-    show(transactions.detailsSection)
+//     // Hide transaction list, show details
+//     hide(transactionsPanel.listSection)
+//     show(transactionsPanel.detailsSection)
 
-    // Show transaction summary at top using unified format
-    const summaryEl = document.getElementById('tx-summary')
-    summaryEl.innerHTML = formatTransaction(tx, null, false)
+//     // Show transaction summary at top using unified format
+//     const summaryEl = document.getElementById('tx-summary')
+//     summaryEl.innerHTML = formatTransaction(tx, null, false)
 
-    // Show enhanced path with current position
-    displayTransactionPath(tx)
+//     // Show enhanced path with current position
+//     displayTransactionPath(tx)
 
-    // Show action buttons only if transaction is active and relevant to current node
-    if (tx.active) {
-        show(txActions)
-        // Update button handlers with current transaction
+//     // Show action buttons only if transaction is active and relevant to current node
+//     if (tx.active) {
+//         show(txActions)
+//         // Update button handlers with current transaction
 
-    } else {
-        hide(txActions)
-        // SHould rarely happen
-        console.warn('Transaction is not active, hiding actions')
-        tx.isSelected = false
+//     } else {
+//         hide(txActions)
+//         // SHould rarely happen
+//         console.warn('Transaction is not active, hiding actions')
+//         tx.isSelected = false
 
-    }
-}
+//     }
+// }
 
-let currentTransactionUpdateInterval = null
-let transactionListUpdateInterval = null
+// let currentTransactionUpdateInterval = null
+// let transactionListUpdateInterval = null
 
-function displayTransactionPath(tx) {
-    const pathDiv = document.getElementById('tx-path')
+// // Deprecated for the moment
+// function displayTransactionPath(tx) {
+//     const pathDiv = document.getElementById('tx-path')
 
-    if (!tx.path || tx.path.length === 0) {
-        pathDiv.innerHTML = '<div class="path-node">Direct transfer</div>'
-        return
-    }
+//     if (!tx.path || tx.path.length === 0) {
+//         pathDiv.innerHTML = '<div class="path-node">Direct transfer</div>'
+//         return
+//     }
 
-    // Clear any existing update interval
-    if (currentTransactionUpdateInterval) {
-        clearInterval(currentTransactionUpdateInterval)
-    }
+//     // Clear any existing update interval
+//     if (currentTransactionUpdateInterval) {
+//         clearInterval(currentTransactionUpdateInterval)
+//     }
 
-    // Function to update the path display
-    const updatePath = () => {
-        if (!tx.active) {
-            hide(txActions)
-            tx.isSelected = false
-        }
+//     // Function to update the path display
+//     const updatePath = () => {
+//         if (!tx.active) {
+//             hide(txActions)
+//             tx.isSelected = false
+//         }
 
-        const currentStepIndex = tx.active ? tx.index : tx.path.length
+//         const currentStepIndex = tx.active ? tx.index : tx.path.length
 
-        // Clear existing content
-        pathDiv.innerHTML = ''
+//         // Clear existing content
+//         pathDiv.innerHTML = ''
 
-        tx.path.forEach((pathId, stationIndex) => {
-            const user = window.users.find(u => u.id === pathId)
-            const node = window.nodes.find(n => n.id === pathId)
-            const name = user?.name || node?.name || pathId
+//         tx.path.forEach((pathId, stationIndex) => {
+//             const user = window.users.find(u => u.id === pathId)
+//             const node = window.nodes.find(n => n.id === pathId)
+//             const name = user?.name || node?.name || pathId
 
-            const isCompleted = stationIndex < currentStepIndex
-            const isCurrent = stationIndex === currentStepIndex
-            const isValidated = stationIndex <= currentStepIndex
-            const isPending = stationIndex > currentStepIndex
+//             const isCompleted = stationIndex < currentStepIndex
+//             const isCurrent = stationIndex === currentStepIndex
+//             const isValidated = stationIndex <= currentStepIndex
+//             const isPending = stationIndex > currentStepIndex
 
-            // Create step container
-            const stepDiv = document.createElement('div')
-            stepDiv.className = 'path-step'
+//             // Create step container
+//             const stepDiv = document.createElement('div')
+//             stepDiv.className = 'path-step'
 
-            // Add dot if current position and active
-            const showDot = tx.active && stationIndex === currentStepIndex
-            if (showDot) {
-                const dotDiv = document.createElement('div')
-                dotDiv.className = 'path-dot'
-                stepDiv.appendChild(dotDiv)
-            }
+//             // Add dot if current position and active
+//             const showDot = tx.active && stationIndex === currentStepIndex
+//             if (showDot) {
+//                 const dotDiv = document.createElement('div')
+//                 dotDiv.className = 'path-dot'
+//                 stepDiv.appendChild(dotDiv)
+//             }
 
-            // Create node span
-            const nodeSpan = document.createElement('span')
-            nodeSpan.textContent = name
-            nodeSpan.className = 'path-node'
+//             // Create node span
+//             const nodeSpan = document.createElement('span')
+//             nodeSpan.textContent = name
+//             nodeSpan.className = 'path-node'
 
-            if (isCurrent) nodeSpan.classList.add('current')
-            if (isCompleted || isValidated) nodeSpan.classList.add('completed')
-            if (isPending) nodeSpan.classList.add('pending')
+//             if (isCurrent) nodeSpan.classList.add('current')
+//             if (isCompleted || isValidated) nodeSpan.classList.add('completed')
+//             if (isPending) nodeSpan.classList.add('pending')
 
-            if (user || node) {
-                nodeSpan.classList.add('clickable-user')
-                nodeSpan.addEventListener('click', (e) => {
-                    e.stopPropagation()
-                    if (user) {
-                        showUserDetails(user)
-                    } else if (node) {
-                        showNodeDetailsByID(pathId)
-                    }
-                })
-            }
+//             if (user || node) {
+//                 nodeSpan.classList.add('clickable-user')
+//                 nodeSpan.addEventListener('click', (e) => {
+//                     e.stopPropagation()
+//                     if (user) {
+//                         showUserDetails(user)
+//                     } else if (node) {
+//                         showNodeDetailsByID(pathId)
+//                     }
+//                 })
+//             }
 
-            stepDiv.appendChild(nodeSpan)
-            pathDiv.appendChild(stepDiv)
+//             stepDiv.appendChild(nodeSpan)
+//             pathDiv.appendChild(stepDiv)
 
-            // Add connector line between steps (except after last step)
-            if (stationIndex < tx.path.length - 1) {
-                const connectorDiv = document.createElement('div')
-                connectorDiv.className = 'path-connector'
-                pathDiv.appendChild(connectorDiv)
-            }
-        })
-    }
+//             // Add connector line between steps (except after last step)
+//             if (stationIndex < tx.path.length - 1) {
+//                 const connectorDiv = document.createElement('div')
+//                 connectorDiv.className = 'path-connector'
+//                 pathDiv.appendChild(connectorDiv)
+//             }
+//         })
+//     }
 
-    // Initial update
-    updatePath()
+//     // Initial update
+//     updatePath()
 
-    // Set up real-time updates if transaction is active
-    if (tx.active) {
-        currentTransactionUpdateInterval = setInterval(updatePath, 500) // Update every 500 ms
-    }
-}
+//     // Set up real-time updates if transaction is active
+//     if (tx.active) {
+//         currentTransactionUpdateInterval = setInterval(updatePath, 500) // Update every 500 ms
+//     }
+// }
 
 export function hideFullInterface() {
     // Simplified interface when using the tutorial
@@ -1013,6 +982,7 @@ export function setSelectedTransaction(tx) {
     }
     tx.isSelected = true
     selectedTransaction = tx
+    showTransactionTooltip(tx)
 }
 
 export function clearTransactionSelection() {
@@ -1021,38 +991,4 @@ export function clearTransactionSelection() {
     }
     selectedTransaction = null
 }
-// Transaction tooltip functions
 
-export function showTransactionTooltip(tx) {
-    setSelectedTransaction(tx)
-
-    tooltip.content.innerHTML = formatTransaction(tx, null, false)
-
-    // Position tooltip
-    if (isMobile) {
-        // For mobile, offset the tx to be above any tutorial
-        const screenPos = Camera.getScreenPos(tx.x, tx.y)
-        // position below the transaction
-        tooltip.panel.style.left = (screenPos.x - 120) + 'px'
-        tooltip.panel.style.top = (screenPos.y + 30) + 'px'
-    } else {
-
-        const screenPos = Camera.getScreenPos(tx.x, tx.y)
-        // For desktop, position to the right
-        tooltip.panel.style.left = (screenPos.x + 35) + 'px'
-        tooltip.panel.style.top = (screenPos.y - 35) + 'px'
-    }
-
-    if (tx.freezed) {
-        tooltip.allowBtn.disabled = true
-        tooltip.blockBtn.disabled = true
-        tooltip.freezeBtn.disabled = true
-    } else {
-        tooltip.allowBtn.disabled = tx.validated
-        tooltip.blockBtn.disabled = false
-        tooltip.freezeBtn.disabled = tx.wasFreezed
-    }
-
-    // Show tooltip and store transaction
-    show(tooltip.panel)
-}

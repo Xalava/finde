@@ -327,7 +327,7 @@ export function removeExpiredEnforcementActions(now) {
         })
 }
 export function increaseAIaccuracy() {
-    nodes.filter(n => n.active && (n.tower === "ai" || n.tower === "super"))
+    activeNodes.filter(n => (n.tower === "ai" || n.tower === "super"))
         .forEach(n => {
             if (n.tower === "ai" && n.accuracy < 0.85) {
                 n.accuracy *= 1.005 * tech.bonus.aiLearning

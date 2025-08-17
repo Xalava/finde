@@ -174,7 +174,7 @@ canvas {
 }
 
 #user-details-panel {
-    top: 50px;
+    top: 60px;
     left: 20px;
     width: 280px;
     max-height: 80vh;
@@ -190,11 +190,16 @@ canvas {
     pointer-events: none;
 }
 
-#user-details {
-    font-size: 12px;
+#user-details-panel .panel-header {
+    padding: 0 0 0 1rem;
+}
 
+#user-details-panel .panel-content {
+    padding: 0.5rem;
+}
+
+#user-summary {
     text-align: center;
-
 }
 
 #transactions-panel {
@@ -253,7 +258,6 @@ canvas {
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
-/* Transaction Path - Simplified & Improved */
 .transaction-path {
     display: flex;
     flex-direction: column;
@@ -565,13 +569,13 @@ details {
 }
 
 .text-yellow-glow {
-    text-shadow: 
+    text-shadow:
         0 0 6px #ffa500,
         0 0 12px #ffa500;
 }
 
 .text-red-glow {
-    text-shadow: 
+    text-shadow:
         0 0 6px #ff0000,
         0 0 12px #ff0000;
 }
@@ -668,9 +672,11 @@ button:disabled {
 button.primary {
     background: rgba(0, 204, 102, 0.2);
 }
+
 button.errory {
     background: rgba(255, 62, 62, 0.2);
 }
+
 button.primary:hover:not(:disabled) {
     background: rgba(0, 204, 102, 0.3);
     border-color: var(--success);
@@ -682,6 +688,7 @@ button.errory:hover:not(:disabled) {
     border-color: rgba(255, 62, 62, 0.5);
     box-shadow: 0 3px 10px rgba(255, 62, 62, 0.3);
 }
+
 #instructions {
     bottom: 80px;
     left: 20px;
@@ -1266,6 +1273,7 @@ small {
 .status-completed {
     color: var(--text-dim);
 }
+
 /* Transaction Tooltip Overlay - */
 #transaction-tooltip {
     position: absolute;
