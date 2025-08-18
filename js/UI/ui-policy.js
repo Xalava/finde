@@ -82,7 +82,7 @@ document.getElementById('compliance-select')?.addEventListener('change', e => {
     state.minCompliance = level
     const levelName = complianceLevels[level]
     showToast('Policy updated', `Minimum compliance set to ${levelName}`, 'info')
-    changePopularity(level > 0 ? -1 : 0)
+    changePopularity(level > 0 ? -10 : 0)
 })
 
 // Listen for policy changes from game module

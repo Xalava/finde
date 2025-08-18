@@ -1,6 +1,6 @@
 import * as UI from '../UI/ui-manager.js'
 import * as config from '../game/config.js'
-import { distance } from '../utils.js'
+import { pointsDistance } from '../utils.js'
 
 // Utils
 export const uiFont = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
@@ -33,8 +33,13 @@ export function drawEffects(effects) {
                 ctx.font = `12px ${uiFont}`
                 ctx.fillText(e.emoji, e.x + 25, e.y + 5)
                 break
+            case 'smallbonus':
+                ctx.fillStyle = '#00cc66'
+                ctx.font = `4px ${uiFont}`
+                ctx.fillText(e.emoji, e.x + 8, e.y-2 )
+                break
             case 'budget':
-                ctx.fillStyle = '#666'
+                ctx.fillStyle = '#AAA'
                 ctx.font = `8px ${uiFont}`
                 ctx.fillText(e.emoji, e.x + 25, e.y + 5)
                 ctx.font = `4px ${uiFont}`
@@ -85,6 +90,31 @@ export function drawEffects(effects) {
     //     return e.timer >= 0
     // })
 
+}
+
+export function drawObjectEffects(objectEffects) {
+    objectEffects.forEach(e => {
+        e.timer -= 1
+        if (!e.object.active) {
+            e.timer = 0
+            return
+        } else {
+            ctx.save()
+            if (e.direction === '+') {
+                ctx.font = `4px ${uiFont}`
+                ctx.fillText(e.emoji, e.object.x + e.offset.x, e.object.y + e.offset.y - ((30 - e.timer) / 10))// object moves up. Assumes timer 30
+                //
+            } else {
+                ctx.shadowColor = 'red'
+                ctx.shadowBlur = 16
+                ctx.filter = "hue-rotate(-50deg)"
+                // display nothing for the moment
+                // ctx.fillText(e.emoji, e.object.x + e.offset.x, e.object.y + e.offset.y)//
+            }
+
+            ctx.restore()
+        }
+    })
 }
 
 export function drawUser(user, debug = false) {
@@ -337,7 +367,7 @@ export function drawCorruptionMeter(spread) {
     ctx.restore()
 }
 
-export function drawPopularityMeter(reputation) {
+export function drawPopularityMeter(popularity) {
     ctx.save()
     let meterX, meterY, meterWidth, meterHeight
 
@@ -359,8 +389,8 @@ export function drawPopularityMeter(reputation) {
     ctx.strokeStyle = 'rgba(0, 0, 0, 0.1)'
     ctx.lineWidth = 1
     ctx.stroke()
-    // Draw corruption bar
-    const barWidth = (meterWidth * Math.min(reputation, 100)) / 100
+    // Draw popularity bar
+    const barWidth = (meterWidth * popularity) / 1000
     const gradient = ctx.createLinearGradient(meterX, meterY, meterX + meterWidth, meterY)
     gradient.addColorStop(0, '#000040ff')
     gradient.addColorStop(0.4, '#000050ff')
@@ -376,7 +406,7 @@ export function drawPopularityMeter(reputation) {
     ctx.font = `12px ${uiFont}`
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
-    ctx.fillText(`Popularity  ${Math.floor(reputation)}`, meterX + meterWidth / 2, meterY + meterHeight / 2)
+    ctx.fillText(`Popularity  ${Math.floor(popularity)}`, meterX + meterWidth / 2, meterY + meterHeight / 2)
 
     ctx.restore()
 }
@@ -468,7 +498,7 @@ function getExpandedConvexHull(points, distance) {
 
             const cross = (next.x - current.x) * (p.y - current.y) - (next.y - current.y) * (p.x - current.x)
             if (next === current || cross > 0 || (cross === 0 &&
-                distance(p, current) > distance(next, current))) {
+                pointsDistance(p, current) > pointsDistance(next, current))) {
                 next = p
             }
         }

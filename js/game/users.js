@@ -1,4 +1,4 @@
-import { normalRandom, selectRandomly, distance } from '../utils.js'
+import { normalRandom, selectRandomly, pointsDistance } from '../utils.js'
 import { DISTANCE, countries } from './config.js'
 import { skewedRandom } from '../utils.js'
 window.userEdges = []
@@ -19,7 +19,7 @@ export function generateUsers(target = false) {
                 userEdges.push([user.id, t.id])
                 users.push(user)
             } else {
-                console.warning("User creation failed for node", t.id)
+                console.warn("User creation failed for node", t.id)
             }
         }
     })
@@ -28,8 +28,9 @@ export function generateUsers(target = false) {
 class User {
     constructor(node) {
         // Location
-        const { x, y } = _findSuitablePosition(node)
-        if (!x || !y) return null
+        const position = _findSuitablePosition(node)
+        if (!position) return null
+        const { x, y } = position
         this.id = `${users.length}`
         this.x = x
         this.y = y
@@ -38,7 +39,7 @@ class User {
         if (node.type === 'bank')
             this.type = random < 0.6 ? 'person' : random < 0.9 ? 'business' : 'government'
         else
-            type = random < 0.7 ? 'person' : 'business'
+            this.type = random < 0.7 ? 'person' : 'business'
         this.name = _nameUser(this.type, node.country)
         this.country = node.country
         // economic activity
@@ -68,7 +69,7 @@ function _findSuitablePosition(node) {
     do {
         const x = node.x + (Math.random() - 0.5) * DISTANCE.MAX_USERTONODE
         const y = node.y + (Math.random() - 0.5) * DISTANCE.MAX_USERTONODE
-        const overlapping = nodes.some(n => distance({x, y}, n) < DISTANCE.MIN_USERTONODE) || users.some(u => distance({x, y}, u) < DISTANCE.MIN_USERTOUSER)
+        const overlapping = nodes.some(n => pointsDistance({ x, y }, n) < DISTANCE.MIN_USERTONODE) || users.some(u => pointsDistance({ x, y }, u) < DISTANCE.MIN_USERTOUSER)
         if (!overlapping) {
             return ({ x, y })
         }
@@ -141,8 +142,8 @@ export function assignNearestBank(user) {
     } else {
         validNodes = activeNodes.filter(n => n.type !== 'processor')
     }
-    const nearest = validNodes.sort((a, b) => distance(user, a) - distance(user, b))[0]
-    if (nearest && distance(user, nearest) < DISTANCE.MAX_USERTONODE) {
+    const nearest = validNodes.sort((a, b) => pointsDistance(user, a) - pointsDistance(user, b))[0]
+    if (nearest && pointsDistance(user, nearest) < DISTANCE.MAX_USERTONODE) {
         user.bankId = nearest.id
         userEdges = userEdges.filter(e => e[0] !== user.id)
         userEdges.push([user.id, user.bankId])

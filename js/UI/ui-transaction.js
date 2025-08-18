@@ -77,6 +77,13 @@ export function showTransactionTooltip(tx) {
 
     tooltip.content.innerHTML = formatTransaction(tx, null, false)
     tooltip.motive.innerHTML = tx.motive
+    if (tx.validated) {
+        document.querySelector(".transaction-status").innerHTML += `<div><small>✅</small></div>`
+    }
+
+    if (tx.wasFreezed) {
+        document.querySelector(".transaction-status").innerHTML += `<div><small>🧊</small></div>`
+    }
 
     // Position tooltip
     if (isMobile) {

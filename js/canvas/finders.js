@@ -1,5 +1,5 @@
 import * as Camera from './camera.js'
-import { distance } from '../utils.js'
+import { pointsDistance } from '../utils.js'
 
 const CLICK_DETECTION_RADIUS = 20
 
@@ -7,7 +7,7 @@ const CLICK_DETECTION_RADIUS = 20
 export function findNodeAt(screenX, screenY) {
     const worldPos = Camera.getWorldPosition(screenX, screenY)
     return nodes.find(node => {
-        return node.active && distance(node, worldPos) < CLICK_DETECTION_RADIUS
+        return node.active && pointsDistance(node, worldPos) < CLICK_DETECTION_RADIUS
     })
 }
 export function findTransactionAt(screenX, screenY) {
@@ -15,7 +15,7 @@ export function findTransactionAt(screenX, screenY) {
 
     return activeTransactions.find(tx => {
         const radius = tx.size === 'small' ? 10 : tx.size === 'medium' ? 12 : 18
-        return distance(tx, worldPos) < radius // Math.max(CLICK_DETECTION_RADIUS, radius )
+        return pointsDistance(tx, worldPos) < radius // Math.max(CLICK_DETECTION_RADIUS, radius )
     })
 }
 export function findUserAt(screenX, screenY) {
@@ -26,7 +26,7 @@ export function findUserAt(screenX, screenY) {
     }
 
     const found = activeUsers.find(user => {
-        const dist = distance(user, worldPos)
+        const dist = pointsDistance(user, worldPos)
         if (dist < CLICK_DETECTION_RADIUS) { // Increased click area for debugging
             // console.log(`User ${user.id} at ${user.x.toFixed(1)}, ${user.y.toFixed(1)} - distance: ${dist.toFixed(1)} - MATCH`)
         }
@@ -36,7 +36,7 @@ export function findUserAt(screenX, screenY) {
     if (!found) {
         // console.log('Closest users:')
         activeUsers.slice(0, 3).forEach(user => {
-            const dist = distance(user, worldPos)
+            const dist = pointsDistance(user, worldPos)
             // console.log(`  User ${user.id} at ${user.x.toFixed(1)}, ${user.y.toFixed(1)} - distance: ${dist.toFixed(1)}`)
         })
     }

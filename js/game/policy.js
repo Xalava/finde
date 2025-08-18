@@ -1,4 +1,4 @@
-let taxRate = 0.2
+let taxRate = 0.05 // TODO distinguish fees and taxes
 
 export const regulationLevels = {
     lenient: { detectMod: 0.9, fpMod: 2, icon: '🌿' },
@@ -9,7 +9,7 @@ export const regulationLevels = {
 export const policyPoints = document.getElementById('policy-points')
 
 export const POPULARITY = {
-    INIT: 800,
+    INIT: 200,
     MAX: 1000
 }
 
@@ -31,7 +31,7 @@ export function popularityDelta() {
             break
     }
     if (state.requireValidation) d -= 1
-    d -= Math.round(getTaxRate() * 100 - 2)
+    d -= Math.round(getTaxRate() * 100)
 
     const deltaText = d > 0 ? `+${d}` : d < 0 ? `${d}` : ''
     policyPoints.innerText = deltaText
@@ -39,6 +39,10 @@ export function popularityDelta() {
 }
 
 export function changePopularity(delta) {
+    if (isNaN(delta)) {
+        console.error("NaN in popularity", delta)
+        return
+    }
     popularity = Math.max(0, Math.min(POPULARITY.MAX, popularity + delta))
     window.dispatchEvent(new CustomEvent('policyChanged'))
 }

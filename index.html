@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>Financial Defense</title>
     <link rel="stylesheet" href="style.css" />
+    <meta name="description" content="A game to understand payments and compliance.">
 </head>
 
 <body>
@@ -40,6 +41,11 @@
                 <strong class="ui-name">GDP</strong>
                 <span id="gdp">0</span>
             </div>
+            <!-- TODO: Statistics panel -->
+            <!-- <div id="stat-stat-item" class="stat-item" data-tooltip="Transaction and detection statistics">
+                                                            <span class="stat-icon">📈</span>
+                                                            <strong class="ui-name">Stats</strong>
+                                                        </div> -->
             <div class="stat-item" data-tooltip="Available operational budget">
                 <span class="stat-icon">💰</span>
                 <strong class="ui-name">Budget</strong>
@@ -360,6 +366,7 @@
         <div class="transaction-item" data-tx-id="">
             <div class="transaction-amount"></div>
             <div class="transaction-parties"></div>
+            <div class="transaction-status"></div>
         </div>
     </template>
 

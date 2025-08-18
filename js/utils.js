@@ -10,7 +10,7 @@ export function selectRandomly(array) {
 
 export function normalRandom(max) {
     // Ideally, we look for a normal distribution, with a spike in low / medium
-    // Returns a random number between 1 and 100, with 50% below 10
+    // Returns a random number between 1 and max, with 50% below 10 (for max = 100)
     let normalDice = Math.pow(1.5849, Math.random() * 10)
     let result = Math.ceil(normalDice / 100 * max)
     return result
@@ -28,24 +28,31 @@ export function skewedRandom(bias, stddev = 3, min = 1, max = 9) {
     return Math.min(max, Math.max(min, result))
 }
 
-export function distance(a, b) {
+export function pointsDistance(a, b) {
     return Math.hypot(a.x - b.x, a.y - b.y)
 }
 
-
 function displayConsoleRandom() {
-    for (let bias = 1; bias <= 9; bias++) {
-        let counts = Array(9).fill(0)
+    let BIAS = 15
+    let STDDEV = 10
+    let MAX = 999
+    let MIN = 1
+
+    let step = (MAX - MIN) / 10
+    console.log("Step is", step)
+
+    // for (let bias = MIN; bias <= MAX / 10; bias += step) {
+    let counts = Array(MAX).fill(0)
         for (let i = 0; i < 5000; i++) {
-            counts[skewedRandom(bias) - 1]++
+            counts[skewedRandom(BIAS, STDDEV, MIN, MAX) - 1]++
             // counts[normalRandom(bias) - 1]++
         }
-        console.log(`Bias ${bias}:`)
+    console.log(`Bias ${BIAS}:`)
         counts.forEach((c, i) => {
             console.log(`${i + 1}: ${'*'.repeat(c / 50)}`)
         })
         console.log("\n")
-    }
+    // }
 }
 
 window.d = displayConsoleRandom

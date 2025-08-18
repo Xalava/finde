@@ -136,7 +136,7 @@ const TUTORIAL_STEPS = [
     },
     {
         title: 'Increase popularity and intelligence',
-        content: 'You popularity depend on your accurate and quick judgement. Freezing helps gather intelligence. Reach 850 in popularity and 30 in intelligence',
+        content: 'You popularity depend on your accurate and quick judgement. Freezing helps gather intelligence. Reach 250 in popularity and 50 in intelligence',
         onEnter: () => {
             unlock.reputation = true
             unlock.research
@@ -146,7 +146,7 @@ const TUTORIAL_STEPS = [
         },
         waitFor: () => {
             if (debug) return true
-            if (policy.popularity >= policy.POPULARITY.INIT + 50 && tech.getResearchPoints() >= 30) {
+            if (policy.popularity >= policy.POPULARITY.INIT + 50 && tech.getResearchPoints() >= 50) {
                 UI.show(tutorialContainer)
                 return true
             } else {

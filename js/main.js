@@ -29,6 +29,7 @@ Camera.initCamera(canvas)
 window.addEventListener('resize', Camera.resizeCanvas.bind(null, ctx))
 
 let effects = []
+let objectEffects = []
 
 function handleCanvasClick(screenX, screenY) {
     const tx = findTransactionAt(screenX, screenY)
@@ -37,7 +38,11 @@ function handleCanvasClick(screenX, screenY) {
         UI.closeAllPanels()
         // Select new transaction
         UI.setSelectedTransaction(tx)
-        Camera.cinematicPanAndZoom(tx.x, tx.y, 3, 1)
+        if (Camera.getZoom() < 3) {
+            Camera.panAndZoom(tx.x, tx.y, 3)
+        } else {
+            Camera.panAndZoom(tx.x, tx.y, Camera.getZoom())
+        }
         return
     }
     if (unlock.nodes) {
@@ -261,7 +266,16 @@ export function addEffect(x, y, emoji, type = 'default', color = null) {
 
     }
     effects.push({ x, y, emoji, timer, type, color })
+}
 
+export function addObjectEffect(object, emoji, direction = "+", timer = 30, offset = { x: 4, y: 0 }) {
+    // oddset
+    if (object.size === 'large') {
+        offset.x += 4
+    } else if (object.size === 'medium') {
+        offset.x += 1
+    }
+    objectEffects.push({ object, emoji, direction, timer, offset })
 }
 
 function calculateIndicators() {
@@ -410,8 +424,11 @@ function drawGame() {
         graphics.drawTransaction(tx)
     })
     graphics.drawEffects(effects)
+    graphics.drawObjectEffects(objectEffects)
+
     // Filter out expired effects
     effects = effects.filter(e => e.timer > 0)
+    objectEffects = objectEffects.filter(e => e.timer > 0)
     if (displayCountries) {
         graphics.drawCountries(nodes, users)
     }
@@ -429,7 +446,11 @@ function drawGame() {
         if (graphics.isMobile) {
             Camera.panAndZoom(selectedTx.x, selectedTx.y + 40, 3)
         } else {
-            Camera.panAndZoom(selectedTx.x, selectedTx.y, 3)
+            if (Camera.getZoom() < 3) {
+                Camera.panAndZoom(selectedTx.x, selectedTx.y, 3)
+            } else {
+                Camera.panAndZoom(selectedTx.x, selectedTx.y, Camera.getZoom())
+            }
         }
         // Only show tooltip if it's not already visible
         if (!UI.isTransactionTooltipVisible()) {
@@ -465,6 +486,9 @@ function gameLoop() {
         if (UI.getSelectedNode()) {
             UI.updateCurrentNodeDetails(budget, placeTower, enforceAction)
         }
+
+        // Update statistics panel if visible
+        // uiStatistics.updateStatisticsPanel()
         if (currentDay % Math.round(NEW_NODE_FREQUENCY / spawnControl) === 0) {
             // Every 60 days, a new node is added and we check for popularity
             if (!isFirstPlay()) {

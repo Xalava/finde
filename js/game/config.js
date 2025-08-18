@@ -26,7 +26,7 @@ export const towerOptions = {
     },
     medium: {
         name: 'Medium Filter',
-        cost: 75,
+        cost: 95,
         accuracy: 0.7,
         maintenance: 0,
         icon: '🔬',
@@ -40,7 +40,7 @@ export const towerOptions = {
         name: 'Advanced Filter',
         cost: 350,
         accuracy: 0.85,
-        maintenance: 1,
+        maintenance: 2,
         icon: '🔭',
         description: 'Advanced detection with 85% accuracy. Not compatible with AI.',
         depend: 'medium',
@@ -51,7 +51,7 @@ export const towerOptions = {
         name: 'AI System',
         cost: 299,
         accuracy: 0.6,
-        maintenance: 2,
+        maintenance: 3,
         icon: '🧠',
         description: '60% accuracy detection that learns and improves by 0.5% per day, up to 80%. maintenance cost is 2.',
         depend: 'medium',
@@ -62,7 +62,7 @@ export const towerOptions = {
         name: 'Supra AI System',
         cost: 1475,
         accuracy: 0.8,
-        maintenance: 6,
+        maintenance: 12,
         icon: '🤖',
         description: 'High-end system with 80% accuracy that improves by 1% per day, up to 98%!',
         depend: 'ai',
@@ -122,17 +122,17 @@ export const MAX_CORRUPTION = 9
 
 export const txSizeOptions = {
     small: { name: 'small', max: 10 },
-    medium: { name: 'medium', max: 30 },
-    large: { name: 'large', max: 0 }
+    medium: { name: 'medium', max: 100 },
+    large: { name: 'large', max: 10000 } 
 }
-export const getTransactionSizeName = (amount) => {
+export const getSizeTier = (amount) => {
     if (amount < txSizeOptions.small.max) return 'small'
     if (amount < txSizeOptions.medium.max) return 'medium'
     return 'large'
 }
 
 export const legalityOptions = ['legit', 'questionable', 'illegal']
-export const getLegality = (riskLevel) => {
+export const getLegalityCategory = (riskLevel) => {
     if (riskLevel < 4) return 'legit'
     if (riskLevel < 7) return 'questionable'
     return 'illegal'
@@ -269,7 +269,7 @@ export const techTree = {
         {
             id: 'basic_compliance',
             name: 'Compliance Training',
-            cost: 25,
+            cost: 40,
             prerequisites: [],
             description: 'Enables Medium Filters.',
             effects: {
@@ -281,7 +281,7 @@ export const techTree = {
         {
             id: 'advanced_compliance',
             name: 'Compliance Protocols',
-            cost: 150,
+            cost: 160,
             prerequisites: ['basic_compliance'],
             description: 'Unlocks Advanced Filter and improves accuracy for all systems.',
             effects: {
@@ -342,7 +342,7 @@ export const techTree = {
         {
             id: 'organised_procedures',
             name: 'Organised Procedures',
-            cost: 90,
+            cost: 60,
             prerequisites: [],
             description: 'Reduces Enforcement cost.',
             effects: {
@@ -401,7 +401,7 @@ export const techTree = {
         {
             id: 'basic_network',
             name: 'Standardised Messaging',
-            cost: 80,
+            cost: 30,
             prerequisites: [],
             description: 'Improves transaction speed.',
             effects: {
@@ -432,6 +432,19 @@ export const techTree = {
             },
             icon: '⚡',
         },
+        ,
+        {
+            id: 'instant_settlement',
+            name: 'Instant settlement ',
+            cost: 800,
+            prerequisites: ['high_speed_processing'],
+            description: 'Instant transactions are not visible, increase wealth, but crime too.',
+            effects: {
+                // TODO : enable instant settlement transactoins
+            },
+            icon: '☄️',
+        },
+
         {
             id: 'distributed_architecture',
             name: 'Distributed Systems Architecture',

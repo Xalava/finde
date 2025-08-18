@@ -43,7 +43,7 @@ function updateResearchPointsDisplay() {
     resUI.points.textContent = pts
     // Todo link with unlock logic
     if (pts >= 1 && !firstResearchPoint) {
-        addResearchPoints(10)// one time bonus for the early game
+        addResearchPoints(30)// one time bonus for the early game
         setTimeout(() => {
             show(resUI.button)
             showToast(`🧪 Research Enabled!`, `Research points are collected when blocking or analysing some transactions.`, 'info')

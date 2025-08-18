@@ -5,6 +5,7 @@ import { uiFont } from '../canvas/graphics.js'
 import { selectRandomly } from '../utils.js'
 import { showTransactionTooltip } from './ui-transaction.js'
 import { closeUserDetails } from './ui-users.js'
+// import { initStatisticsUI, showStatisticsPanel } from '../../ideas/statistics/ui-statistics.js'
 
 let indicators = null
 let controls = null
@@ -14,6 +15,7 @@ let policy = null
 let research = null
 export let userDetails = null
 let analytics = null
+let statistics = null
 // let transactionsPanel = null
 export let tooltip = null
 let panels = null
@@ -136,6 +138,11 @@ export function initUI() {
         currentView: 'volume'
     }
 
+    // statistics = {
+    //     panel: document.getElementById('statistics-panel'),
+    //     close: document.getElementById('close-statistics')
+    // }
+
     // transactionsPanel = {
     //     panel: document.getElementById('transactions-panel'),
     //     close: document.getElementById('close-transactions'),
@@ -158,6 +165,8 @@ export function initUI() {
 
     analytics.close.addEventListener('click', () => hide(analytics.panel))
 
+    // statistics.close.addEventListener('click', () => hide(statistics.panel))
+
     analytics.volumeBtn.addEventListener('click', () => switchGDPView('volume'))
     analytics.countBtn.addEventListener('click', () => switchGDPView('count'))
 
@@ -176,6 +185,14 @@ export function initUI() {
         showGDPPanel()
     })
 
+    // // Make statistics stat item clickable
+    // controls.statStatItem = document.getElementById('stat-stat-item')
+    // controls.statStatItem.style.cursor = 'pointer'
+    // controls.statStatItem.addEventListener('click', (e) => {
+    //     e.stopPropagation()
+    //     showStatisticsPanel()
+    // })
+
     // Make transactions stat item clickable
     // controls.txStatItem.style.cursor = 'pointer'
     // controls.txStatItem.addEventListener('click', (e) => {
@@ -191,6 +208,7 @@ export function initUI() {
         research.panel,
         userDetails.panel,
         analytics.panel,
+        // statistics.panel,
         // transactionsPanel.panel,
         tooltip.panel
     ]
@@ -223,6 +241,9 @@ export function initUI() {
     //     getSelectedTransaction().freeze()
     //     clearAllSelections()
     // }
+
+    // Initialize statistics UI
+    // initStatisticsUI()
 }
 
 export function isClickInsideAnyPanel({ clientX, clientY }) {
@@ -265,7 +286,7 @@ export function clearAllSelections() {
 export function updateIndicators(budget, gdp, maintenance) {
     if (maintenance > 0) {
 
-        indicators.budget.textContent = `${budget.toFixed(0)} (- ${maintenance.toFixed(0)})`
+        indicators.budget.innerHTML = `${budget.toFixed(0)} (- ${maintenance.toFixed(0)})`
     } else {
         indicators.budget.textContent = budget.toFixed(0)
     }

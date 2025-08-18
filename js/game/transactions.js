@@ -2,9 +2,9 @@ import * as policy from './policy.js'
 import * as tech from './tech.js'
 import { isFirstPlay } from '../tutorial.js'
 import * as UI from '../UI/ui-manager.js'
-import { selectRandomly, normalRandom, skewedRandom, distance } from '../utils.js'
-import { getLegality, getTransactionSizeName } from './config.js'
-import { addEffect, getSpeedControl, dropProbability, incrementDailyDetectedTransactions } from '../main.js'
+import { selectRandomly, normalRandom, skewedRandom, pointsDistance } from '../utils.js'
+import { getLegalityCategory, getSizeTier, txSizeOptions } from './config.js'
+import { addEffect, getSpeedControl, dropProbability, incrementDailyDetectedTransactions, addObjectEffect } from '../main.js'
 import { detect } from './nodes.js'
 
 let txId = 0
@@ -90,6 +90,26 @@ function _calculateRiskLevel(sourceUser, targetUser) {
     return result
 }
 
+function _generateRandomAmount() {
+    // Not realistic, but ensures a distribution
+    const r = Math.random()
+    if (r < 0.25) {
+        // Small
+        return 1 + Math.floor(Math.random() * (txSizeOptions.small.max - 1))
+    } else if (r > 0.50) {
+        // Medium
+        const u = Math.random()
+        return txSizeOptions.small.max + Math.floor(u * (txSizeOptions.medium.max - txSizeOptions.small.max - 1))
+
+    } else {
+        // Large 
+        const u = Math.random()
+        const lambda = 0.002 // Decay rate
+        const value = txSizeOptions.medium.max + Math.floor(-Math.log(1 - u) / lambda)
+        return Math.min(value, txSizeOptions.large.max)
+    }
+}
+
 class Transaction {
     constructor(sourceUser, targetUser, path, amount = null, riskLevel = null) {
         this.path = path
@@ -115,15 +135,16 @@ class Transaction {
             this.riskLevel = _calculateRiskLevel(sourceUser, targetUser)
         }
         // Misnomer: now legality is the just apparent risk level
-        this.legality = getLegality(this.riskLevel)
+        this.legality = getLegalityCategory(this.riskLevel)
 
         // TODO : Updat formula depending on users sizes and for more vairation in amounts. 
         if (amount) {
             this.amount = amount
         } else {
-            this.amount = Math.round(Math.exp(Math.random() * 4.2)) // 15 on average with log-normal distribution and exponent 4.2 
+            this.amount = _generateRandomAmount()
+            // Todo could be proportional to sender?
         }
-        this.size = getTransactionSizeName(this.amount) // kept for comptaibility, in the future, we could use directly amount
+        this.size = getSizeTier(this.amount) // kept for comptaibility, in the future, we could use directly amount
         this.speed = 0.5 + Math.random() * Math.min(15 / this.amount, 1)
 
         // Purpose
@@ -145,7 +166,7 @@ class Transaction {
             nodes[nextId]
 
         const speed = this.speed * tech.bonus.transactionSpeed * getSpeedControl()
-        const dist = distance(next, this)
+        const dist = pointsDistance(next, this)
 
         if (dist < speed) {
             // remaining distance to next node is less than the speed of the transaction
@@ -222,9 +243,10 @@ class Transaction {
         switch (this.legality) {
             case 'legit':
                 UI.showToast('✅ Transaction validated', `Legit transaction from ${this.sourceUser.name}. `, 'success')
-                budget += 1
-                addEffect(this.x, this.y, "+1", "budget")
                 policy.changePopularity(3)
+                addObjectEffect(this, "✨")
+                // addObjectEffect(this, "✅",  2000, { x: 3, y: 3 })
+
                 this.validated = true
                 break
             case 'questionable':
@@ -235,9 +257,10 @@ class Transaction {
                     this.validated = true
                     this.legality = 'legit'
                 } else {
-                    UI.showToast('✅ Suspicious transaction validated', `Later reports show that it was part of an illegal scheme, damaging your reputation and budget (-${reward}💰️).`, 'error')
+                    UI.showToast('✅ Suspicious transaction validated', `Later reports show that it was part of an illegal scheme, damaging your reputation  (-${reward}).`, 'error')
                     policy.changePopularity(-reward)
-                    budget -= reward
+                    addObjectEffect(this, "✨", "-")
+
                     this.legality = 'illegal'
                     // (This one is now a normal illegal that could be validated again.)
                 }
@@ -245,6 +268,7 @@ class Transaction {
             case 'illegal':
                 UI.showToast('✅ Illegal transaction validated', `${reward > 9 ? "Strongly damaging" : "Damaging"} damaging your reputation (-${reward * 5})`, 'error')
                 policy.changePopularity(-reward * 5)
+                addObjectEffect(this, "✨", "-")
                 this.validated = true
                 break
         }
@@ -265,11 +289,14 @@ class Transaction {
                 case 'legit':
                     UI.showToast('🧊 Transaction freezed and analyzed', `Damage in global popularity for freezing a legitimate operation from ${this.sourceUser.name}`, 'error')
                     policy.changePopularity(-reward)
+                    addObjectEffect(this, "✨", "-")
                     break
                 case 'questionable':
-                    UI.showToast('🧊 Transaction freezed and analyzed', `Suspicious transaction from ${this.sourceUser.name}. Gathering ${reward} in intelligence `, 'error')
+                    UI.showToast('🧊 Transaction freezed and analyzed', `Suspicious transaction from ${this.sourceUser.name}. Gathering ${reward} in intelligence `, 'warning')
                     tech.addResearchPoints(reward)
-                    if (Math.random() > 0.5) {
+                    addObjectEffect(this, "🧪")
+
+                    if (this.riskLevel < 6) {
                         this.legality = 'legit'
                     } else {
                         this.legality = 'illegal'
@@ -278,6 +305,8 @@ class Transaction {
                 case 'illegal':
                     UI.showToast('🧊 Transaction freezed and analyzed', `Illegal transaction from ${this.sourceUser.name}. Gathering intelligence ( ${reward * 2}), but the transaction may still cause damage`, 'warning')
                     tech.addResearchPoints(reward * 2)
+                    addObjectEffect(this, "🧪")
+
                     break
             }
 
@@ -292,20 +321,26 @@ class Transaction {
             case 'legit':
                 UI.showToast('🛑 Legit transaction blocked', `${reward > 9 ? "Heavy damage" : "Damage"} in global popularity (-${reward * 2})`, 'error')
                 policy.changePopularity(-reward * 2)
+                addObjectEffect(this, "✨", "-")
+
                 break
             case 'questionable':
-                if (Math.random() < 0.5) {
+                if (this.risk < 6) {
                     UI.showToast('🛑 Transaction blocked', `Suspicious transaction from ${this.sourceUser.name}. Limited consequences`, 'warning')
                     let change = Math.random() < 0.5 ? 3 : -4
                     policy.changePopularity(change)
                 } else {
                     UI.showToast('🛑 Transaction blocked', `Suspicious transaction from ${this.sourceUser.name}. Later report show it was part of an illegal scheme, boosting your reputation 🌟 by ${reward}`, 'warning')
                     policy.changePopularity(reward)
+                    addObjectEffect(this, "✨")
+
                 }
                 break
             case 'illegal':
                 UI.showToast('🛑 Transaction blocked', `Illegal transaction from ${this.sourceUser.name}has been blocked. Gaining popularity (+${reward})`, 'success')
                 policy.changePopularity(reward)
+                addEffect(this.x, this.y, "✨", 'smallbonus')//not visible as object ended
+
                 break
         }
     }
@@ -371,7 +406,7 @@ function _defineReference(sourceUser, targetUser, risklevel, amount) {
             },
             high: {
                 small: ["Irregular Fine", "Anonymous Payment", "Undisclosed Fee", "Cash Payment", "Private Settlement", "Off-record Payment"],
-                medium: ["Suspicious Tax Payment", "Anonymous Settlement", "Irregular Payment", "Complex Legal Fee", "Undisclosed Fine", "Private Agreement"],
+                medium: ["Suspicious Tax Payment", " Settlement", "Irregular Payment", "Complex Legal Fee", "Undisclosed Fine", "Private Agreement"],
                 large: ["Offshore Tax Settlement", "Anonymous Major Payment", "Complex Legal Settlement", "Undisclosed Major Fine", "High-Risk Government Payment", "Irregular Major Settlement"]
             }
         },
@@ -480,8 +515,8 @@ function _defineReference(sourceUser, targetUser, risklevel, amount) {
     }
 
     const key = `${sourceUser.type}-${targetUser.type}`
-    const riskCategory = risklevel < 4 ? 'low' : risklevel < 7 ? 'medium' : 'high'
-    const amountTier = amount < 1000 ? 'small' : amount < 10000 ? 'medium' : 'large'
+    const riskCategory = risklevel < 4 ? 'low' : risklevel < 7 ? 'medium' : 'high' // Todo harmonise with : getLegalityCategory(risklevel)
+    const amountTier = getSizeTier(amount)
 
     return selectRandomly(referenceData[key][riskCategory][amountTier])
 }
