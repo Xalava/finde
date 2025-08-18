@@ -41,6 +41,10 @@ export function getResearchProgress() {
     return researchState.progress
 }
 
+export function isTechUnlocked(techRequirement) {
+    return !techRequirement || researchState.progress[techRequirement]?.researched
+}
+
 // Initialize technologies as locked
 export function initTechTree() {
     Object.keys(techTree).forEach(branch => {

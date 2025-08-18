@@ -1,5 +1,6 @@
 import * as UI from '../UI/ui-manager.js'
 import * as config from '../game/config.js'
+import { distance } from '../utils.js'
 
 // Utils
 export const uiFont = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
@@ -383,7 +384,7 @@ export function drawPopularityMeter(reputation) {
 export function drawCountries(nodes, users) {
     config.countryKeys.forEach(countryKey => {
         const country = config.countries[countryKey]
-        if (nodes.filter(node => node.country === countryKey && node.active).length > 0) {
+        if (nodes.some(node => node.country === countryKey && node.active)) {
 
             drawCountryShape(countryKey, country, nodes, users)
             drawCountryFlag(countryKey, country)
@@ -467,7 +468,7 @@ function getExpandedConvexHull(points, distance) {
 
             const cross = (next.x - current.x) * (p.y - current.y) - (next.y - current.y) * (p.x - current.x)
             if (next === current || cross > 0 || (cross === 0 &&
-                Math.hypot(p.x - current.x, p.y - current.y) > Math.hypot(next.x - current.x, next.y - current.y))) {
+                distance(p, current) > distance(next, current))) {
                 next = p
             }
         }

@@ -2,7 +2,8 @@ import * as policy from './policy.js'
 import * as tech from './tech.js'
 import { isFirstPlay } from '../tutorial.js'
 import * as UI from '../UI/ui-manager.js'
-import { selectRandomly, normalRandom, skewedRandom } from '../utils.js'
+import { selectRandomly, normalRandom, skewedRandom, distance } from '../utils.js'
+import { getLegality, getTransactionSizeName } from './config.js'
 import { addEffect, getSpeedControl, dropProbability, incrementDailyDetectedTransactions } from '../main.js'
 import { detect } from './nodes.js'
 
@@ -89,12 +90,6 @@ function _calculateRiskLevel(sourceUser, targetUser) {
     return result
 }
 
-function _calculateLegality(riskLevel) {
-    if (riskLevel < 4) return 'legit'
-    if (riskLevel < 7) return 'questionable'
-    return 'illegal'
-}
-
 class Transaction {
     constructor(sourceUser, targetUser, path, amount = null, riskLevel = null) {
         this.path = path
@@ -114,13 +109,13 @@ class Transaction {
         this.isRecurrent = false
 
         // Risk level
-        if (riskLevel) {
+        if (riskLevel !== null) {
             this.riskLevel = riskLevel
         } else {
             this.riskLevel = _calculateRiskLevel(sourceUser, targetUser)
         }
         // Misnomer: now legality is the just apparent risk level
-        this.legality = _calculateLegality(this.riskLevel)
+        this.legality = getLegality(this.riskLevel)
 
         // TODO : Updat formula depending on users sizes and for more vairation in amounts. 
         if (amount) {
@@ -149,10 +144,8 @@ class Transaction {
             users[nextId] :
             nodes[nextId]
 
-        const dx = next.x - this.x
-        const dy = next.y - this.y
         const speed = this.speed * tech.bonus.transactionSpeed * getSpeedControl()
-        const dist = Math.hypot(dx, dy)
+        const dist = distance(next, this)
 
         if (dist < speed) {
             // remaining distance to next node is less than the speed of the transaction
@@ -184,7 +177,7 @@ class Transaction {
             }
             if (this.index == this.path.length - 1) {
                 // Record for GDP [TODO : we could use transactions array instead]
-                gdpLog.push({ amount: this.amount, timestamp: Date.now(), legality: this.legality })
+                // gdpLog.push({ amount: this.amount, timestamp: Date.now(), legality: this.legality })
 
                 addEffect(next.x, next.y, '', 'pulse')
                 this.endTransaction('completed')
@@ -203,6 +196,8 @@ class Transaction {
                 return
             }
             //  Move toward target 
+            const dx = next.x - this.x
+            const dy = next.y - this.y
             this.x += (dx / dist) * speed
             this.y += (dy / dist) * speed
         }
@@ -233,7 +228,7 @@ class Transaction {
                 this.validated = true
                 break
             case 'questionable':
-                if (tx.riskLevel < 6) {
+                if (this.riskLevel < 6) {
                     UI.showToast('✅ Suspicious transaction validated', `It was risky, but there with limited consequences`, 'warning')
                     let change = Math.random() < 0.5 ? 5 : -7
                     policy.changePopularity(change)
@@ -326,7 +321,6 @@ class Transaction {
         // }
     }
 }
-
 
 function _defineReference(sourceUser, targetUser, risklevel, amount) {
     const referenceData = {

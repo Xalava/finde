@@ -132,6 +132,11 @@ export const getTransactionSizeName = (amount) => {
 }
 
 export const legalityOptions = ['legit', 'questionable', 'illegal']
+export const getLegality = (riskLevel) => {
+    if (riskLevel < 4) return 'legit'
+    if (riskLevel < 7) return 'questionable'
+    return 'illegal'
+}
 export const legalityColorMap = {
     legit: 'rgba(0, 255, 0, 0.7)',
     questionable: 'rgba(255, 165, 0, 0.7)',

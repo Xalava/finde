@@ -3,6 +3,7 @@
 export function selectRandomly(array) {
     if (array.length === 0) {
         console.error("Empty array")
+        return null
     }
     return array[Math.floor(Math.random() * array.length)]
 }
@@ -25,6 +26,10 @@ export function skewedRandom(bias, stddev = 3, min = 1, max = 9) {
 
     // clamp into [min,max]
     return Math.min(max, Math.max(min, result))
+}
+
+export function distance(a, b) {
+    return Math.hypot(a.x - b.x, a.y - b.y)
 }
 
 

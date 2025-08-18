@@ -177,13 +177,9 @@ export function placeTower(node, towerType) {
     const tower = towerOptions[towerType]
 
     // Only check if this tower has a tech requirement
-    const requiredTech = tower.techRequirement
-    if (requiredTech) {
-        const progress = tech.getResearchProgress()
-        if (!progress[requiredTech]?.researched) {
-            UI.showToast('Technology Required', `Research "${requiredTech}" to unlock this tower`, 'error')
-            return
-        }
+    if (!tech.isTechUnlocked(tower.techRequirement)) {
+        UI.showToast('Technology Required', `Research "${tower.techRequirement}" to unlock this tower`, 'error')
+        return
     }
 
     node.accuracy = tower.accuracy * tech.bonus.accuracy + (node.type === 'fintech' ? 0.1 : 0)
@@ -248,11 +244,11 @@ export function detect(node, tx) {
     }
 
     if (debug) console.log(`Detection rolls at ${node.id} with chance ${detectionChance} (Event mod:`, events.detectMod, "PolicyMod", detectMod, "False Positive Mod", fpMod, ").")
-    if (tx.legality < 6) {
+    if (tx.riskLevel < 6) {
         // case 'legit': (suspicious tx can be caugh as illegal)
         if (!isFirstPlay()) {
             // small chance of false flag, inversely proportional to accuracy, then 10% unless robust tech
-            if (Math.random() > detectionChance && Math.random() < towerOptions[node.tower].errors * 0.01 * tech.bonus.falsePositive * fpMod) {
+            if (Math.random() > detectionChance && Math.random() < (towerOptions[node.tower].errors * 0.01 * tech.bonus.falsePositive * fpMod)) {
                 addEffect(node.x, node.y, '🔴', "tower")
                 tx.endTransaction("falsePositive")
                 console.log(`🔴 False postive at`, node.name)
@@ -315,7 +311,7 @@ export function increaseAIaccuracy() {
             if (n.tower === "ai" && n.accuracy < 0.85) {
                 n.accuracy *= 1.005 * tech.bonus.aiLearning
             } else if (n.tower === "super" && n.accuracy < 0.98) {
-                n.accuracy += 1.01 * tech.bonus.aiLearning
+                n.accuracy *= 1.01 * tech.bonus.aiLearning
             }
         })
 }

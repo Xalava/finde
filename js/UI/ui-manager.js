@@ -352,13 +352,9 @@ function updateActionOptions(node, budget, enforceAction) {
     nodeDetails.actionOptions.innerHTML = ''
     let foundOption = false
 
-    // Get research progress
-    const progress = tech.getResearchProgress()
-
     Object.keys(actionOptions).forEach(actionType => {
         // Check if technology requirement is met
-        const techRequirement = actionOptions[actionType].techRequirement
-        const techUnlocked = !techRequirement || progress[techRequirement]?.researched
+        const techUnlocked = tech.isTechUnlocked(actionOptions[actionType].techRequirement)
 
         // Only show actions that have been unlocked through research
         if (techUnlocked) {
@@ -414,16 +410,13 @@ function createActionButton(actionType, node, budget, enforceAction) {
 
 function updateTowerOptions(node, budget, placeTower) {
     nodeDetails.towerOptions.innerHTML = ''
-    const progress = tech.getResearchProgress()
-
     let foundOption = false
     Object.keys(towerOptions).forEach(towerType => {
         // Check if this tower depends on the current tower and is not already installed
         const validUpgrade = towerOptions[towerType].depend === node.tower && node.tower !== towerType
 
         // Check if technology requirement is met (if any)
-        const techRequirement = towerOptions[towerType].techRequirement
-        const techUnlocked = !techRequirement || progress[techRequirement]?.researched
+        const techUnlocked = tech.isTechUnlocked(towerOptions[towerType].techRequirement)
 
         // Only show options that are valid upgrades and have their tech requirements met
         if (validUpgrade && techUnlocked) {
@@ -549,46 +542,45 @@ let currentBucket = null
 const BUCKET_DURATION = 10 * 1000 // 10 seconds per bucket (representing 10 days in game time)
 const MAX_BUCKETS = 15 // Show last 15 periods
 
-function calculateBuckets() {
-    const now = Date.now()
-
-    // Initialize current bucket if needed
-    if (!currentBucket || now - currentBucket.startTime >= BUCKET_DURATION) {
-        // Finalize previous bucket if it exists
-        if (currentBucket) {
-            historicalBuckets.push({ ...currentBucket })
-            if (historicalBuckets.length > MAX_BUCKETS) {
-                historicalBuckets = historicalBuckets.slice(-MAX_BUCKETS)
-            }
-        }
-
-        // Create new current bucket
-        currentBucket = {
-            startTime: now,
-            legit: { count: 0, amount: 0 },
-            questionable: { count: 0, amount: 0 },
-            illegal: { count: 0, amount: 0 },
-        }
-    }
-
-    // Only process new transactions since last update
-    // TODO: Update to use transacitons array instead of window.gdpLog
-    if (gdpLog && window.length > lastProcessedLogIndex) {
-        const newTransactions = gdpLog.slice(lastProcessedLogIndex)
-
-        newTransactions.forEach(logEntry => {
-            if (logEntry.timestamp >= currentBucket.startTime) {
-                const legality = logEntry.legality || 'legit'
-                currentBucket[legality].count++
-                currentBucket[legality].amount += logEntry.amount
-            }
-        })
-
-        lastProcessedLogIndex = gdpLog.length
-    }
-
-    return [...historicalBuckets, currentBucket]
-}
+// function calculateBuckets() {
+//     const now = Date.now()
+// 
+//     // Initialize current bucket if needed
+//     if (!currentBucket || now - currentBucket.startTime >= BUCKET_DURATION) {
+//         // Finalize previous bucket if it exists
+//         if (currentBucket) {
+//             historicalBuckets.push({ ...currentBucket })
+//             if (historicalBuckets.length > MAX_BUCKETS) {
+//                 historicalBuckets = historicalBuckets.slice(-MAX_BUCKETS)
+//             }
+//         }
+// 
+//         // Create new current bucket
+//         currentBucket = {
+//             startTime: now,
+//             legit: { count: 0, amount: 0 },
+//             questionable: { count: 0, amount: 0 },
+//             illegal: { count: 0, amount: 0 },
+//         }
+//     }
+// 
+//     // Only process new transactions since last update
+//     // TODO: Update to use transacitons array instead of window.gdpLog
+//     if (gdpLog && window.length > lastProcessedLogIndex) {
+//         const newTransactions = gdpLog.slice(lastProcessedLogIndex)
+// 
+//         newTransactions.forEach(logEntry => {
+//             if (logEntry.timestamp >= currentBucket.startTime) {
+//                 const legality = logEntry.legality || 'legit'
+//                 currentBucket[legality].count++
+//                 currentBucket[legality].amount += logEntry.amount
+//             }
+//         })
+// 
+//         lastProcessedLogIndex = gdpLog.length
+//     }
+//     return [...historicalBuckets, currentBucket]
+// }
 
 function switchGDPView(view) {
     analytics.currentView = view
@@ -966,7 +958,7 @@ export function showNodeDetailsByID(nodeId) {
 }
 
 export function isTransactionTooltipVisible() {
-    return tooltip.panel.classList.contains('hidden')
+    return !tooltip.panel.classList.contains('hidden')
 }
 
 export function hideTransactionTooltip() {

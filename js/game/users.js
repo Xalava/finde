@@ -1,4 +1,4 @@
-import { normalRandom, selectRandomly } from '../utils.js'
+import { normalRandom, selectRandomly, distance } from '../utils.js'
 import { DISTANCE, countries } from './config.js'
 import { skewedRandom } from '../utils.js'
 window.userEdges = []
@@ -68,7 +68,7 @@ function _findSuitablePosition(node) {
     do {
         const x = node.x + (Math.random() - 0.5) * DISTANCE.MAX_USERTONODE
         const y = node.y + (Math.random() - 0.5) * DISTANCE.MAX_USERTONODE
-        const overlapping = nodes.some(n => Math.hypot(x - n.x, y - n.y) < DISTANCE.MIN_USERTONODE) || users.some(u => Math.hypot(x - u.x, y - u.y) < DISTANCE.MIN_USERTOUSER)
+        const overlapping = nodes.some(n => distance({x, y}, n) < DISTANCE.MIN_USERTONODE) || users.some(u => distance({x, y}, u) < DISTANCE.MIN_USERTOUSER)
         if (!overlapping) {
             return ({ x, y })
         }
@@ -141,8 +141,8 @@ export function assignNearestBank(user) {
     } else {
         validNodes = activeNodes.filter(n => n.type !== 'processor')
     }
-    const nearest = validNodes.sort((a, b) => Math.hypot(user.x - a.x, user.y - a.y) - Math.hypot(user.x - b.x, user.y - b.y))[0]
-    if (nearest && Math.hypot(user.x - nearest.x, user.y - nearest.y) < DISTANCE.MAX_USERTONODE) {
+    const nearest = validNodes.sort((a, b) => distance(user, a) - distance(user, b))[0]
+    if (nearest && distance(user, nearest) < DISTANCE.MAX_USERTONODE) {
         user.bankId = nearest.id
         userEdges = userEdges.filter(e => e[0] !== user.id)
         userEdges.push([user.id, user.bankId])

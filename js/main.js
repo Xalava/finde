@@ -17,7 +17,6 @@ import * as uiTech from './UI/ui-tech.js'
 import * as Camera from './canvas/camera.js'
 import * as graphics from "./canvas/graphics.js"
 import { findNodeAt, findTransactionAt, findUserAt } from './canvas/finders.js'
-import { NEW_NODE_FREQUENCY, HOLIDAY_SPAWN_BONUS, BASE_SPAWN_RATE } from './game/config.js'
 
 window.debug = false
 let displayCountries = false
@@ -39,7 +38,6 @@ function handleCanvasClick(screenX, screenY) {
         // Select new transaction
         UI.setSelectedTransaction(tx)
         Camera.cinematicPanAndZoom(tx.x, tx.y, 3, 1)
-        UI.setSelectedTransaction(tx)
         return
     }
     if (unlock.nodes) {
@@ -150,19 +148,9 @@ document.addEventListener('DOMContentLoaded', () => {
         ctrls.countriesBtn.style.backgroundColor = displayCountries ? 'rgba(0, 255, 0, 0.2)' : ''
     })
 
-    ctrls.slowBtn.addEventListener('click', () => {
-        speedControl = 0.5
-        spawnControl = 0.5
-
-    })
-    ctrls.normalBtn.addEventListener('click', () => {
-        speedControl = 1
-        spawnControl = 1
-    })
-    ctrls.fastBtn.addEventListener('click', () => {
-        speedControl = 2
-        spawnControl = 2
-    })
+    ctrls.slowBtn.addEventListener('click', () => setGameSpeed(0.5))
+    ctrls.normalBtn.addEventListener('click', () => setGameSpeed(1))
+    ctrls.fastBtn.addEventListener('click', () => setGameSpeed(2))
 
     ctrls.restartBtn.addEventListener('click', () => {
         window.location.reload()
@@ -170,12 +158,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Zoom in slightly when the game starts
     if (isFirstPlay()) {
-        speedControl = 0.4
-        spawnControl = 0.5
+        setGameSpeed(0.4, 0.6)
         // Restauring default after a while
         setTimeout(() => {
-            spawnControl = 1
-            speedControl = 1
+            setGameSpeed(1)
         }, 40000)
         showTutorial()
         Camera.centerView(activeNodes, -70)
@@ -227,7 +213,6 @@ let holiday = false
 export let dropProbability = 0.00001
 let spawnControl = 1
 let corruptionSpread = 10
-window.gdpLog = [] // also another table of transactions
 // export let transactions = []
 const startTime = Date.now()
 let currentDay = 0
@@ -236,6 +221,11 @@ let currentDay = 0
 let speedControl = 1
 export function getSpeedControl() {
     return speedControl
+}
+
+function setGameSpeed(speed, spawn = speed) {
+    speedControl = speed
+    spawnControl = spawn
 }
 let isFirstNewNode = false
 
@@ -276,10 +266,10 @@ export function addEffect(x, y, emoji, type = 'default', color = null) {
 
 function calculateIndicators() {
     // Remove old transactions from the log (older than 150 seconds, each second is a day)
-    while (gdpLog.length && gdpLog[0].timestamp < Date.now() - 150 * 1000) {
-        gdpLog.shift()
-    }
-    gdp = gdpLog.reduce((sum, tx) => sum + tx.amount, 0)
+    // while (gdpLog.length && gdpLog[0].timestamp < Date.now() - 150 * 1000) {
+    //     gdpLog.shift()
+    // }
+    // gdp = gdpLog.reduce((sum, tx) => sum + tx.amount, 0)
 
     // TODO : use transactions array instead of gdpLog. (currently, tx are cleaned up). E.g.:
     // gdp = transactions.filter(t=>(!t.active&&t.endDate < Date.now()-150*1000)).reduce((sum, tx) => sum + tx.amount, 0)
