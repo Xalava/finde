@@ -53,7 +53,7 @@ export const towerOptions = {
         accuracy: 0.6,
         maintenance: 3,
         icon: '🧠',
-        description: '60% accuracy detection that learns and improves by 0.5% per day, up to 80%. maintenance cost is 2.',
+        description: '60% accuracy detection that learns and improves by 0.5% per day, up to 80%. Not compatible with advanced towers',
         depend: 'medium',
         errors: 1,
         techRequirement: 'ai_research'
@@ -123,7 +123,7 @@ export const MAX_CORRUPTION = 9
 export const txSizeOptions = {
     small: { name: 'small', max: 10 },
     medium: { name: 'medium', max: 100 },
-    large: { name: 'large', max: 10000 } 
+    large: { name: 'large', max: 10000 }
 }
 export const getSizeTier = (amount) => {
     if (amount < txSizeOptions.small.max) return 'small'
@@ -311,7 +311,7 @@ export const techTree = {
                 unlockTowers: ['super'],
                 aiLearning: 1.1,
             },
-            icon: '📊',
+            icon: '🦾',
         },
         {
             id: 'false_positive_reduction',
@@ -410,6 +410,17 @@ export const techTree = {
             icon: '🌐',
         },
         {
+            id: 'reporting',
+            name: 'Reporting System',
+            cost: 80,
+            prerequisites: ['basic_network'],
+            description: 'Enables analytics.',
+            effects: {
+                unlockStatistics: true,
+            },
+            icon: '📊',
+        },
+        {
             id: 'secure_tunneling',
             name: 'Secure Tunneling Protocols',
             cost: 350,
@@ -438,7 +449,7 @@ export const techTree = {
             name: 'Instant settlement ',
             cost: 800,
             prerequisites: ['high_speed_processing'],
-            description: 'Instant transactions are not visible, increase wealth, but crime too.',
+            description: 'Instant transactions increase wealth, but crime too.',
             effects: {
                 // TODO : enable instant settlement transactoins
             },
@@ -447,7 +458,7 @@ export const techTree = {
 
         {
             id: 'distributed_architecture',
-            name: 'Distributed Systems Architecture',
+            name: 'Distributed Architecture',
             cost: 1600,
             prerequisites: ['secure_tunneling'],
             description: 'Minimizes transaction drops.',// and speeds up node activation.',

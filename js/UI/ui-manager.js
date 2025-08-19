@@ -5,10 +5,10 @@ import { uiFont } from '../canvas/graphics.js'
 import { selectRandomly } from '../utils.js'
 import { showTransactionTooltip } from './ui-transaction.js'
 import { closeUserDetails } from './ui-users.js'
-// import { initStatisticsUI, showStatisticsPanel } from '../../ideas/statistics/ui-statistics.js'
+import { showStatistics } from './statistics.js'
 
-let indicators = null
-let controls = null
+export let indicators = null
+export let controls = null
 let instructions = null
 let nodeDetails = null
 let policy = null
@@ -29,11 +29,13 @@ let selectedUser = null
 export function initUI() {
     indicators = {
         budget: document.getElementById('budget'),
-        gdp: document.getElementById('gdp'),
         maintenance: document.getElementById('maintenance'),
+        statStatItem: document.getElementById('stat-stat-item'),
         day: document.getElementById('day'),
         holiday: document.getElementById('holiday'),
     }
+    indicators.statStatItem.addEventListener('click', showStatistics)
+
 
     controls = {
         centerBtn: document.getElementById('center-view'),
@@ -43,8 +45,6 @@ export function initUI() {
         normalBtn: document.getElementById('normal'),
         fastBtn: document.getElementById('fast'),
         restartBtn: document.getElementById('restart-game'),
-        gdpStatItem: document.getElementById('gdp-stat-item'),
-        txStatItem: document.getElementById('tx-stat-item'),
         maintenanceStatItem: document.getElementById('maintenance-stat-item'),
         debugControls: document.getElementById('debug-controls'),
         policyBtn: document.getElementById('policy-button'),
@@ -80,34 +80,10 @@ export function initUI() {
         actionOptions: document.getElementById('action-options'),
         close: document.getElementById('close-panel')
     }
-    // txActions = document.getElementById('tx-actions')
-    // txButtons = {
-    //     validate: document.getElementById('validate-tx'),
-    //     block: document.getElementById('block-tx'),
-    //     analyze: document.getElementById('analyze-tx'),
-    // }
 
     nodeDetails.close.addEventListener('click', hideNodeDetails)
 
-    // Transaction detail handlers
-    // document.getElementById('back-to-transactions').addEventListener('click', () => {
-    //     // Clear transaction update interval
-    //     if (currentTransactionUpdateInterval) {
-    //         clearInterval(currentTransactionUpdateInterval)
-    //         currentTransactionUpdateInterval = null
-    //     }
 
-    //     // Clear selection from all transactions
-    //     if (window.transactions) {
-    //         window.transactions.forEach(tx => tx.isSelected = false)
-    //     }
-
-    //     transactionsPanel.listSection.classList.remove('hidden')
-    //     transactionsPanel.detailsSection.classList.add('hidden')
-
-    //     // Refresh the transaction list to update visual state
-    //     updateTransactionsList()
-    // })
 
     // User details panel
     userDetails = {
@@ -128,29 +104,6 @@ export function initUI() {
         panel: document.getElementById('research-panel'),
     }
 
-    analytics = {
-        panel: document.getElementById('gdp-panel'),
-        close: document.getElementById('close-gdp'),
-        chart: document.getElementById('gdp-chart'),
-        chartContainer: document.getElementById('gdp-chart-container'),
-        volumeBtn: document.getElementById('volume-btn'),
-        countBtn: document.getElementById('count-btn'),
-        currentView: 'volume'
-    }
-
-    // statistics = {
-    //     panel: document.getElementById('statistics-panel'),
-    //     close: document.getElementById('close-statistics')
-    // }
-
-    // transactionsPanel = {
-    //     panel: document.getElementById('transactions-panel'),
-    //     close: document.getElementById('close-transactions'),
-    //     allTransactions: document.getElementById('all-transactions'),
-    //     listSection: document.getElementById('transactions-list-section'),
-    //     detailsSection: document.getElementById('transaction-details')
-    // }
-
     tooltip = {
         panel: document.getElementById('transaction-tooltip'),
         title: document.getElementById('tooltip-title'),
@@ -163,42 +116,7 @@ export function initUI() {
         freezeBtn: document.getElementById('tooltip-freeze')
     }
 
-    analytics.close.addEventListener('click', () => hide(analytics.panel))
 
-    // statistics.close.addEventListener('click', () => hide(statistics.panel))
-
-    analytics.volumeBtn.addEventListener('click', () => switchGDPView('volume'))
-    analytics.countBtn.addEventListener('click', () => switchGDPView('count'))
-
-    // transactionsPanel.close.addEventListener('click', () => {
-    //     if (transactionListUpdateInterval) {
-    //         clearInterval(transactionListUpdateInterval)
-    //         transactionListUpdateInterval = null
-    //     }
-    //     hide(transactionsPanel.panel)
-    // })
-
-    // Make GDP stat item clickable
-    controls.gdpStatItem.style.cursor = 'pointer'
-    controls.gdpStatItem.addEventListener('click', (e) => {
-        e.stopPropagation()
-        showGDPPanel()
-    })
-
-    // // Make statistics stat item clickable
-    // controls.statStatItem = document.getElementById('stat-stat-item')
-    // controls.statStatItem.style.cursor = 'pointer'
-    // controls.statStatItem.addEventListener('click', (e) => {
-    //     e.stopPropagation()
-    //     showStatisticsPanel()
-    // })
-
-    // Make transactions stat item clickable
-    // controls.txStatItem.style.cursor = 'pointer'
-    // controls.txStatItem.addEventListener('click', (e) => {
-    //     e.stopPropagation()
-    //     showTransactionsPanel()
-    // })
 
     // helper array for iterations on panels
     panels = [
@@ -207,9 +125,7 @@ export function initUI() {
         policy.panel,
         research.panel,
         userDetails.panel,
-        analytics.panel,
-        // statistics.panel,
-        // transactionsPanel.panel,
+        document.getElementById('statistics-panel'), // Statistics panel
         tooltip.panel
     ]
 
@@ -228,22 +144,7 @@ export function initUI() {
         getSelectedTransaction().freeze()
         clearAllSelections()
     })
-
-    // txButtons.validate.onclick = () => {
-    //     getSelectedTransaction().validate()
-    //     clearAllSelections()
-    // }
-    // txButtons.block.onclick = () => {
-    //     getSelectedTransaction().block()
-    //     clearAllSelections()
-    // }
-    // txButtons.analyze.onclick = () => {
-    //     getSelectedTransaction().freeze()
-    //     clearAllSelections()
-    // }
-
-    // Initialize statistics UI
-    // initStatisticsUI()
+    // Statistics initialization handled in main.js
 }
 
 export function isClickInsideAnyPanel({ clientX, clientY }) {
@@ -261,8 +162,6 @@ export function closeAllPanels(exceptPanel) {
         if (panel && !panel.classList.contains('hidden') && panel.id !== exceptId) {
             if (panel.id === 'node-details-panel') {
                 hideNodeDetails()
-                // } else if (panel.id === 'transaction-tooltip') {
-                //     hideTransactionTooltip()
             } else if (panel.id === 'user-details-panel') {
                 closeUserDetails()
             } else {
@@ -284,14 +183,22 @@ export function clearAllSelections() {
 }
 
 export function updateIndicators(budget, gdp, maintenance) {
-    if (maintenance > 0) {
+    if (maintenance < 0) {
 
-        indicators.budget.innerHTML = `${budget.toFixed(0)} (- ${maintenance.toFixed(0)})`
+        indicators.budget.innerHTML = `${budget.toFixed(0)} (<span style="color: red">${maintenance.toFixed(0)}</span>)`
     } else {
         indicators.budget.textContent = budget.toFixed(0)
     }
     // indicators.gdp.textContent = gdp.toFixed(0);
-    // indicators.maintenance.textContent = maintenance;
+    // Update maintenance display
+    indicators.maintenance.textContent = Math.abs(maintenance)
+
+    // Show/hide maintenance stat item based on value
+    if (Math.abs(maintenance) > 0) {
+        show(controls.maintenanceStatItem)
+    } else {
+        hide(controls.maintenanceStatItem)
+    }
     // indicators.txCounter.textContent = window.transactions.length
 }
 
@@ -329,13 +236,17 @@ export function showToast(title, message, type = 'info') {
 
 export function togglePanel(panelId, updateCallback = null) {
     return function (e) {
+        console.log(`togglePanel called for: ${panelId}`)
         if (e) e.stopPropagation()
         const panel = document.getElementById(panelId)
         closeAllPanels(panel)
-        panel.classList.toggle('hidden')
-
-        if (!panel.classList.contains('hidden') && updateCallback) {
-            updateCallback()
+        if (panel) {
+            panel.classList.toggle('hidden')
+            if (!panel.classList.contains('hidden') && updateCallback) {
+                updateCallback()
+            }
+        } else {
+            console.error(`Panel ${panelId} not found!`)
         }
     }
 }
@@ -531,97 +442,7 @@ export function showGDPPanel() {
     updateGDPChart()
 }
 
-// export function showTransactionsPanel() {
-//     if (!transactionsPanel || !transactionsPanel.panel) {
-//         return
-//     }
-//     closeAllPanels(transactionsPanel.panel)
-//     show(transactionsPanel.panel)
 
-//     // Show the list section and hide details
-//     show(transactionsPanel.listSection)
-//     hide(transactionsPanel.detailsSection)
-
-//     updateTransactionsList()
-
-//     // Start simple interval to update every 500ms
-//     if (!transactionListUpdateInterval) {
-//         transactionListUpdateInterval = setInterval(() => {
-//             if (!transactionsPanel.panel.classList.contains('hidden')) {
-//                 updateTransactionsList()
-//             }
-//         }, 500)
-//     }
-// }
-
-
-// Temporarely deprecated
-// Store historical chart data - each bucket represents a fixed time period (e.g., 10 days)
-let historicalBuckets = []
-let lastProcessedLogIndex = 0
-let currentBucket = null
-const BUCKET_DURATION = 10 * 1000 // 10 seconds per bucket (representing 10 days in game time)
-const MAX_BUCKETS = 15 // Show last 15 periods
-
-// function calculateBuckets() {
-//     const now = Date.now()
-// 
-//     // Initialize current bucket if needed
-//     if (!currentBucket || now - currentBucket.startTime >= BUCKET_DURATION) {
-//         // Finalize previous bucket if it exists
-//         if (currentBucket) {
-//             historicalBuckets.push({ ...currentBucket })
-//             if (historicalBuckets.length > MAX_BUCKETS) {
-//                 historicalBuckets = historicalBuckets.slice(-MAX_BUCKETS)
-//             }
-//         }
-// 
-//         // Create new current bucket
-//         currentBucket = {
-//             startTime: now,
-//             legit: { count: 0, amount: 0 },
-//             questionable: { count: 0, amount: 0 },
-//             illegal: { count: 0, amount: 0 },
-//         }
-//     }
-// 
-//     // Only process new transactions since last update
-//     // TODO: Update to use transacitons array instead of window.gdpLog
-//     if (gdpLog && window.length > lastProcessedLogIndex) {
-//         const newTransactions = gdpLog.slice(lastProcessedLogIndex)
-// 
-//         newTransactions.forEach(logEntry => {
-//             if (logEntry.timestamp >= currentBucket.startTime) {
-//                 const legality = logEntry.legality || 'legit'
-//                 currentBucket[legality].count++
-//                 currentBucket[legality].amount += logEntry.amount
-//             }
-//         })
-// 
-//         lastProcessedLogIndex = gdpLog.length
-//     }
-//     return [...historicalBuckets, currentBucket]
-// }
-
-function switchGDPView(view) {
-    analytics.currentView = view
-
-    // Update button states
-    analytics.volumeBtn.classList.toggle('active', view === 'volume')
-    analytics.countBtn.classList.toggle('active', view === 'count')
-
-    updateGDPChart()
-}
-
-function updateGDPChart() {
-    drawTransactionChart(calculateBuckets(), analytics.currentView)
-}
-
-export function updateAnalyticsPanel() {
-    if (analytics && !analytics.panel.classList.contains('hidden')) {
-        updateGDPChart()
-    }
-}
 
 function capitalizeFirstLetter(val) {
     return String(val).charAt(0).toUpperCase() + String(val).slice(1)
@@ -826,10 +647,11 @@ window.addEventListener('keydown', (e) => {
 })
 
 export function activatePolicy() {
+    console.log('Activating policy button')
     show(controls.policyBtn)
 }
 
-// Node transactions functionality removed - now using dedicated transactions panel
+// Node transactions functionality removed
 
 // function showTransactionDetails(tx) {
 //     // Mark this transaction as selected
@@ -959,15 +781,27 @@ export function activatePolicy() {
 
 export function hideFullInterface() {
     // Simplified interface when using the tutorial
-    hide(controls.gdpStatItem)
     hide(controls.maintenanceStatItem)
+    hide(indicators.statStatItem)
     hide(controls.gameControls)
 }
 
 export function showFullInterface() {
     // show(controls.gdpStatItem)
     // show(controls.maintenanceStatItem)
+
+    // Only show statistics if reporting technology is unlocked
+    if (tech.isTechUnlocked('reporting')) {
+        show(indicators.statStatItem)
+    }
     show(controls.gameControls)
+}
+
+export function updateTechUnlocks() {
+    // Check and update UI elements that depend on technology unlocks
+    if (tech.isTechUnlocked('reporting')) {
+        show(indicators.statStatItem)
+    }
 }
 
 // Helper function to show node details by ID  

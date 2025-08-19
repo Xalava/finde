@@ -33,6 +33,7 @@ body,
 #app-container {
     margin: 0;
     height: 100%;
+    overscroll-behavior-x: none;
 }
 
 #app-container {
@@ -366,7 +367,7 @@ canvas {
 
 .transaction-status {
     flex-direction: column;
-        /* font-size: 12px; */
+    /* font-size: 12px; */
 }
 
 .transaction-progress {
@@ -1087,12 +1088,12 @@ small {
     background: rgba(0, 0, 0, 0.1);
 }
 
-#popularity-bar {
+/* #popularity-bar {
     height: 100%;
     width: 100%;
     transition: width 0.3s ease, background-color 0.3s ease;
     background: #2ecc71;
-}
+} */
 
 #restart-game {
     background-color: var(--accent);

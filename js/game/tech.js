@@ -85,9 +85,13 @@ export function researchTechnology(techId) {
 
     // Apply effects
     applyTechnologyEffects(tech)
+    
+    // Update UI elements that depend on technology unlocks
+    UI.updateTechUnlocks()
+    
     if (researchState.cumulativePoints > 2000) {
+        console.log('Research threshold reached - activating policy button')
         UI.activatePolicy()
-
     }
     return true
 }

@@ -4,7 +4,7 @@ import * as policy from './policy.js'
 import * as tech from './tech.js'
 import * as events from './events.js'
 import { assignNearestBank, generateUsers, realignUsersBanks } from './users.js'
-import { addEffect } from '../main.js'
+import { addEffect, addExpenditure } from '../main.js'
 import { isFirstPlay } from '../tutorial.js'
 import * as UI from '../UI/ui-manager.js'
 import { selectRandomly } from '../utils.js'
@@ -43,9 +43,10 @@ function assignCountryToNode(node) {
 }
 function reassignUsersBank(nodeID) {
     //after a bank closure, we reassign users to the nearest bank
+    const failedBank = nodes[nodeID]
     userEdges = userEdges.filter(e => e[1] !== nodeID)
     const usersToUpdate = users.filter(u => u.bankId === nodeID)
-    console.log("Users to update", usersToUpdate)
+    console.log(`🏦 Bank ${failedBank.name} failed - reassigning ${usersToUpdate.length} users`)
     usersToUpdate.forEach(u => {
         u.bankId = null
         assignNearestBank(u)
@@ -188,6 +189,10 @@ export function placeTower(node, towerType) {
     // node.accuracy = tower.accuracy + (node.type === 'fintech' ? 0.1 : 0)// We move the accuracy to the node for AI usages
     budget -= tower.cost
     maintenance -= tower.maintenance
+    
+    // Track expenditure
+    addExpenditure('tower', tower.cost, `${tower.name} installed at ${node.name}`, node.id)
+    
     console.log(`🛠️ Tower placed at #${node.id}`)
     if (debug) console.log(tower)
     // Update UI immediately after placing tower
@@ -213,6 +218,12 @@ export function enforceAction(node, actionType, free = false) {
         return
     } else {
         budget -= actionCost
+        
+        // Track expenditure (only for paid actions)
+        if (!free && actionCost > 0) {
+            addExpenditure('enforcement', actionCost, `${action.name} at ${node.name}`, node.id)
+        }
+        
         node.changeReputation(action.reputationEffect * tech.bonus.reputationDamage) //negative
         policy.changePopularity(action.popularityEffect)
         node.enforcementAction = actionType
@@ -347,6 +358,9 @@ export function checkNodesCompliance() {
             node.tower = targetTower
             node.accuracy = config.towerOptions[targetTower].accuracy
             budget -= cost
+            
+            // Track expenditure for compliance
+            addExpenditure('compliance', cost, `Automated compliance: ${config.towerOptions[targetTower].name} at ${node.name}`, node.id)
 
             UI.showToast('🏛️ Automated Compliance',
                 `${node.name} installed ${config.towerOptions[targetTower].name} (-${cost})`,

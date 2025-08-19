@@ -1,4 +1,4 @@
-let taxRate = 0.05 // TODO distinguish fees and taxes
+let taxRate = 0.04 // TODO distinguish fees and taxes
 
 export const regulationLevels = {
     lenient: { detectMod: 0.9, fpMod: 2, icon: '🌿' },
@@ -31,7 +31,7 @@ export function popularityDelta() {
             break
     }
     if (state.requireValidation) d -= 1
-    d -= Math.round(getTaxRate() * 100)
+    d -= Math.round(getTaxRate() * 200)
 
     const deltaText = d > 0 ? `+${d}` : d < 0 ? `${d}` : ''
     policyPoints.innerText = deltaText

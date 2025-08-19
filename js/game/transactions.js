@@ -21,12 +21,25 @@ export function spawnTransaction() {
         console.error("Error spawning transaction: missing user.")
         return
     }
+
     const sourceBank = nodes[sourceUser.bankId]
     const targetBank = nodes[targetUser.bankId]
 
+    // Debug: Check if users somehow still have inactive banks (should not happen)
+    if (sourceBank && !sourceBank.active) {
+        console.error(`ERROR: User ${sourceUser.id} still assigned to inactive bank ${sourceBank.name}!`)
+        return
+    }
+    if (targetBank && !targetBank.active) {
+        console.error(`ERROR: User ${targetUser.id} still assigned to inactive bank ${targetBank.name}!`)
+        return
+    }
+
     let txPath = []
     if (!sourceBank || !targetBank) {
+        // Direct cash transaction - direct between users (no banks involved)
         txPath = [sourceUser.id, targetUser.id]
+
     } else {
         const innerPath = getPathFrom(sourceBank.id, targetBank.id)
         if (!innerPath || innerPath.length < 2) return
@@ -78,15 +91,15 @@ function _calculateRiskLevel(sourceUser, targetUser) {
     // Illegal tx depends on the corruption of the source user (avg 2) and its bank (0 then increase)
     // If corruption is 2, 10% chance of being illegal, 5% chance of being questionable. Increase quickly with bank corruption
     // P2P transactions are more likely to be illegal
-    let riskLevel = 0
+    let baseRisk = 0
         + (sourceBank ?
             sourceUser.riskLevel + sourceBank.corruption + targetUser.riskLevel :
             sourceUser.riskLevel + targetUser.riskLevel + 9) // P2P is considered as using a bad bank
         + (sourceUser.country !== targetUser.country ? 3 : 0)// +3 for international
 
     // legalityOptions[dice100 < 10 ? 2 : dice100 < 15 ? 1 : 0] // illegal : questionable : legit
-    let result = skewedRandom(riskLevel / 4)
-    if (debug) console.log("Dice", result, riskLevel / 4)
+    let result = skewedRandom(baseRisk / 4)
+    if (debug) console.log(`Risk Level ${result} from baserisk ${baseRisk / 4}`)
     return result
 }
 

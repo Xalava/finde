@@ -32,34 +32,25 @@
                 <span id="policy-status">⚖️</span>
             </button>
             <div id="separator"></div>
-            <div id="tx-stat-item" class="stat-item hidden" data-tooltip="Ongoing transactions.">
+            <!-- disabled -->
+            <!-- <div id="tx-stat-item" class="stat-item hidden" data-tooltip="Ongoing transactions.">
                 <span class="stat-icon">↔️</span>
                 <strong class="ui-name">Transactions</strong>
-            </div>
-            <div id="gdp-stat-item" class="stat-item hidden" data-tooltip="GDP from financial transactions (past quarter)">
+            </div> -->
+            <div id="stat-stat-item" class="stat-item hidden" data-tooltip="Transaction and detection statistics">
                 <span class="stat-icon">📊</span>
-                <strong class="ui-name">GDP</strong>
-                <span id="gdp">0</span>
+                <strong class="ui-name">Stats</strong>
             </div>
-            <!-- TODO: Statistics panel -->
-            <!-- <div id="stat-stat-item" class="stat-item" data-tooltip="Transaction and detection statistics">
-                                                            <span class="stat-icon">📈</span>
-                                                            <strong class="ui-name">Stats</strong>
-                                                        </div> -->
             <div class="stat-item" data-tooltip="Available operational budget">
                 <span class="stat-icon">💰</span>
                 <strong class="ui-name">Budget</strong>
-                <span id="budget">150</span>
+                <span id="budget">90</span>
             </div>
             <div id="maintenance-stat-item" class="stat-item hidden" data-tooltip="Ongoing system maintenance costs per second">
                 <span class="stat-icon">🛠️</span>
                 <strong class="ui-name">Upkeep</strong>
                 <span id="maintenance">0</span>
             </div>
-            <!-- 
-                <div class="stat-item pulse-animation" data-tooltip="Your public trust rating">
-                    🌟 <strong>Reputation:</strong> <span id="reputation">100</span>
-                </div> -->
 
         </header>
 
@@ -223,10 +214,10 @@
             <div class="panel-content">
                 <section class="panel-section">
                     <h3>🗳️ Your Ecosystem Popularity</h3>
-                    <div id="popularity-wrap" data-tooltip="Updates regularly based on policy level and changes">
+                    <!-- <div id="popularity-wrap" data-tooltip="Updates regularly based on policy level and changes">
                         <div id="popularity-bar"></div>
-                    </div>
-                    <div style="text-align: center;">
+                    </div> -->
+                    <div>
                         <em>Δ <span id="policy-points">0</span> per quarter</em>
                     </div>
                 </section>
@@ -251,11 +242,11 @@
                         <input type="radio" name="reg" value="stringent">
                     </label>
                 </section>
-                <section class="panel-section" data-tooltip="Set the national taxation level.">
-                    <h3>💰️ Taxation Level</h3>
+                <section class="panel-section" data-tooltip="Set the fee level.">
+                    <h3>💰️ Fee Level</h3>
                     <div class="tax-slider-wrapper">
-                        <label for="taxation-slider">Rate: <span id="taxation-value">20</span>%</label>
-                        <input type="range" id="taxation-slider" name="taxation" min="0" max="50" value="20" class="policy-slider">
+                        <label for="taxation-slider">Rate: <span id="taxation-value">4</span>%</label>
+                        <input type="range" id="taxation-slider" name="taxation" min="0" max="20" value="4" class="policy-slider">
                     </div>
                 </section>
                 <section class="panel-section" data-tooltip="Require minimum filter compliance for banks. Non-compliant banks trigger automated tower placement.">
@@ -282,62 +273,7 @@
             </div>
         </aside>
 
-        <aside id="gdp-panel" class="panel command-panel hidden">
-            <div class="panel-header">
-                <h2>Analytics</h2>
-                <button id="close-gdp" class="close-button">×</button>
-            </div>
-            <div class="panel-content">
-                <section class="panel-section">
-                    <h3>Transaction Flow Over Time</h3>
-                    <div id="gdp-chart-container">
-                        <canvas id="gdp-chart"></canvas>
-                    </div>
-                    <div class="gdp-controls">
-                        <button id="volume-btn" class="active" data-view="volume">Volume ($)</button>
-                        <button id="count-btn" data-view="count">Count (#)</button>
-                    </div>
-                </section>
-            </div>
-        </aside>
-        <!-- Deprecated for the moment to favor direct map engagement
-        <aside id="transactions-panel" class="panel hidden">
-            <div class="panel-header">
-                <h2>Transactions</h2>
-                <button id="close-transactions" class="close-button">×</button>
-            </div>
-            <div class="panel-content">
-                <section class="panel-section" id="transactions-list-section">
-                    <h3>All Transactions</h3>
-                    <div id="all-transactions" class="transaction-list">
-                        <div class="no-transactions">No transactions found</div>
-                    </div>
-                </section>
-                <section id="transaction-details" class="panel-section hidden">
-                    <button id="back-to-transactions" class="option-button" style="margin-bottom: 16px; width: 100%;">← Back to List</button>
-                    <div id="tx-summary">
-                    </div>
-                    <div class="detail-row" style="margin: 16px 0;">
-                        <span class="detail-label">Transaction path</span>
-                    </div>
-                    <div id="tx-path" class="transaction-path"></div>
-                    <div id="tx-actions" class="">
-                        <button id="validate-tx" class="tx-button primary">
-                            <span class="tx-button-icon">✓</span>
-                            <span class="tx-button-name">Approve</span>
-                        </button>
-                        <button id="block-tx" class="tx-button errory">
-                            <span class="tx-button-icon">✕</span>
-                            <span class="tx-button-name">Block</span>
-                        </button>
-                        <button id="analyze-tx" class="tx-button">
-                            <span class="tx-button-icon">🔍</span>
-                            <span class="tx-button-name">Analyze</span>
-                        </button>
-                    </div>
-                </section>
-            </div>
-        </aside> -->
+
     </div>
 
     <div id="toast-container">
@@ -369,7 +305,7 @@
             <div class="transaction-status"></div>
         </div>
     </template>
-
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="./js/main.js" type="module"></script>
 </body>
 

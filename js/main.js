@@ -13,6 +13,8 @@ import * as UI from './UI/ui-manager.js'
 import * as uiTransaction from './UI/ui-transaction.js'
 import * as uiUsers from './UI/ui-users.js'
 import * as uiTech from './UI/ui-tech.js'
+import * as uiPolicy from './UI/ui-policy.js' // Import for side effects (event listeners)
+import * as statistics from './UI/statistics.js'
 // Canvas
 import * as Camera from './canvas/camera.js'
 import * as graphics from "./canvas/graphics.js"
@@ -77,6 +79,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Initialize UI panels 
     UI.initUI()
+    statistics.initStatistics()
+    uiPolicy.initPolicyUI()
 
     // Set initial canvas size and enable touch/mouse camera actions
     Camera.resizeCanvas(ctx)
@@ -87,10 +91,18 @@ document.addEventListener('DOMContentLoaded', () => {
     // We show debug controls if relevant
     if (debugAvailable) {
         UI.show(ctrls.debugControls)
+        UI.showFullInterface()
+        UI.show(UI.indicators.statStatItem)
+
     }
     if (isFirstPlay()) {
         UI.hideFullInterface()
+    } else {
+        // For returning players, check tech unlocks to show appropriate UI elements
+        UI.updateTechUnlocks()
+        UI.show(UI.getControls().gameControls)
     }
+
     let isDragging = false
     // Unified click handler for canvas
     canvas.addEventListener('mousedown', (e) => {
@@ -176,6 +188,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     // We center view and then zoom initially.
     Camera.cinematicZoom(Camera.getDefaultZoom())
+    window.startTime = Date.now()
     gameLoop()
 })
 
@@ -183,7 +196,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Global variables, used in many modules
 
-let budget = 120
+let budget = 80
 // Hacky budget global access. But I like the proxy pattern
 Object.defineProperty(window, 'budget', {
     get: () => budget,
@@ -201,6 +214,22 @@ Object.defineProperty(window, 'activeTransactions', {
     }
 })
 
+// Track all expenditures for cost analysis
+window.expenditures = []
+export function addExpenditure(type, cost, description, nodeId = null) {
+    window.expenditures.push({
+        timestamp: Date.now(),
+        type: type, // 'tower', 'enforcement', 'compliance', etc.
+        cost: cost,
+        description: description,
+        nodeId: nodeId
+    })
+    // Keep only last 1000 expenditures to prevent memory issues
+    if (window.expenditures.length > 1000) {
+        window.expenditures = window.expenditures.slice(-1000)
+    }
+}
+
 window.users = []
 Object.defineProperty(window, 'activeUsers', {
     get() {
@@ -214,12 +243,15 @@ Object.defineProperty(window, 'activeNodes', {
     }
 })
 let gdp = 0
+// Export GDP to window for statistics access
+Object.defineProperty(window, 'gdp', {
+    get: () => gdp
+})
 let holiday = false
 export let dropProbability = 0.00001
 let spawnControl = 1
 let corruptionSpread = 10
 // export let transactions = []
-const startTime = Date.now()
 let currentDay = 0
 
 // Gameplay
@@ -279,14 +311,13 @@ export function addObjectEffect(object, emoji, direction = "+", timer = 30, offs
 }
 
 function calculateIndicators() {
-    // Remove old transactions from the log (older than 150 seconds, each second is a day)
-    // while (gdpLog.length && gdpLog[0].timestamp < Date.now() - 150 * 1000) {
-    //     gdpLog.shift()
-    // }
-    // gdp = gdpLog.reduce((sum, tx) => sum + tx.amount, 0)
-
-    // TODO : use transactions array instead of gdpLog. (currently, tx are cleaned up). E.g.:
-    // gdp = transactions.filter(t=>(!t.active&&t.endDate < Date.now()-150*1000)).reduce((sum, tx) => sum + tx.amount, 0)
+    // Calculate GDP from completed transactions over past 150 seconds (150 days)
+    const gdpTimeThreshold = Date.now() - (150 * 1000)
+    gdp = transactions.filter(tx => 
+        !tx.active && 
+        tx.endDate && 
+        tx.endDate >= gdpTimeThreshold
+    ).reduce((sum, tx) => sum + (tx.amount || 0), 0)
 
     budget += maintenance / (60 * 7) * tech.bonus.maintenance// maintenance is per week for balance   
 
@@ -302,20 +333,20 @@ function checkEndGame() {
 
     // Warning states
     if (now - lastWarningTime > 30000) {
-        if (corruptionSpread >= 80 && corruptionSpread < 100) {
+        if (corruptionSpread >= 80 && corruptionSpread <= 100) {
             UI.showToast('⚠️ Critical Warning', 'Corruption is dangerously high!', 'error')
             lastWarningTime = now
         } else if (budget < 0 && budget >= -100) {
             UI.showToast('💰 Financial Warning', 'Budget is critically low!', 'error')
             lastWarningTime = now
-        } else if (policy.popularity <= 100 && policy.popularity > 0) {
+        } else if (policy.popularity <= 100 && policy.popularity >= 0) {
             UI.showToast('😡 Sentiment Warning', 'Your popularity is very low!', 'error')
             lastWarningTime = now
         }
     }
 
     // Loosing cases
-    if (corruptionSpread >= 100) {
+    if (corruptionSpread > 100) {
         graphics.drawEndGame('Corruption has reached critical levels!')
         UI.showRestartButton()
         return true
@@ -327,7 +358,7 @@ function checkEndGame() {
         return true
     }
 
-    if (policy.popularity <= 0) {
+    if (policy.popularity < 0) {
         graphics.drawEndGame('The ecosystem disapproves of your policies!')
         UI.showRestartButton()
         return true
@@ -468,6 +499,7 @@ function gameLoop() {
     if (newCurrentDay !== currentDay) {
         //Daily actions
         currentDay = newCurrentDay
+        window.currentDay = currentDay // Export for statistics
         checkForHoliday(currentDay)
         UI.updateDate(currentDay, holiday)
         const researchPointsGain = tech.calculateResearchPointsGain(gdp, dailyDetectedTransactions)
@@ -488,7 +520,7 @@ function gameLoop() {
         }
 
         // Update statistics panel if visible
-        // uiStatistics.updateStatisticsPanel()
+        statistics.updateStatistics()
         if (currentDay % Math.round(NEW_NODE_FREQUENCY / spawnControl) === 0) {
             // Every 60 days, a new node is added and we check for popularity
             if (!isFirstPlay()) {
@@ -563,8 +595,6 @@ function gameLoop() {
 
     // == Update the UI ==
     UI.updateIndicators(budget, gdp, maintenance * tech.bonus.maintenance)
-    // Update Analytics panel (function will check if visible)
-    UI.updateAnalyticsPanel()
 
     // == Draw the game ==
     drawGame()
