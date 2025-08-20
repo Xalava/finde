@@ -2,6 +2,7 @@
 import { countries, countryKeys, legalityOptions, legalityColorMap, nodeTypes, userTypes } from '../game/config.js'
 import * as policy from '../game/policy.js'
 import { show, hide } from './ui-manager.js'
+import { isMobile } from '../canvas/graphics.js'
 let statisticsPanel = null
 let charts = {}
 
@@ -169,6 +170,7 @@ const CHART_COLORS = {
     warning: '#f59e0b',
     danger: '#ef4444',
     secondary: '#6b7280',
+    terciary: '#a8a8a8ff',
     accent: '#8b5cf6'
 }
 
@@ -198,20 +200,18 @@ export function initStatistics() {
 
 function createStatisticsPanel() {
     // Create the statistics panel HTML structure
-    const panelHTML = `
+    const panelHTML = /*html*/`
         <style>
             .stats-grid {
                 display: grid;
                 grid-template-columns: 1fr 1fr;
                 gap: 15px;
-                max-height: 70vh;
-                overflow-y: auto;
             }
             .stat-card {
                 background: rgba(0, 0, 0, 0.3);
                 border: 1px solid #374151;
                 border-radius: 8px;
-                padding: 15px;
+                padding: 1em;
                 min-height: 200px;
                 max-height: 300px;
             }
@@ -227,6 +227,9 @@ function createStatisticsPanel() {
                 width: 100% !important;
                 height: auto !important;
             }
+            .metrics {
+                padding: 2em;
+            }
             .metric {
                 display: flex;
                 justify-content: space-between;
@@ -240,10 +243,32 @@ function createStatisticsPanel() {
                 color: #e5e7eb;
                 font-weight: bold;
             }
+            @media (max-width: 699px) {
+                .stats-grid {
+                    grid-template-columns: 1fr;
+                    gap: 10px;
+                }
+                .stat-card {
+                    min-height: 250px;
+                    max-height: 350px;
+                    padding: 12px;
+                }
+                .stat-card h4 {
+                    font-size: 14px;
+                    margin-bottom: 12px;
+                }
+                .stat-card canvas {
+                    max-height: 220px !important;
+                }
+                .metric {
+                    font-size: 13px;
+                    margin: 10px 0;
+                }
+            }
         </style>
         <aside id="statistics-panel" class="panel command-panel hidden">
             <div class="panel-header">
-                <h2>📊 Analytics Dashboard</h2>
+                <h2>📊 Analytics </h2>
                 <button id="close-statistics" class="close-button">×</button>
             </div>
             <div class="panel-tabs">
@@ -256,7 +281,7 @@ function createStatisticsPanel() {
                     <div class="stats-grid">
                         <div class="stat-card">
                             <h4>Network Status & Performance</h4>
-                            <div id="network-metrics">
+                            <div class="metrics">
                                 <div class="metric">
                                     <span class="metric-label">Active Nodes</span>
                                     <span class="metric-value" id="active-nodes-count" title="Number of currently operational financial institutions in the network">0</span>
@@ -273,10 +298,10 @@ function createStatisticsPanel() {
                                     <span class="metric-label">System Efficiency</span>
                                     <span class="metric-value" id="system-efficiency" title="Detection rate minus (false positive rate × 2)">0%</span>
                                 </div>
-                                <div class="metric">
+                                <!-- <div class="metric">
                                     <span class="metric-label">Network Capacity</span>
                                     <span class="metric-value" id="network-capacity" title="Current transaction load as percentage of total network capacity (nodes × 100)">0%</span>
-                                </div>
+                                </div> -->
                                 <div class="metric">
                                     <span class="metric-label">Transactions Processed</span>
                                     <span class="metric-value" id="total-transactions" title="Total number of transactions that have been processed by the network">0</span>
@@ -292,14 +317,35 @@ function createStatisticsPanel() {
                             <canvas id="historical-trends-chart"></canvas>
                         </div>
                         <div class="stat-card">
-                            <h4>Transaction Flow Analysis</h4>
+                            <h4>Transaction Path Length</h4>
                             <canvas id="transaction-flow-chart"></canvas>
                         </div>
                     </div>
                 </div>
-                
+
                 <div id="stats-security-tab" class="tab-content hidden">
-                    <div class="stats-grid">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <h4>Security Summary</h4>
+                        <div class="metrics">
+                            <div class="metric">
+                                <span class="metric-label">Detection Rate</span>
+                                <span class="metric-value" id="detection-rate" title="Percentage of illegal transactions that were detected">0%</span>
+                            </div>
+                            <div class="metric">
+                                <span class="metric-label">False Positive Rate</span>
+                                <span class="metric-value" id="false-positive-rate" title="Percentage of legitimate transactions incorrectly flagged as illegal">0%</span>
+                            </div>
+                            <div class="metric">
+                                <span class="metric-label">Financial Institutions with Filters</span>
+                                <span class="metric-value" id="nodes-with-filters" title="Number of FI that have detection filters installed">0</span>
+                            </div>
+                            <div class="metric">
+                                <span class="metric-label">Manual Actions</span>
+                                <span class="metric-value" id="manual-actions" title="Number of transactions manually blocked by player">0</span>
+                            </div>
+                        </div>
+                    </div>
                         <div class="stat-card">
                             <h4>Transactions by Risk Category</h4>
                             <canvas id="transaction-risk-chart"></canvas>
@@ -312,47 +358,14 @@ function createStatisticsPanel() {
                             <h4>Detection Filter Distribution</h4>
                             <canvas id="filter-distribution-chart"></canvas>
                         </div>
-                        <div class="stat-card">
-                            <h4>Security Summary</h4>
-                            <div id="security-metrics">
-                                <div class="metric">
-                                    <span class="metric-label">Detection Rate</span>
-                                    <span class="metric-value" id="detection-rate" title="Percentage of illegal transactions that were detected">0%</span>
-                                </div>
-                                <div class="metric">
-                                    <span class="metric-label">False Positive Rate</span>
-                                    <span class="metric-value" id="false-positive-rate" title="Percentage of legitimate transactions incorrectly flagged as illegal">0%</span>
-                                </div>
-                                <div class="metric">
-                                    <span class="metric-label">Financial Institutions with Filters</span>
-                                    <span class="metric-value" id="nodes-with-filters" title="Number of FI that have detection filters installed">0</span>
-                                </div>
-                                <div class="metric">
-                                    <span class="metric-label">Manual Actions</span>
-                                    <span class="metric-value" id="manual-actions" title="Number of transactions manually blocked by player">0</span>
-                                </div>
-                            </div>
-                        </div>
                     </div>
                 </div>
-                
+
                 <div id="stats-economics-tab" class="tab-content hidden">
                     <div class="stats-grid">
                         <div class="stat-card">
-                            <h4>Revenue Analysis</h4>
-                            <canvas id="revenue-analysis-chart"></canvas>
-                        </div>
-                        <div class="stat-card">
-                            <h4>Cost Breakdown (past 30 days)</h4>
-                            <canvas id="cost-breakdown-chart"></canvas>
-                        </div>
-                        <div class="stat-card">
-                            <h4>Economic Growth Progress</h4>
-                            <canvas id="budget-trends-chart"></canvas>
-                        </div>
-                        <div class="stat-card">
                             <h4>Economic Health</h4>
-                            <div id="economic-metrics">
+                            <div class="metrics">
                                 <div class="metric">
                                     <span class="metric-label">Revenue/Day</span>
                                     <span class="metric-value" id="daily-revenue" title="Income generated from tax collection on completed transactions">$0</span>
@@ -374,6 +387,18 @@ function createStatisticsPanel() {
                                     <span class="metric-value" id="victory-progress" title="Progress toward $1M GDP economic victory condition">0%</span>
                                 </div>
                             </div>
+                        </div>
+                        <div class="stat-card">
+                            <h4>Revenue Analysis</h4>
+                            <canvas id="revenue-analysis-chart"></canvas>
+                        </div>
+                        <div class="stat-card">
+                            <h4>Cost Breakdown (past 30 days)</h4>
+                            <canvas id="cost-breakdown-chart"></canvas>
+                        </div>
+                        <div class="stat-card">
+                            <h4>Economic Growth (GDP)</h4>
+                            <canvas id="budget-trends-chart"></canvas>
                         </div>
                     </div>
                 </div>
@@ -613,12 +638,12 @@ function getChartConfig(chartId, type) {
             maintainAspectRatio: true,
             aspectRatio: 1.5,
             layout: {
-                padding: 10
+                padding: 0,
+                paddingTop: 20
             },
             plugins: {
                 legend: {
-                    labels: { color: '#e5e7eb', font: { size: 10 } },
-                    position: 'bottom'
+                    display: false,
                 }
             },
             interaction: {
@@ -630,11 +655,17 @@ function getChartConfig(chartId, type) {
             },
             scales: type === 'line' || type === 'bar' ? {
                 x: {
-                    ticks: { color: '#9ca3af', font: { size: 9 } },
+                    ticks: {
+                        color: '#9ca3af',
+                        font: { size: isMobile ? 11 : 9 }
+                    },
                     grid: { color: '#374151' }
                 },
                 y: {
-                    ticks: { color: '#9ca3af', font: { size: 9 } },
+                    ticks: {
+                        color: '#9ca3af',
+                        font: { size: isMobile ? 11 : 9 }
+                    },
                     grid: { color: '#374151' }
                 }
             } : {},
@@ -656,7 +687,7 @@ function getChartConfig(chartId, type) {
                 y: {
                     type: 'logarithmic',
                     display: true,
-                    title: { display: true, text: 'GDP ($) - Log Scale', color: '#9ca3af' },
+                    // title: { display: true, text: 'GDP ($) - Log Scale', color: '#9ca3af' },
                     ticks: {
                         color: '#9ca3af',
                         font: { size: 10 },
@@ -681,11 +712,39 @@ function getChartConfig(chartId, type) {
                 }
             }
             break
+        case 'cross-border-chart':
+            baseConfig.options.plugins.legend = {
+                display: true,
+                labels: { color: '#e5e7eb', font: { size: isMobile ? 10 : 8 } },
+                position: 'bottom',
+            }
+            break
+        case 'transaction-risk-chart':
+            baseConfig.options.plugins.legend = {
+                display: true,
+                labels: { color: '#e5e7eb', font: { size: isMobile ? 10 : 8 } },
+                position: 'bottom',
+            }
+            break
+        case 'filter-distribution-chart':
+            baseConfig.options.plugins.legend = {
+                display: true,
+                labels: { color: '#e5e7eb', font: { size: isMobile ? 10 : 8 } },
+                position: 'bottom',
+            }
+            break
+        case 'cost-breakdown-chart':
+            baseConfig.options.plugins.legend = {
+                display: true,
+                labels: { color: '#e5e7eb', font: { size: isMobile ? 10 : 8 } },
+                position: 'bottom',
+            }
+            break
+
     }
 
     return baseConfig
 }
-
 
 function updateAllCharts() {
     const analysis = analyzeCurrentGameState()
@@ -766,7 +825,7 @@ function updateNetworkCharts(analysis) {
             chart.data.labels = labels
             chart.data.datasets = [
                 {
-                    label: 'New Transactions/Week',
+                    label: 'Weekly New Transactions',
                     data: weeklyNewTransactions,
                     borderColor: CHART_COLORS.primary,
                     backgroundColor: CHART_COLORS.primary + '40',
@@ -779,7 +838,7 @@ function updateNetworkCharts(analysis) {
             chart.data.labels = ['Week 1', 'Week 2', 'Week 3']
             chart.data.datasets = [
                 {
-                    label: 'New Transactions/Week',
+                    label: 'Weekly New Transactions',
                     data: [0, 0, 0],
                     borderColor: CHART_COLORS.primary,
                     backgroundColor: CHART_COLORS.primary + '40',
@@ -790,7 +849,6 @@ function updateNetworkCharts(analysis) {
         }
         chart.update('none')
     }
-
 
     // Transaction Flow Analysis Chart (shows transaction paths)
     if (charts['transaction-flow-chart']) {
@@ -838,13 +896,14 @@ function updateNetworkCharts(analysis) {
     }
 
     const systemEfficiency = Math.max(0, analysis.detectionRate - (analysis.falsePositiveRate * 2))
-    const totalCapacity = analysis.activeNodes * 100
-    const networkCapacity = totalCapacity > 0 ? Math.min(100, (analysis.totalTransactions / totalCapacity) * 100) : 0
+    // TODO revisit this idea of effiency
+    // const totalCapacity = analysis.activeNodes * 100 /
+    // const networkCapacity = totalCapacity > 0 ? Math.min(100, (analysis.totalTransactions / totalCapacity) * 100) : 0
 
     // Update with safe fallbacks for NaN values
     updateElement('avg-processing-time', isNaN(avgProcessingTime) ? '0s' : Math.round(avgProcessingTime) + 's')
     updateElement('system-efficiency', isNaN(systemEfficiency) ? '0%' : Math.round(systemEfficiency) + '%')
-    updateElement('network-capacity', isNaN(networkCapacity) ? '0%' : Math.round(networkCapacity) + '%')
+    // updateElement('network-capacity', isNaN(networkCapacity) ? '0%' : Math.round(networkCapacity) + '%')
 }
 
 function updateSecurityCharts(analysis) {
@@ -909,11 +968,11 @@ function updateSecurityCharts(analysis) {
             datasets: [{
                 data: data,
                 backgroundColor: [
-                    CHART_COLORS.success,
+                    CHART_COLORS.secondary,
+                    CHART_COLORS.terciary,
                     CHART_COLORS.primary,
                     CHART_COLORS.warning,
                     CHART_COLORS.accent,
-                    CHART_COLORS.secondary
                 ]
             }]
         }
@@ -1075,7 +1134,7 @@ function updateEconomicsCharts(analysis) {
                 datasets: [
                     {
                         label: 'GDP ($)',
-                        data: [1, 1, Math.max(1, currentGDP)], // Use 1 as minimum for log scale
+                        data: [1, 1, Math.max(1000, currentGDP)], // Use 1000 as minimum for log scale
                         borderColor: CHART_COLORS.primary,
                         backgroundColor: CHART_COLORS.primary + '40',
                         tension: 0.3,

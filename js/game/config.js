@@ -1,5 +1,5 @@
 // Game constants
-export const BASE_SPAWN_RATE = 0.002
+export const BASE_SPAWN_RATE = 0.0018
 export const HOLIDAY_SPAWN_BONUS = 10
 export let NEW_NODE_FREQUENCY = 60
 export const DISTANCE = {

@@ -256,7 +256,7 @@ class Transaction {
         switch (this.legality) {
             case 'legit':
                 UI.showToast('✅ Transaction validated', `Legit transaction from ${this.sourceUser.name}. `, 'success')
-                policy.changePopularity(3)
+                policy.changePopularity(7)
                 addObjectEffect(this, "✨")
                 // addObjectEffect(this, "✅",  2000, { x: 3, y: 3 })
 
@@ -280,7 +280,7 @@ class Transaction {
                 break
             case 'illegal':
                 UI.showToast('✅ Illegal transaction validated', `${reward > 9 ? "Strongly damaging" : "Damaging"} damaging your reputation (-${reward * 5})`, 'error')
-                policy.changePopularity(-reward * 5)
+                policy.changePopularity(-reward * 4)
                 addObjectEffect(this, "✨", "-")
                 this.validated = true
                 break

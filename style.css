@@ -1179,7 +1179,8 @@ small {
 
     .command-panel {
         width: 95vw;
-        top: 60px;
+        top: 65px;
+        max-width: 95vw;
         max-height: 90vh;
     }
 

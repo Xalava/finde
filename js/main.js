@@ -313,9 +313,9 @@ export function addObjectEffect(object, emoji, direction = "+", timer = 30, offs
 function calculateIndicators() {
     // Calculate GDP from completed transactions over past 150 seconds (150 days)
     const gdpTimeThreshold = Date.now() - (150 * 1000)
-    gdp = transactions.filter(tx => 
-        !tx.active && 
-        tx.endDate && 
+    gdp = transactions.filter(tx =>
+        !tx.active &&
+        tx.endDate &&
         tx.endDate >= gdpTimeThreshold
     ).reduce((sum, tx) => sum + (tx.amount || 0), 0)
 
@@ -540,12 +540,12 @@ function gameLoop() {
     if (selectedTx && !selectedTx.active) {
         UI.clearTransactionSelection()
     }
-    if (transactions.length === 0) {
+    if (activeTransactions.length === 0) {
         // ensure there is always a transaction going
         spawnTransaction()
     } else {
         const holidayBonus = holiday ? HOLIDAY_SPAWN_BONUS : 1
-        const spawnRate = activeNodes.length * holidayBonus * Math.log10(currentDay + 1) * BASE_SPAWN_RATE * spawnControl
+        const spawnRate = activeNodes.length * holidayBonus * Math.log10(currentDay + 2) * BASE_SPAWN_RATE * spawnControl
         if (Math.random() < spawnRate) {
             spawnTransaction()
         } else if (window.launderingAlert && Math.random() < spawnRate * 0.1) {
