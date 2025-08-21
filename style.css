@@ -201,6 +201,12 @@ canvas {
 }
 
 /* General badge component */
+.maintenance-tag {
+    color: red;
+    font-size: 12px;
+    padding: 2px;
+}
+
 .badge {
     display: inline-block;
     border-radius: 3px;

@@ -189,10 +189,10 @@ export function placeTower(node, towerType) {
     // node.accuracy = tower.accuracy + (node.type === 'fintech' ? 0.1 : 0)// We move the accuracy to the node for AI usages
     budget -= tower.cost
     maintenance -= tower.maintenance
-    
+
     // Track expenditure
     addExpenditure('tower', tower.cost, `${tower.name} installed at ${node.name}`, node.id)
-    
+
     console.log(`🛠️ Tower placed at #${node.id}`)
     if (debug) console.log(tower)
     // Update UI immediately after placing tower
@@ -218,14 +218,15 @@ export function enforceAction(node, actionType, free = false) {
         return
     } else {
         budget -= actionCost
-        
+
         // Track expenditure (only for paid actions)
         if (!free && actionCost > 0) {
             addExpenditure('enforcement', actionCost, `${action.name} at ${node.name}`, node.id)
         }
-        
+
         node.changeReputation(action.reputationEffect * tech.bonus.reputationDamage) //negative
-        policy.changePopularity(action.popularityEffect)
+        if (action.popularityEffect)
+            policy.changePopularity(action.popularityEffect)
         node.enforcementAction = actionType
         node.enforcementEnd = Date.now() + action.duration * 1000
         if (action.affectsConnected) {
@@ -358,7 +359,7 @@ export function checkNodesCompliance() {
             node.tower = targetTower
             node.accuracy = config.towerOptions[targetTower].accuracy
             budget -= cost
-            
+
             // Track expenditure for compliance
             addExpenditure('compliance', cost, `Automated compliance: ${config.towerOptions[targetTower].name} at ${node.name}`, node.id)
 

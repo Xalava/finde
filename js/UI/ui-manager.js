@@ -19,6 +19,7 @@ let statistics = null
 // let transactionsPanel = null
 export let tooltip = null
 let panels = null
+let toastContainer = null
 // let txButtons = null
 // let txActions = null
 
@@ -116,7 +117,7 @@ export function initUI() {
         freezeBtn: document.getElementById('tooltip-freeze')
     }
 
-
+    toastContainer = document.getElementById('toast-container')
 
     // helper array for iterations on panels
     panels = [
@@ -185,7 +186,7 @@ export function clearAllSelections() {
 export function updateIndicators(budget, gdp, maintenance) {
     if (maintenance < 0) {
 
-        indicators.budget.innerHTML = `${budget.toFixed(0)} (<span style="color: red">${maintenance.toFixed(0)}</span>)`
+        indicators.budget.innerHTML = `${budget.toFixed(0)} <span class="maintenance-tag">${maintenance.toFixed(0)}🛠️</span>`
     } else {
         indicators.budget.textContent = budget.toFixed(0)
     }
@@ -194,11 +195,11 @@ export function updateIndicators(budget, gdp, maintenance) {
     indicators.maintenance.textContent = Math.abs(maintenance)
 
     // Show/hide maintenance stat item based on value
-    if (Math.abs(maintenance) > 0) {
-        show(controls.maintenanceStatItem)
-    } else {
-        hide(controls.maintenanceStatItem)
-    }
+    // if (Math.abs(maintenance) > 0) {
+    //     show(controls.maintenanceStatItem)
+    // } else {
+    //     hide(controls.maintenanceStatItem)
+    // }
     // indicators.txCounter.textContent = window.transactions.length
 }
 
@@ -217,7 +218,6 @@ export function showToast(title, message, type = 'info') {
             <div class="toast-message">${message}</div>
         </div>
     `
-    const toastContainer = document.getElementById('toast-container')
     toastContainer.appendChild(toast)
 
     // Trigger animation
@@ -626,7 +626,7 @@ window.addEventListener('keydown', (e) => {
     if (!getSelectedNode()) return
     // Numbers 1-9 for towers (in UI order)
     if (/^[1-9]$/.test(key)) {
-        const towerButtons = document.querySelectorAll('#tower-options .option-button')
+        const towerButtons = nodeDetails.towerOptions.querySelectorAll('.option-button')
         const index = parseInt(key) - 1
         if (towerButtons[index] && !towerButtons[index].disabled) {
             towerButtons[index].click()
@@ -636,7 +636,7 @@ window.addEventListener('keydown', (e) => {
     // Letters for actions (a, r, i)
     const actionMap = { 'a': 'audit', 'r': 'raid', 'i': 'international_task_force' }
     if (actionMap[key]) {
-        const actionButtons = document.querySelectorAll('#action-options .option-button')
+        const actionButtons = nodeDetails.actionOptions.querySelectorAll('.option-button')
         const actionButton = Array.from(actionButtons).find(btn =>
             btn.textContent.toLowerCase().includes(actionMap[key].replace('_', ' ').split(' ')[0])
         )
@@ -647,7 +647,6 @@ window.addEventListener('keydown', (e) => {
 })
 
 export function activatePolicy() {
-    console.log('Activating policy button')
     show(controls.policyBtn)
 }
 

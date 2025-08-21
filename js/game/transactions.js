@@ -240,7 +240,7 @@ class Transaction {
 
     loseTransaction(message = '') {
         this.endTransaction('lost')
-        console.log("Transaction lost!")
+        console.log("∅ Transaction lost!")
         addEffect(this.x - 2, this.y, "∅", "insitus")
         let lostTransactions = transactions.filter(tx => tx.endReason === 'lost').length
         if (lostTransactions < 2 || lostTransactions % 10 === 0) {
@@ -326,7 +326,6 @@ class Transaction {
         }, 3000)
     }
     block() {
-        console.log('Transaction blocked')
         this.endTransaction('blocked')
         addEffect(this.x - 2, this.y, "❌", "insitus")
         let reward = normalRandom(120)
@@ -338,7 +337,7 @@ class Transaction {
 
                 break
             case 'questionable':
-                if (this.risk < 6) {
+                if (this.riskLevel < 6) {
                     UI.showToast('🛑 Transaction blocked', `Suspicious transaction from ${this.sourceUser.name}. Limited consequences`, 'warning')
                     let change = Math.random() < 0.5 ? 3 : -4
                     policy.changePopularity(change)
@@ -350,7 +349,7 @@ class Transaction {
                 }
                 break
             case 'illegal':
-                UI.showToast('🛑 Transaction blocked', `Illegal transaction from ${this.sourceUser.name}has been blocked. Gaining popularity (+${reward})`, 'success')
+                UI.showToast('🛑 Transaction blocked', `Illegal transaction from ${this.sourceUser.name} has been blocked. Gaining popularity (+${reward})`, 'success')
                 policy.changePopularity(reward)
                 addEffect(this.x, this.y, "✨", 'smallbonus')//not visible as object ended
 
