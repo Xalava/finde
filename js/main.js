@@ -27,7 +27,6 @@ const debugAvailable = ['localhost', '127.0.0.1'].includes(location.hostname)
 const canvas = document.getElementById('game')
 const ctx = canvas.getContext('2d')
 graphics.init(canvas, ctx)
-Camera.initCamera(canvas)
 window.addEventListener('resize', Camera.resizeCanvas.bind(null, ctx))
 
 let effects = []
@@ -82,9 +81,9 @@ document.addEventListener('DOMContentLoaded', () => {
     statistics.initStatistics()
     uiPolicy.initPolicyUI()
 
-    // Set initial canvas size and enable touch/mouse camera actions
+    // Set initial canvas size and setup event listeners
+    Camera.initCamera(canvas, handleCanvasClick)
     Camera.resizeCanvas(ctx)
-    Camera.setCameraActions()
 
     // First-time setup
     const ctrls = UI.getControls()
@@ -103,30 +102,30 @@ document.addEventListener('DOMContentLoaded', () => {
         UI.show(UI.getControls().gameControls)
     }
 
-    let isDragging = false
-    // Unified click handler for canvas
-    canvas.addEventListener('mousedown', (e) => {
-        isDragging = false
-        const transaction = findTransactionAt(e.clientX, e.clientY)
-        const node = findNodeAt(e.clientX, e.clientY)
-        const user = findUserAt(e.clientX, e.clientY)
+    // let isDragging = false
+    // // Unified click handler for canvas
+    // canvas.addEventListener('mousedown', (e) => {
+    //     isDragging = false
+    //     const transaction = findTransactionAt(e.clientX, e.clientY)
+    //     const node = findNodeAt(e.clientX, e.clientY)
+    //     const user = findUserAt(e.clientX, e.clientY)
 
-        if (transaction || node || user) {
-            // Don't start dragging when clicking on interactive elements
-            return
-        } else {
-            Camera.startDrag(e)
-            isDragging = true
-        }
-    })
+    //     if (transaction || node || user) {
+    //         // Don't start dragging when clicking on interactive elements
+    //         return
+    //     } else {
+    //         Camera.startDrag(e)
+    //         isDragging = true
+    //     }
+    // })
 
-    canvas.addEventListener('click', (e) => {
-        // canvas.onClick = (e) => {
+    // canvas.addEventListener('click', (e) => {
+    //     // canvas.onClick = (e) => {
 
-        e.stopPropagation() // Prevent document click handler from interfering
+    //     e.stopPropagation() // Prevent document click handler from interfering
 
-        handleCanvasClick(e.clientX, e.clientY)
-    })
+    //     handleCanvasClick(e.clientX, e.clientY)
+    // })
 
     // Handle node approval
     window.addEventListener('approveNode', (e) => {
@@ -138,16 +137,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     })
 
-    // // Handle touch interactions
-    canvas.addEventListener('touchend', (e) => {
-        const touch = e.changedTouches[0]
-
-        handleCanvasClick(touch.clientX, touch.clientY)
-        // const node = findNodeAt(touch.clientX, touch.clientY)
-        // if (node) {
-        //     UI.showNodeDetails(node, budget, placeTower, enforceAction)
-        // }
-    })
 
     // document.addEventListener('click', handlePanelClose)
     // document.addEventListener('touchstart', handlePanelClose, { passive: false })
@@ -396,7 +385,7 @@ function spawnNode() {
             activateNode(newNode)
             if (!isFirstNewNode) {
                 Camera.cinematicCenterPoint(newNode.x, newNode.y, 2)
-                isFirstNewNode = false
+                // isFirstNewNode = true // We keep them for the moment.
                 setTimeout(() => {
                     Camera.cinematicCenterMap(nodes.filter(n => n.active))
                 }, 2000) // Come back after 2 seconds
@@ -460,6 +449,17 @@ function drawGame() {
     // Filter out expired effects
     effects = effects.filter(e => e.timer > 0)
     objectEffects = objectEffects.filter(e => e.timer > 0)
+
+    // Aggressive cleanup if effects arrays get too large
+    const maxEffects = 100 // Maximum number of effects to keep
+    if (effects.length > maxEffects) {
+        // Keep only the most recent effects
+        effects = effects.slice(-maxEffects)
+    }
+    if (objectEffects.length > maxEffects) {
+        // Keep only the most recent object effects
+        objectEffects = objectEffects.slice(-maxEffects)
+    }
     if (displayCountries) {
         graphics.drawCountries(nodes, users)
     }

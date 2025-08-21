@@ -1,24 +1,42 @@
-let canvas, ctx // ctx is local to this module
+let canvas // Canvas element reference
+let handleCanvasClick
 
 const MAX_ZOOM = 5
 const MIN_ZOOM = 0.5
 const camera = {
     x: 0,
     y: 0,
-    zoom: 1,
-    dragging: false,
+    zoom: 1
+}
+
+// Minimal mobile touch state
+let touchState = {
+    startX: 0,
+    startY: 0,
+    startTime: 0,
     lastX: 0,
     lastY: 0,
     lastPinchDistance: 0,
-    isPinching: false
+    isPinching: false,
+    hasMoved: false
 }
 
+// Constants for swipe prevention
+const SWIPE_THRESHOLD = 30
+const SWIPE_TIME_LIMIT = 300
+const EDGE_THRESHOLD = 50
+// Desktop mouse handling functions
+let mouseState = {
+    dragging: false,
+    lastX: 0,
+    lastY: 0
+}
 // Helper functions
 function normaliseZoom(z) {
     return Math.min(Math.max(MIN_ZOOM, z), MAX_ZOOM)
 }
 
-function setZoomAt(clientX, clientY, newZoom) {
+export function setZoomAt(clientX, clientY, newZoom) {
     const rect = canvas.getBoundingClientRect()
     const mouseX = clientX - rect.left
     const mouseY = clientY - rect.top
@@ -42,63 +60,36 @@ function targetScreenCoordsFor(worldX, worldY, zoom) {
     }
 }
 
-export function initCamera(canvasEl) {
+export function initCamera(canvasEl, handleCanvasClickFunction) {
     canvas = canvasEl
+    // A bit hacky, will be used in event listeners. 
+    handleCanvasClick = handleCanvasClickFunction
+    // Native click handling (works on both desktop and mobile)
+    canvas.addEventListener('click', (e) => {
+        handleCanvasClick(e.clientX, e.clientY)
+    })
+
+    // Desktop mouse events
+    canvas.addEventListener('mousedown', handleMouseDown)
+    canvas.addEventListener('mousemove', handleMouseMove)
+    canvas.addEventListener('mouseup', handleMouseUp)
+    canvas.addEventListener('mouseleave', handleMouseUp)
+    canvas.addEventListener('wheel', handleWheel, { passive: false })
+
+    // Mobile touch events
+    canvas.addEventListener('touchstart', handleTouchStart, { passive: false })
+    canvas.addEventListener('touchmove', handleTouchMove, { passive: false })
+    canvas.addEventListener('touchend', handleTouchEnd, { passive: false })
+
+    // Mobile swipe prevention
+    document.addEventListener('touchmove', preventSwipeNavigation, { passive: false })
 }
 
-export function setCameraActions() {
-    canvas.addEventListener('mousemove', (e) => {
-        moveCamera(e)
-    })
-
-    canvas.addEventListener('mouseup', () => {
-        endDrag()
-    })
-
-    canvas.addEventListener('mouseleave', () => {
-        endDrag()
-    })
-
-    canvas.addEventListener('touchstart', (e) => {
-        e.preventDefault()
-        if (e.touches.length === 2) {
-            startPinch(e)
-        } else if (e.touches.length === 1) {
-            const touch = e.touches[0]
-            startDrag(touch)
-        }
-    }, { passive: false })
-
-    canvas.addEventListener('touchmove', (e) => {
-        e.preventDefault()
-        if (e.touches.length === 2) {
-            handlePinch(e)
-        } else if (e.touches.length === 1 && !camera.isPinching) {
-            const touch = e.touches[0]
-            moveCamera(touch)
-        }
-    }, { passive: false })
-
-    canvas.addEventListener('touchend', (e) => {
-        if (e.touches.length === 0) {
-            endDrag()
-            endPinch()
-        } else if (e.touches.length === 1 && camera.isPinching) {
-            endPinch()
-            const touch = e.touches[0]
-            startDrag(touch)
-        }
-    })
-
-    canvas.addEventListener('wheel', (e) => {
-        e.preventDefault()
-        const zoomFactor = e.deltaY < 0 ? 1.1 : 0.9
-        setZoomAt(e.clientX, e.clientY, camera.zoom * zoomFactor)
-    }, { passive: false })
-
-    // Prevent context menu on right click
-    canvas.addEventListener('contextmenu', (e) => e.preventDefault())
+export function panCamera(deltaX, deltaY) {
+    camera.x += deltaX
+    camera.y += deltaY
 }
+
 
 export function getDefaultZoom() {
     return window.innerWidth < 600 ? 1.1 : 1.8
@@ -115,6 +106,8 @@ export function restoreCamera(ctx) {
 }
 
 export function resizeCanvas(ctx) {
+    if (!canvas) return
+
     const container = document.getElementById('game-container')
     canvas.width = container.clientWidth
     canvas.height = container.clientHeight
@@ -166,66 +159,126 @@ export function getScreenPos(worldX, worldY) {
         y: screenY
     }
 }
-
-function moveCamera(e) {
-    if (camera.dragging) {
-        camera.x += e.clientX - camera.lastX
-        camera.y += e.clientY - camera.lastY // e.movementY / camera.zoom
-        camera.lastX = e.clientX
-        camera.lastY = e.clientY
+function handleMouseDown(e) {
+    if (e.button === 0) { // Left click only
+        mouseState.dragging = true
+        mouseState.lastX = e.clientX
+        mouseState.lastY = e.clientY
+        canvas.style.cursor = 'grabbing'
     }
 }
 
-export function startDrag(e) {
-    camera.dragging = true
-    camera.lastX = e.clientX
-    camera.lastY = e.clientY
-    canvas.style.cursor = 'grabbing'
-
-}
-export function endDrag() {
-    camera.dragging = false
-    canvas.style.cursor = 'default'
+function handleMouseMove(e) {
+    if (mouseState.dragging) {
+        panCamera(e.clientX - mouseState.lastX, e.clientY - mouseState.lastY)
+        mouseState.lastX = e.clientX
+        mouseState.lastY = e.clientY
+    }
 }
 
-function getPinchDistance(e) {
-    const touch1 = e.touches[0]
-    const touch2 = e.touches[1]
+function handleMouseUp(e) {
+    if (mouseState.dragging) {
+        mouseState.dragging = false
+        canvas.style.cursor = 'default'
+    }
+}
+
+function handleWheel(e) {
+    e.preventDefault()
+    const zoomFactor = e.deltaY < 0 ? 1.1 : 0.9
+    const newZoom = getZoom() * zoomFactor
+    setZoomAt(e.clientX, e.clientY, newZoom)
+}
+
+// Mobile touch handling functions
+function handleTouchStart(e) {
+    e.preventDefault()
+    const touch = e.touches[0]
+
+    touchState.startX = touch.clientX
+    touchState.startY = touch.clientY
+    touchState.startTime = Date.now()
+    touchState.lastX = touch.clientX
+    touchState.lastY = touch.clientY
+    touchState.hasMoved = false
+
+    if (e.touches.length === 2) {
+        touchState.isPinching = true
+        touchState.lastPinchDistance = getPinchDistance(e.touches[0], e.touches[1])
+    } else {
+        touchState.isPinching = false
+    }
+}
+function handleTouchMove(e) {
+    e.preventDefault()
+    
+    // Check if touch has moved significantly (for tap detection)
+    if (!touchState.hasMoved) {
+        const touch = e.touches[0]
+        const deltaX = Math.abs(touch.clientX - touchState.startX)
+        const deltaY = Math.abs(touch.clientY - touchState.startY)
+        if (deltaX > 10 || deltaY > 10) {
+            touchState.hasMoved = true
+        }
+    }
+
+    if (e.touches.length === 2 && touchState.isPinching) {
+        // Handle pinch zoom
+        const currentDistance = getPinchDistance(e.touches[0], e.touches[1])
+        const zoomFactor = currentDistance / touchState.lastPinchDistance
+        const centerX = (e.touches[0].clientX + e.touches[1].clientX) / 2
+        const centerY = (e.touches[0].clientY + e.touches[1].clientY) / 2
+        const newZoom = getZoom() * zoomFactor
+        setZoomAt(centerX, centerY, newZoom)
+        touchState.lastPinchDistance = currentDistance
+    } else if (e.touches.length === 1 && !touchState.isPinching) {
+        // Handle single finger pan
+        const touch = e.touches[0]
+        panCamera(touch.clientX - touchState.lastX, touch.clientY - touchState.lastY)
+        touchState.lastX = touch.clientX
+        touchState.lastY = touch.clientY
+    }
+}
+function handleTouchEnd(e) {
+    const wasQuickTap = !touchState.hasMoved && (Date.now() - touchState.startTime) < 500
+    
+    if (e.touches.length === 0) {
+        // All touches ended
+        if (wasQuickTap) {
+            // Handle tap as click
+            const touch = e.changedTouches[0]
+            handleCanvasClick(touch.clientX, touch.clientY)
+        }
+        touchState.isPinching = false
+    } else if (e.touches.length === 1 && touchState.isPinching) {
+        // Transition from pinch to single finger
+        touchState.isPinching = false
+        const touch = e.touches[0]
+        touchState.lastX = touch.clientX
+        touchState.lastY = touch.clientY
+    }
+}
+function getPinchDistance(touch1, touch2) {
     const dx = touch2.clientX - touch1.clientX
     const dy = touch2.clientY - touch1.clientY
     return Math.sqrt(dx * dx + dy * dy)
 }
+function preventSwipeNavigation(e) {
+    if (e.touches.length > 1) return
 
-function getPinchCenter(e) {
-    const touch1 = e.touches[0]
-    const touch2 = e.touches[1]
-    return {
-        x: (touch1.clientX + touch2.clientX) / 2,
-        y: (touch1.clientY + touch2.clientY) / 2
+    const touch = e.touches[0]
+    const deltaX = touch.clientX - touchState.startX
+    const deltaY = touch.clientY - touchState.startY
+    const deltaTime = Date.now() - touchState.startTime
+
+    // Prevent horizontal swipes from left edge (browser back navigation)
+    const isHorizontalSwipe = Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > SWIPE_THRESHOLD
+    const isFastSwipe = deltaTime < SWIPE_TIME_LIMIT
+    const isFromLeftEdge = touchState.startX < EDGE_THRESHOLD
+
+    if (isHorizontalSwipe && (isFastSwipe || isFromLeftEdge)) {
+        e.preventDefault()
     }
-}
-
-function startPinch(e) {
-    camera.isPinching = true
-    camera.dragging = false
-    camera.lastPinchDistance = getPinchDistance(e)
-}
-
-function handlePinch(e) {
-    if (!camera.isPinching) return
-
-    const currentDistance = getPinchDistance(e)
-    const zoomFactor = currentDistance / camera.lastPinchDistance
-    const center = getPinchCenter(e)
-
-    setZoomAt(center.x, center.y, camera.zoom * zoomFactor)
-
-    camera.lastPinchDistance = currentDistance
-}
-
-function endPinch() {
-    camera.isPinching = false
-    camera.lastPinchDistance = 0
 }
 
 export function cinematicZoom(zoomTarget) {
