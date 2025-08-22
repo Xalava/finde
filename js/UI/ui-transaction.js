@@ -84,12 +84,12 @@ export function positionTransactionTooltip(tx) {
 
     if (isMobile) {
         // Default: below the transaction
-        left = pt.x - 120
-        top = pt.y + 30
+        left = pt.x - PANEL_W / 2
+        top = pt.y + 60
 
         // Flip above if it would overflow bottom
         if (top + PANEL_H > innerHeight - M) {
-            top = pt.y - PANEL_H - 10
+            top = pt.y - PANEL_H - 20
         }
 
         // Clamp horizontally to stay on screen
@@ -100,12 +100,12 @@ export function positionTransactionTooltip(tx) {
 
     } else {
         // Default: to the right of the transaction
-        left = pt.x + 35
+        left = pt.x + 60
         top = pt.y - 35
 
         // Flip to left if it would overflow right
         if (left + PANEL_W > innerWidth - M) {
-            left = pt.x - PANEL_W - 35
+            left = pt.x - PANEL_W - 60
         }
 
         // Avoid overflowing bottom; keep margin

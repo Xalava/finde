@@ -440,6 +440,8 @@ function drawGame() {
         .forEach(edge => graphics.drawEdge(edge, nodes))
     activeNodes.forEach(node => graphics.drawNode(node, debug))
     activeUsers.forEach(user => graphics.drawUser(user, debug))
+    // Draw trail particles behind transactions
+    graphics.drawTransactionTrails()
     activeTransactions.forEach(tx => {
         graphics.drawTransaction(tx)
     })

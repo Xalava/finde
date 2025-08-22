@@ -140,6 +140,11 @@ class Transaction {
         this.endReason = null
         this.validated = false
         this.isRecurrent = false
+        
+        // Direction tracking for particle trails
+        this.dx = 0
+        this.dy = 0
+        this.moving = false
 
         // Risk level
         if (riskLevel !== null) {
@@ -232,8 +237,14 @@ class Transaction {
             //  Move toward target 
             const dx = next.x - this.x
             const dy = next.y - this.y
-            this.x += (dx / dist) * speed
-            this.y += (dy / dist) * speed
+            
+            // Store normalized direction for particle system
+            this.dx = dx / dist
+            this.dy = dy / dist
+            this.moving = true
+            
+            this.x += this.dx * speed
+            this.y += this.dy * speed
         }
 
     }

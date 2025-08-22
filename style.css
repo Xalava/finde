@@ -70,7 +70,6 @@ canvas {
     display: flex;
     align-items: center;
     padding: 10px 20px;
-    background: rgba(15, 15, 25, 0.95);
     background: var(--panel-bg);
     box-shadow: 0 4px 16px var(--shadow);
     z-index: 1;

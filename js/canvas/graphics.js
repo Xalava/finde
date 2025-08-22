@@ -46,6 +46,52 @@ function updateAnimationCache() {
         animationCache.lastUpdate = now
     }
 }
+// Simplified particle system for transaction trails
+const trailParticles = []
+
+function createTrailParticle(x, y, dx, dy, options = {}) {
+    const trailDistance = options.trailDistance || 8
+    const spread = options.spread || 2
+
+    return {
+        x: x - dx * trailDistance + (Math.random() - 0.5) * spread,
+        y: y - dy * trailDistance + (Math.random() - 0.5) * spread,
+        vx: -dx * 0.3 + (Math.random() - 0.5) * 0.2,
+        vy: -dy * 0.3 + (Math.random() - 0.5) * 0.2,
+        life: options.life || 30,
+        maxLife: options.life || 30,
+        color: options.color || '#ffffff',
+        size: options.size || 0.8
+    }
+}
+
+function updateTrailParticles() {
+    for (let i = trailParticles.length - 1; i >= 0; i--) {
+        const p = trailParticles[i]
+        p.x += p.vx
+        p.y += p.vy
+        p.life--
+        p.vx *= 0.96 // friction for trails
+        p.vy *= 0.96
+
+        if (p.life <= 0) {
+            trailParticles.splice(i, 1)
+        }
+    }
+}
+
+function drawTrailParticles() {
+    trailParticles.forEach(p => {
+        const alpha = p.life / p.maxLife
+        ctx.save()
+        ctx.globalAlpha = alpha * 0.3
+        ctx.fillStyle = p.color
+        ctx.beginPath()
+        ctx.arc(p.x, p.y, p.size * alpha, 0, Math.PI * 2)
+        ctx.fill()
+        ctx.restore()
+    })
+}
 
 function hexToRgb(hex) {
     // Handle shorthand hex colors (e.g., #f0a -> #f0a)
@@ -88,6 +134,12 @@ export function init(canvasEl, context) {
 }
 
 // Todo: modularise, create visual language
+// Export function to draw trail particles behind transactions
+export function drawTransactionTrails() {
+    updateTrailParticles()
+    drawTrailParticles()
+}
+
 export function drawEffects(effects) {
     effects.forEach(e => {
         e.timer -= 1
@@ -337,7 +389,7 @@ export function drawEdge([a, b], nodes) {
     ctx.beginPath()
     ctx.moveTo(nodes[a].x, nodes[a].y)
     ctx.lineTo(nodes[b].x, nodes[b].y)
-    ctx.strokeStyle = '#aaa'
+    ctx.strokeStyle = '#aaaaaac9'
     ctx.lineWidth = 2
     ctx.stroke()
 }
@@ -347,13 +399,15 @@ export function drawTransaction(tx) {
     const radius = tx.size === 'small' ? 2 : tx.size === 'medium' ? 4 : 6
 
     // Set shadow based on legality
-    ctx.shadowColor = config.legalityColorMap[tx.legality]
+    let legalityColor = config.legalityColorMap[tx.legality]
+    ctx.shadowColor = legalityColor
 
     if (tx.freezed) {
         const seq = Math.floor(Date.now() / 18) % 60
         if (seq < 30) {
             ctx.shadowColor = 'rgba(0, 8, 255, 0.5)'
         }
+
     }
     ctx.shadowBlur = 4
 
@@ -363,6 +417,22 @@ export function drawTransaction(tx) {
         'rgb(255, 255, 255)',
         'rgba(145, 145, 145, 0)'
     )
+
+    // Create trail particles only for selected moving transactions
+    if (tx.isSelected && tx.moving && Math.random() < 0.3) {
+        // Longer trails for faster transactions
+
+        trailParticles.push(createTrailParticle(
+            tx.x, tx.y, tx.dx, tx.dy,
+            {
+                color: legalityColor,
+                life: 15 + tx.speed * 20,
+                size: 0.5 + Math.log10(radius + 1),
+                trailDistance: radius,
+                spread: 2 + Math.log2(radius)
+            }
+        ))
+    }
 
     if (tx.isSelected) {
         updateAnimationCache()
@@ -623,6 +693,7 @@ export function drawEndGame(condition, win = false) {
     ctx.fillStyle = 'white'
     ctx.fillText(condition, canvas.width / 2, canvas.height / 2 + 20)
 }
+
 export function drawDebugGrid(ctx) {
     ctx.save()
     // Draw coordinate grid
