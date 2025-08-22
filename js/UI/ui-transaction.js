@@ -1,5 +1,5 @@
 import * as Camera from '../canvas/camera.js'
-import { isMobile } from '../canvas/graphics.js'
+import { isMobile } from '../canvas/visual-constants.js'
 import { legalityColorMap, countries } from '../game/config.js'
 import { setSelectedTransaction, show, tooltip } from './ui-manager.js'
 
@@ -72,6 +72,55 @@ export function formatTransactionList(txs, userId = null, isClickable = false) {
         return formatTransaction(tx, userId, isClickable)
     }).join('')
 }
+
+export function positionTransactionTooltip(tx) {
+    // Position tooltip: keep it on-screen by flipping side if near edges
+    const pt = Camera.getScreenPos(tx.x, tx.y)
+    const PANEL_W = parseFloat(getComputedStyle(tooltip.panel).width) || 204
+    const PANEL_H = tooltip.panel.offsetHeight || 120 // fallback if hidden
+    const M = 10 // margin to screen edges
+
+    let left, top
+
+    if (isMobile) {
+        // Default: below the transaction
+        left = pt.x - 120
+        top = pt.y + 30
+
+        // Flip above if it would overflow bottom
+        if (top + PANEL_H > innerHeight - M) {
+            top = pt.y - PANEL_H - 10
+        }
+
+        // Clamp horizontally to stay on screen
+        if (left < M) left = M
+        if (left + PANEL_W > innerWidth - M) left = innerWidth - PANEL_W - M
+        // Clamp vertically to stay on screen (in case flipping still goes above)
+        if (top < M) top = M
+
+    } else {
+        // Default: to the right of the transaction
+        left = pt.x + 35
+        top = pt.y - 35
+
+        // Flip to left if it would overflow right
+        if (left + PANEL_W > innerWidth - M) {
+            left = pt.x - PANEL_W - 35
+        }
+
+        // Avoid overflowing bottom; keep margin
+        if (top + PANEL_H > innerHeight - M) {
+            top = innerHeight - PANEL_H - M
+        }
+
+        // Clamp to top/left margins
+        if (left < M) left = M
+        if (top < M) top = M
+    }
+
+    tooltip.panel.style.left = `${left}px`
+    tooltip.panel.style.top = `${top}px`
+}
 // Transaction tooltip functions
 export function showTransactionTooltip(tx) {
 
@@ -86,19 +135,7 @@ export function showTransactionTooltip(tx) {
     }
 
     // Position tooltip
-    if (isMobile) {
-        // For mobile, offset the tx to be above any tutorial
-        const screenPos = Camera.getScreenPos(tx.x, tx.y)
-        // position below the transaction
-        tooltip.panel.style.left = (screenPos.x - 120) + 'px'
-        tooltip.panel.style.top = (screenPos.y + 30) + 'px'
-    } else {
-
-        const screenPos = Camera.getScreenPos(tx.x, tx.y)
-        // For desktop, position to the right
-        tooltip.panel.style.left = (screenPos.x + 35) + 'px'
-        tooltip.panel.style.top = (screenPos.y - 35) + 'px'
-    }
+    positionTransactionTooltip(tx)
 
     if (tx.freezed) {
         tooltip.allowBtn.disabled = true

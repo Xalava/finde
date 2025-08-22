@@ -1,11 +1,84 @@
 import * as UI from '../UI/ui-manager.js'
 import * as config from '../game/config.js'
 import { pointsDistance } from '../utils.js'
+import { isMobile, uiFont, colors, performance, effects } from './visual-constants.js'
 
-// Utils
-export const uiFont = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-export const isMobile = window.innerWidth < 920 // navigator?.userAgentData?.mobile
-const selectionColor = '#FFD700'
+// Simplified helper functions
+function createGradient(x, y, innerRadius, outerRadius, innerColor, outerColor) {
+    const gradient = ctx.createRadialGradient(x, y, innerRadius, x, y, outerRadius)
+    gradient.addColorStop(0, innerColor)
+    gradient.addColorStop(1, outerColor)
+    return gradient
+}
+
+// Cached selection ring for better performance
+function drawSelectionRing(x, y, radius) {
+    ctx.save()
+    // Subtle outer glow
+    ctx.shadowColor = colors.selection
+    ctx.shadowBlur = 6
+
+    // Main ring with cached styling
+    ctx.strokeStyle = `${colors.selection}7f`
+    ctx.lineWidth = 0.7
+    ctx.beginPath()
+    ctx.arc(x, y, radius + 1, 0, Math.PI * 2)
+    ctx.stroke()
+
+    ctx.restore()
+}
+
+// Performance-optimized animation cache
+let animationCache = {
+    time: 0,
+    pulse: 0,
+    lastUpdate: 0,
+    selectionRing: null,
+    selectionRadius: 0
+}
+
+
+function updateAnimationCache() {
+    const now = Date.now()
+    if (now - animationCache.lastUpdate > performance.minFrameTime) {
+        animationCache.time = now
+        animationCache.pulse = (Math.sin(now * effects.pulseSpeed) + 1) * 0.5
+        animationCache.lastUpdate = now
+    }
+}
+
+function hexToRgb(hex) {
+    // Handle shorthand hex colors (e.g., #f0a -> #f0a)
+    const shorthandResult = /^#?([a-f\d])([a-f\d])([a-f\d])$/i.exec(hex)
+    if (shorthandResult) {
+        return {
+            r: parseInt(shorthandResult[1] + shorthandResult[1], 16),
+            g: parseInt(shorthandResult[2] + shorthandResult[2], 16),
+            b: parseInt(shorthandResult[3] + shorthandResult[3], 16)
+        }
+    }
+
+    // Handle full hex colors (e.g., #1a2b3c)
+    const fullResult = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex)
+    return fullResult ? {
+        r: parseInt(fullResult[1], 16),
+        g: parseInt(fullResult[2], 16),
+        b: parseInt(fullResult[3], 16)
+    } : { r: 255, g: 255, b: 255 }
+}
+
+function brightenColor(hex, amount = 40) {
+    const rgb = hexToRgb(hex)
+    const r = Math.min(255, rgb.r + amount)
+    const g = Math.min(255, rgb.g + amount)
+    const b = Math.min(255, rgb.b + amount)
+    return `rgb(${r}, ${g}, ${b})`
+}
+
+function clearerColor(hex, amount = 40) {
+    const rgb = hexToRgb(hex)
+    return `rgba(${rgb.r}, ${rgb.g}, ${rgb.b},${amount})`
+}
 
 let canvas, ctx
 
@@ -34,9 +107,12 @@ export function drawEffects(effects) {
                 ctx.fillText(e.emoji, e.x + 25, e.y + 5)
                 break
             case 'smallbonus':
-                ctx.fillStyle = '#00cc66'
+                ctx.save()
+                ctx.globalAlpha = Math.min(e.timer / 10, 1)
+                ctx.fillStyle = colors.success
                 ctx.font = `4px ${uiFont}`
-                ctx.fillText(e.emoji, e.x + 8, e.y-2 )
+                ctx.fillText(e.emoji, e.x + 8, e.y - 2 - (30 - e.timer) * 0.3)
+                ctx.restore()
                 break
             case 'budget':
                 ctx.fillStyle = '#AAA'
@@ -62,12 +138,16 @@ export function drawEffects(effects) {
                 ctx.stroke()
                 break
             case 'pulseNode':
+                ctx.save()
                 ctx.beginPath()
-                const pulseRadiusNode = 5 + (20 - e.timer)
+                const pulseRadiusNode = 25 - e.timer * 2
+                const opacity = 1 - e.timer / 30 // Fade out as timer decreases
+                ctx.globalAlpha = Math.max(0.1, opacity)
                 ctx.arc(e.x, e.y, pulseRadiusNode, 0, Math.PI * 2)
                 ctx.strokeStyle = e.color
-                ctx.lineWidth = 4
+                ctx.lineWidth = 5
                 ctx.stroke()
+                ctx.restore()
                 break
             case 'tower':
                 ctx.font = `12px ${uiFont}`
@@ -120,49 +200,40 @@ export function drawObjectEffects(objectEffects) {
 export function drawUser(user, debug = false) {
     ctx.save()
     const isSelectedUser = user === UI.getSelectedUser()
-    if (user.corruption > 1) {
-        ctx.shadowColor = 'rgba(255,0,0,0.5)'
-        ctx.shadowBlur = 10
-        // ctx.fillStyle = 'rgba(255,0,0,0.05)'
-        // ctx.beginPath()
-        // ctx.arc(user.x, user.y, user.corruption / 2, 0, Math.PI * 2)
-        // ctx.fill()
-        // ctx.shadowBlur = 0
-    }
-    const baseRadius = 1 + Math.log(user.activity)
+    const baseRadius = Math.max(2, 1 + Math.log(user.activity))
+    const userColor = config.userTypes[user.type].color
+
+
+    // Enhanced user circle with gradient from brighter to current color
+    const userGradient = createGradient(
+        user.x - 1, user.y - 1, 0, baseRadius * 1.5,
+        brightenColor(userColor, 40),
+        userColor
+    )
+
+    ctx.fillStyle = userGradient
     ctx.beginPath()
     ctx.arc(user.x, user.y, baseRadius, 0, Math.PI * 2)
-
-    ctx.fillStyle = config.userTypes[user.type].color
-
-    if (user.corruption > 1) {
-        ctx.shadowColor = `rgba(255,0,0,${0.1 * user.corruption})`
-    } else {
-        ctx.shadowColor = '#0e0e14'
-    }
-    ctx.shadowBlur = 10
-
     ctx.fill()
 
-    // Selection highlight 
+    ctx.restore()
+
+    // Unified selection system (drawn after restore to avoid shadow interference)
     if (isSelectedUser) {
-        ctx.beginPath()
-        const ringRadius = baseRadius
-        ctx.arc(user.x, user.y, ringRadius, 0, Math.PI * 2)
-        ctx.strokeStyle = '#ffd900bd' // dimmer selectionColor
-        ctx.lineWidth = 0.5
-        ctx.stroke()
+        drawSelectionRing(user.x, user.y, baseRadius)
     }
 
     if (debug) {
+        ctx.save()
         ctx.font = '6px sans-serif'
-        ctx.fillText(user.id, user.x + 5, user.y - 2)
-        ctx.fillStyle = 'red'
-        ctx.fillText(user.riskLevel, user.x + 5, user.y + 4)
+        ctx.fillStyle = 'white'
+        ctx.shadowColor = 'black'
+        ctx.shadowBlur = 2
+        ctx.fillText(user.id, user.x + baseRadius + 2, user.y - 2)
+        ctx.fillStyle = colors.error
+        ctx.fillText(user.riskLevel, user.x + baseRadius + 2, user.y + 4)
+        ctx.restore()
     }
-    // Fun fact : the filder belwo destroys perforamnce
-    // ctx.filter = "brightness(50%)";
-    ctx.restore()
 }
 
 export function drawUserEdge([userId, bankId], users, nodes) { //could be improved by sharing directly the user object
@@ -205,7 +276,7 @@ export function drawNode(node) {
 
     // Add selection highlight
     if (isSelected) {
-        ctx.strokeStyle = selectionColor
+        ctx.strokeStyle = colors.selection
         ctx.lineWidth = 2
     } else {
         ctx.strokeStyle = '#222'
@@ -227,18 +298,19 @@ export function drawNode(node) {
         ctx.fillStyle = gradient
         ctx.fill()
 
-        ctx.shadowColor = 'rgba(0, 0, 0, 0.5)'
-        ctx.shadowBlur = 4
+        ctx.shadowColor = 'rgba(0, 0, 0, 1)'
+        ctx.shadowBlur = 6
         ctx.font = `14px ${uiFont}`
         ctx.textAlign = 'center'
         ctx.textBaseline = 'middle'
-        ctx.fillStyle = '#000'
         ctx.fillText(config.towerOptions[node.tower].icon, node.x, node.y + 25)
         ctx.shadowBlur = 0
     }
     ctx.restore()
 
     // Draw node type emoji
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.4)'
+    ctx.shadowBlur = 4
     ctx.font = `20px ${uiFont}`
     ctx.fillText(config.nodeTypes[node.type].icon, node.x - 12, node.y + 7)
 
@@ -286,29 +358,18 @@ export function drawTransaction(tx) {
     ctx.shadowBlur = 4
 
     // Create gradient
-    const gradient = ctx.createRadialGradient(tx.x, tx.y, 1, tx.x, tx.y, radius * 2)
+
+    const gradient = createGradient(tx.x, tx.y, 1, radius * 2,
+        'rgb(255, 255, 255)',
+        'rgba(145, 145, 145, 0)'
+    )
+
     if (tx.isSelected) {
-        const seq = Math.floor(Date.now() / 18) % 60
-        // if (seq >= 0 && seq < 5) {
-        //     gradient.addColorStop(0, 'rgba(255, 255, 255, 0.50)')
-        // } else 
-
-        if (seq < 40) {
-            gradient.addColorStop(0, `rgba(255, 255, 255, ${1 - Math.abs(seq - 30) / 100})`)
-
-        } else {
-            gradient.addColorStop(0, 'rgb(255, 255, 255)')
-
-        }
-        //we can use "isFollowed" to selectively have this effect. 
-        if (tx.isSelected) {
-            // Center camera on selected transaction. Might be intense (done in ui-manager.js)
-            // Camera.panAndZoom(tx.x, tx.y, 0) 
-        }
-    } else {
-        gradient.addColorStop(0, 'rgb(255, 255, 255)')
+        updateAnimationCache()
+        const pulse = animationCache.pulse
+        const opacity = 0.8 + pulse * 0.2 // Pulse between 0.8 and 1.0
+        ctx.globalAlpha = opacity
     }
-    gradient.addColorStop(1, 'rgba(145, 145, 145, 0)')
 
     ctx.fillStyle = gradient
     ctx.beginPath()
@@ -354,14 +415,22 @@ export function drawCorruptionMeter(spread) {
     gradient.addColorStop(1, 'red')
     ctx.fillStyle = gradient
     ctx.beginPath()
-    ctx.roundRect(meterX, meterY, barWidth, meterHeight, 6)
+    ctx.roundRect(meterX, meterY, barWidth, meterHeight, 8)
     ctx.fill()
 
-    // Draw text
+    // Add subtle glow for high corruption
+    if (spread > 60) {
+        ctx.shadowColor = colors.error
+        ctx.shadowBlur = 4
+        ctx.stroke()
+    }
+
+    // Draw text 
     ctx.fillStyle = 'white'
     ctx.font = `12px ${uiFont}`
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.5)'
     ctx.fillText(`Corruption  ${Math.floor(spread)}%`, meterX + meterWidth / 2, meterY + meterHeight / 2)
 
     ctx.restore()
@@ -406,6 +475,8 @@ export function drawPopularityMeter(popularity) {
     ctx.font = `12px ${uiFont}`
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.5)'
+
     ctx.fillText(`Popularity  ${Math.floor(popularity)}`, meterX + meterWidth / 2, meterY + meterHeight / 2)
 
     ctx.restore()

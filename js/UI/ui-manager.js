@@ -1,7 +1,7 @@
 // Ideally provides the API to all other UI files
 import { towerOptions, actionOptions, countries, legalityOptions, legalityColorMap } from '../game/config.js'
 import * as tech from '../game/tech.js'
-import { uiFont } from '../canvas/graphics.js'
+import { uiFont } from '../canvas/visual-constants.js'
 import { selectRandomly } from '../utils.js'
 import { showTransactionTooltip } from './ui-transaction.js'
 import { closeUserDetails } from './ui-users.js'
@@ -31,7 +31,7 @@ export function initUI() {
     indicators = {
         budget: document.getElementById('budget'),
         maintenance: document.getElementById('maintenance'),
-        statStatItem: document.getElementById('stat-stat-item'),
+        statStatItem: document.getElementById('stat-button'),
         day: document.getElementById('day'),
         holiday: document.getElementById('holiday'),
     }

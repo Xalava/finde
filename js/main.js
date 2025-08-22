@@ -483,9 +483,11 @@ function drawGame() {
                 Camera.panAndZoom(selectedTx.x, selectedTx.y, Camera.getZoom())
             }
         }
-        // Only show tooltip if it's not already visible
+        // Only show tooltip if it's not already visible; otherwise, update its position each frame
         if (!UI.isTransactionTooltipVisible()) {
             uiTransaction.showTransactionTooltip(selectedTx)
+        } else {
+            uiTransaction.positionTransactionTooltip(selectedTx)
         }
     } else {
         UI.hideTransactionTooltip()

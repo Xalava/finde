@@ -2,7 +2,7 @@
 import { countries, countryKeys, legalityOptions, legalityColorMap, nodeTypes, userTypes } from '../game/config.js'
 import * as policy from '../game/policy.js'
 import { show, hide } from './ui-manager.js'
-import { isMobile } from '../canvas/graphics.js'
+import { isMobile } from '../canvas/visual-constants.js'
 let statisticsPanel = null
 let charts = {}
 
