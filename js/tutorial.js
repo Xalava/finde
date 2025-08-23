@@ -128,7 +128,9 @@ const TUTORIAL_STEPS = [
         title: 'Choose an action',
         content: 'Approving ✅ a legitimate transaction is recommended. Blocking 🛑 it may have consequences. And vice-versa for illegal ones. Suspicious transactions are less predictable',
         onEnter: () => {
-
+            setTimeout(() => {
+                UI.hide(tutorialContainer)
+            }, 10000)
         },
         waitFor: () => {
             return policy.popularity !== policy.POPULARITY.INIT || tech.getResearchPoints() > 0

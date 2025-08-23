@@ -83,14 +83,9 @@ export function positionTransactionTooltip(tx) {
     let left, top
 
     if (isMobile) {
-        // Default: below the transaction
+        // Default: above the transaction
         left = pt.x - PANEL_W / 2
-        top = pt.y + 60
-
-        // Flip above if it would overflow bottom
-        if (top + PANEL_H > innerHeight - M) {
-            top = pt.y - PANEL_H - 20
-        }
+        top = pt.y - 60 - PANEL_H
 
         // Clamp horizontally to stay on screen
         if (left < M) left = M

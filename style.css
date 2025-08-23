@@ -434,7 +434,6 @@ canvas {
 
 .panel-content {
     padding: var(--spacing);
-    /* max-height: 70vh; */
     overflow-y: auto;
     flex: 1;
 }
@@ -600,14 +599,12 @@ details {
 }
 
 #tutorial .panel-content {
-    padding: 20px;
     line-height: 1.4;
 }
 
 #tutorial-buttons {
     display: flex;
     gap: 10px;
-    margin-top: 20px;
     justify-content: flex-end;
 }
 
@@ -1264,6 +1261,14 @@ small {
         padding: 8px 10px;
     }
 
+
+    .panel-header {
+        padding: 4px var(--spacing) 4px var(--spacing);
+    }
+
+    .panel-footer {
+        padding: 2px var(--spacing) 2px var(--spacing);
+    }
 }
 
 .compliance-select {
