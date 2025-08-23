@@ -100,7 +100,7 @@ const TUTORIAL_STEPS = [
     },
     {
         title: `<span class="glow glow-green"></span><span class="glow glow-orange">  <span class="glow glow-red"></span></span> `,
-        content: `Successful transactions move money and generate tax revenue for you.`,
+        content: `Successful transactions move money and generate fee revenue for you.`,
     },
     {
         title: 'Legality',
@@ -256,7 +256,7 @@ const TUTORIAL_STEPS = [
         title: '🎉 First technology',
         content: `Congratulations! You can improve compliance filters, enforcement actions, and network efficiency. 
         <br><br>
-        Once advanced enough, you will also be able to adjust policies such as tax rates and minimal compliance.`
+        Once advanced enough, you will also be able to adjust compliance policies such as fees and minimal compliance.`
     },
     {
         title: 'Et voilà!',

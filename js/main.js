@@ -21,6 +21,7 @@ import * as graphics from "./canvas/graphics.js"
 import { findNodeAt, findTransactionAt, findUserAt } from './canvas/finders.js'
 
 window.debug = false
+window.displayHeatmap = false
 let displayCountries = false
 const debugAvailable = ['localhost', '127.0.0.1'].includes(location.hostname)
 
@@ -92,6 +93,7 @@ document.addEventListener('DOMContentLoaded', () => {
         UI.show(ctrls.debugControls)
         UI.showFullInterface()
         UI.show(UI.indicators.statStatItem)
+        UI.show(ctrls.heatmapBtn)
 
     }
     if (isFirstPlay()) {
@@ -152,6 +154,10 @@ document.addEventListener('DOMContentLoaded', () => {
     ctrls.countriesBtn.addEventListener('click', () => {
         displayCountries = !displayCountries
         ctrls.countriesBtn.style.backgroundColor = displayCountries ? 'rgba(0, 255, 0, 0.2)' : ''
+    })
+    ctrls.heatmapBtn.addEventListener('click', () => {
+        displayHeatmap = !displayHeatmap
+        ctrls.heatmapBtn.style.backgroundColor = displayHeatmap ? 'rgba(255, 100, 0, 0.3)' : ''
     })
 
     ctrls.slowBtn.addEventListener('click', () => setGameSpeed(0.5))
@@ -438,8 +444,8 @@ function drawGame() {
     userEdges.forEach(edge => graphics.drawUserEdge(edge, users, nodes))
     edges.filter(([a, b]) => nodes[a].active && nodes[b].active)
         .forEach(edge => graphics.drawEdge(edge, nodes))
-    activeNodes.forEach(node => graphics.drawNode(node, debug))
-    activeUsers.forEach(user => graphics.drawUser(user, debug))
+    activeNodes.forEach(node => graphics.drawNode(node))
+    activeUsers.forEach(user => graphics.drawUser(user))
     // Draw trail particles behind transactions
     graphics.drawTransactionTrails()
     activeTransactions.forEach(tx => {
@@ -464,6 +470,9 @@ function drawGame() {
     }
     if (displayCountries) {
         graphics.drawCountries(nodes, users)
+    }
+    if (displayHeatmap) {
+        graphics.drawTransactionHeatmap(transactions, nodes, users)
     }
     Camera.restoreCamera(ctx)
     if (unlock.corruption) {

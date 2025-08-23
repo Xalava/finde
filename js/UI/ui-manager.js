@@ -42,6 +42,7 @@ export function initUI() {
         centerBtn: document.getElementById('center-view'),
         debugBtn: document.getElementById('toggle-debug'),
         countriesBtn: document.getElementById('toggle-countries'),
+        heatmapBtn: document.getElementById('toggle-heatmap'),
         slowBtn: document.getElementById('slow'),
         normalBtn: document.getElementById('normal'),
         fastBtn: document.getElementById('fast'),

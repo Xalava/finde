@@ -312,18 +312,24 @@ export function drawNode(node) {
     ctx.arc(node.x, node.y, nodeRadius, 0, Math.PI * 2)
     let color = config.nodeTypes[node.type].color
 
-    // Add corruption glow
-    if (node.corruption > config.HIGH_CORRUPTION_THRESHOLD) {
-        ctx.shadowColor = 'red'
-        ctx.shadowBlur = 15
-        color = '#ffdddd'
-    } else if (node.corruption > Math.floor(config.HIGH_CORRUPTION_THRESHOLD / 2)) { // Should be 2 currently
-        ctx.shadowColor = 'orange'
-        ctx.shadowBlur = 10
-        color = '#fff0dd'
+    // Add corruption glow (but not when heatmap is active)
+    if (!displayHeatmap) {
+        if (node.corruption > config.HIGH_CORRUPTION_THRESHOLD) {
+            ctx.shadowColor = 'red'
+            ctx.shadowBlur = 15
+            color = '#ffdddd'
+        } else if (node.corruption > Math.floor(config.HIGH_CORRUPTION_THRESHOLD / 2)) { // Should be 2 currently
+            ctx.shadowColor = 'orange'
+            ctx.shadowBlur = 10
+            color = '#fff0dd'
+        } else if (!isSelected) {
+            ctx.shadowColor = 'black'
+            ctx.shadowBlur = 5
+        }
     } else if (!isSelected) {
+        // When heatmap is active, use minimal shadow
         ctx.shadowColor = 'black'
-        ctx.shadowBlur = 5
+        ctx.shadowBlur = 2
     }
 
     // Add selection highlight
@@ -548,6 +554,305 @@ export function drawPopularityMeter(popularity) {
     ctx.shadowColor = 'rgba(0, 0, 0, 0.5)'
 
     ctx.fillText(`Popularity  ${Math.floor(popularity)}`, meterX + meterWidth / 2, meterY + meterHeight / 2)
+
+    ctx.restore()
+}
+
+// Cache for heatmap calculation to improve performance
+let heatmapCache = { nodeData: {}, edgeData: {}, userData: {}, riskData: {}, lastUpdate: 0, animationPhase: 0 }
+
+export function drawTransactionHeatmap(transactions, nodes, users = []) {
+    if (!transactions || !nodes) return
+
+    const now = Date.now()
+    // Update animation phase every frame for smooth pulsing
+    heatmapCache.animationPhase = (now / 1000) % (Math.PI * 2)
+
+    // Update cache only every 500ms instead of every frame for performance
+    if (now - heatmapCache.lastUpdate > 500) {
+        // Calculate transaction density per node, edge, and user activity
+        const nodeActivity = {}
+        const edgeActivity = {}
+        const userActivity = {}
+        const riskData = { illegal: 0, legal: 0, flagged: 0, totalVolume: 0 }
+
+        // Count recent transactions (last 30 seconds = 30 game days)
+        const recentTime = now - 30000
+        transactions.filter(tx => tx.issuanceDate > recentTime).forEach(tx => {
+            // Count node activity (skip first and last path elements which are users)
+            for (let i = 1; i < tx.path.length - 1; i++) {
+                const nodeId = tx.path[i]
+                if (nodes[nodeId] && nodes[nodeId].active) {
+                    nodeActivity[nodeId] = (nodeActivity[nodeId] || 0) + 1
+                }
+            }
+
+            // Count edge activity (only between actual nodes, not users)
+            for (let i = 1; i < tx.path.length - 2; i++) {
+                const fromId = tx.path[i]
+                const toId = tx.path[i + 1]
+                if (nodes[fromId] && nodes[toId] && nodes[fromId].active && nodes[toId].active) {
+                    const edgeKey = `${Math.min(fromId, toId)}-${Math.max(fromId, toId)}`
+                    edgeActivity[edgeKey] = (edgeActivity[edgeKey] || 0) + 1
+                }
+            }
+
+            // Count user activity (who initiated the transaction)
+            if (tx.sourceUser && tx.sourceUser.id) {
+                userActivity[tx.sourceUser.id] = (userActivity[tx.sourceUser.id] || 0) + 1
+            }
+
+            // Track risk metrics for legend
+            riskData.totalVolume += tx.amount || 0
+            if (tx.illegal) riskData.illegal++
+            else riskData.legal++
+            if (tx.flagged || tx.blocked) riskData.flagged++
+        })
+
+        heatmapCache.nodeData = nodeActivity
+        heatmapCache.edgeData = edgeActivity
+        heatmapCache.userData = userActivity
+        heatmapCache.riskData = riskData
+        heatmapCache.lastUpdate = now
+    }
+
+    // Find max activity for normalization
+    const maxNodeActivity = Math.max(1, ...Object.values(heatmapCache.nodeData))
+    const maxEdgeActivity = Math.max(1, ...Object.values(heatmapCache.edgeData))
+    const maxUserActivity = Math.max(1, ...Object.values(heatmapCache.userData))
+
+    // Animation factor for pulsing effects
+    const pulseIntensity = 0.8 + 0.2 * Math.sin(heatmapCache.animationPhase * 2)
+
+    // Draw animated flow lines for edge activity (behind nodes)
+    Object.entries(heatmapCache.edgeData).forEach(([edgeKey, activity]) => {
+        const [fromId, toId] = edgeKey.split('-').map(Number)
+        const fromNode = nodes[fromId]
+        const toNode = nodes[toId]
+
+        if (!fromNode || !toNode || !fromNode.active || !toNode.active || activity < 2) return  // Only show edges with 2+ transactions
+
+        const intensity = activity / maxEdgeActivity
+        const animatedAlpha = (0.1 + intensity * 0.4) * pulseIntensity
+        const lineWidth = 1 + intensity * 5
+
+        ctx.save()
+        ctx.globalAlpha = animatedAlpha
+        ctx.lineWidth = lineWidth
+
+        // Create gradient along the line for flow effect
+        const gradient = ctx.createLinearGradient(fromNode.x, fromNode.y, toNode.x, toNode.y)
+        const flowOffset = (heatmapCache.animationPhase * 0.5) % 1
+
+        if (intensity > 0.7) {
+            // High activity: bright flowing cyan
+            gradient.addColorStop((0 + flowOffset) % 1, 'rgba(0, 255, 255, 0.9)')
+            gradient.addColorStop((0.5 + flowOffset) % 1, 'rgba(0, 200, 255, 0.6)')
+            gradient.addColorStop((1 + flowOffset) % 1, 'rgba(0, 150, 255, 0.3)')
+        } else if (intensity > 0.3) {
+            // Medium activity: flowing blue-green
+            gradient.addColorStop((0 + flowOffset) % 1, 'rgba(0, 220, 200, 0.7)')
+            gradient.addColorStop((0.5 + flowOffset) % 1, 'rgba(0, 180, 220, 0.5)')
+            gradient.addColorStop((1 + flowOffset) % 1, 'rgba(0, 140, 200, 0.3)')
+        } else {
+            // Low activity: soft flowing green
+            gradient.addColorStop((0 + flowOffset) % 1, 'rgba(120, 255, 180, 0.5)')
+            gradient.addColorStop((0.5 + flowOffset) % 1, 'rgba(100, 220, 160, 0.3)')
+            gradient.addColorStop((1 + flowOffset) % 1, 'rgba(80, 180, 140, 0.2)')
+        }
+
+        ctx.strokeStyle = gradient
+        ctx.lineCap = 'round'
+
+        ctx.beginPath()
+        ctx.moveTo(fromNode.x, fromNode.y)
+        ctx.lineTo(toNode.x, toNode.y)
+        ctx.stroke()
+        ctx.restore()
+    })
+
+    // PRIORITY 1: Draw user activity visualization FIRST (most prominent)
+    Object.entries(heatmapCache.userData).forEach(([userId, activity]) => {
+        const user = users.find(u => u.id == userId)
+        if (!user || activity < 2) return  // Only show users with 2+ transactions
+
+        const intensity = activity / maxUserActivity
+        const baseRadius = Math.max(4, 3 + Math.log(user.activity || 1))
+        const pulseRadius = baseRadius + 15 + intensity * 25
+        const animatedAlpha = (0.4 + intensity * 0.7) * pulseIntensity
+
+        ctx.save()
+        ctx.globalAlpha = animatedAlpha
+
+        // Enhanced user risk-based coloring
+        const gradient = ctx.createRadialGradient(user.x, user.y, baseRadius, user.x, user.y, pulseRadius)
+        const userRisk = user.riskLevel || 0
+
+        if (intensity > 0.6) {
+            if (userRisk > 7) {
+                // Very active + high risk: bright red warning
+                gradient.addColorStop(0, 'rgba(255, 50, 50, 1.0)')
+                gradient.addColorStop(0.4, 'rgba(255, 100, 0, 0.7)')
+                gradient.addColorStop(1, 'rgba(255, 0, 0, 0)')
+            } else if (userRisk > 4) {
+                // Very active + medium risk: orange
+                gradient.addColorStop(0, 'rgba(255, 140, 0, 1.0)')
+                gradient.addColorStop(0.4, 'rgba(255, 180, 0, 0.6)')
+                gradient.addColorStop(1, 'rgba(255, 100, 0, 0)')
+            } else {
+                // Very active + safe: bright cyan
+                gradient.addColorStop(0, 'rgba(0, 255, 255, 1.0)')
+                gradient.addColorStop(0.4, 'rgba(0, 200, 255, 0.7)')
+                gradient.addColorStop(1, 'rgba(0, 150, 255, 0)')
+            }
+        } else if (intensity > 0.2) {
+            if (userRisk > 7) {
+                // Medium active + high risk: red warning
+                gradient.addColorStop(0, 'rgba(255, 100, 100, 0.9)')
+                gradient.addColorStop(0.4, 'rgba(255, 150, 0, 0.5)')
+                gradient.addColorStop(1, 'rgba(255, 50, 0, 0)')
+            } else if (userRisk > 4) {
+                // Medium active + medium risk: yellow
+                gradient.addColorStop(0, 'rgba(255, 200, 0, 0.8)')
+                gradient.addColorStop(0.4, 'rgba(255, 220, 0, 0.5)')
+                gradient.addColorStop(1, 'rgba(255, 160, 0, 0)')
+            } else {
+                // Medium active + safe: green-cyan
+                gradient.addColorStop(0, 'rgba(100, 255, 200, 0.9)')
+                gradient.addColorStop(0.4, 'rgba(0, 255, 180, 0.6)')
+                gradient.addColorStop(1, 'rgba(0, 200, 160, 0)')
+            }
+        } else {
+            // Low activity: soft colors
+            gradient.addColorStop(0, 'rgba(150, 255, 150, 0.7)')
+            gradient.addColorStop(0.4, 'rgba(120, 220, 120, 0.4)')
+            gradient.addColorStop(1, 'rgba(100, 180, 100, 0)')
+        }
+
+        ctx.fillStyle = gradient
+        ctx.beginPath()
+        ctx.arc(user.x, user.y, pulseRadius, 0, Math.PI * 2)
+        ctx.fill()
+
+        // Clean display - no text labels needed
+
+        ctx.restore()
+    })
+
+    // PRIORITY 2: Draw node activity visualization (smaller, less prominent)
+    Object.entries(heatmapCache.nodeData).forEach(([nodeId, activity]) => {
+        const node = nodes[nodeId]
+        if (!node || !node.active || activity < 2) return  // Only show nodes with 2+ transactions
+
+        const intensity = activity / maxNodeActivity
+        const baseRadius = 12 + intensity * 10
+        const pulseRadius = baseRadius * (0.95 + 0.05 * pulseIntensity)
+        const alpha = (0.1 + intensity * 0.2) * pulseIntensity
+
+        ctx.save()
+        ctx.globalAlpha = alpha
+
+        // Simplified node visualization (less prominent than users)
+        const gradient = ctx.createRadialGradient(node.x, node.y, 3, node.x, node.y, pulseRadius)
+        const isHighRisk = node.corruption > 2
+
+        if (isHighRisk) {
+            // Corrupted nodes: subtle orange
+            gradient.addColorStop(0, 'rgba(255, 180, 0, 0.6)')
+            gradient.addColorStop(1, 'rgba(255, 120, 0, 0)')
+        } else {
+            // Safe nodes: subtle blue-green
+            gradient.addColorStop(0, 'rgba(0, 200, 150, 0.5)')
+            gradient.addColorStop(1, 'rgba(0, 150, 120, 0)')
+        }
+
+        ctx.fillStyle = gradient
+        ctx.beginPath()
+        ctx.arc(node.x, node.y, pulseRadius, 0, Math.PI * 2)
+        ctx.fill()
+
+        // Clean display - no node labels needed
+
+        ctx.restore()
+    })
+
+    // Draw informative heatmap legend in screen space
+    drawHeatmapLegend()
+}
+
+function drawHeatmapLegend() {
+    const legendX = canvas.width - 280
+    const legendY = 80
+    const legendWidth = 260
+    const legendHeight = 180
+
+    ctx.save()
+    // Draw legend background
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.8)'
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)'
+    ctx.lineWidth = 1
+    ctx.beginPath()
+    ctx.roundRect(legendX, legendY, legendWidth, legendHeight, 8)
+    ctx.fill()
+    ctx.stroke()
+
+    // Legend title
+    ctx.fillStyle = 'white'
+    ctx.font = 'bold 14px sans-serif'
+    ctx.textAlign = 'left'
+    ctx.fillText('👥 User Activity Monitor', legendX + 10, legendY + 20)
+
+    // Activity levels (prioritizing user visualization)
+    let yPos = legendY + 45
+    ctx.font = '12px sans-serif'
+
+    // High risk users
+    ctx.fillStyle = 'rgba(255, 50, 50, 0.9)'
+    ctx.beginPath()
+    ctx.arc(legendX + 20, yPos, 10, 0, Math.PI * 2)
+    ctx.fill()
+    ctx.fillStyle = 'white'
+    ctx.fillText('High Risk Users (Red)', legendX + 40, yPos + 4)
+
+    yPos += 25
+    // Medium risk users
+    ctx.fillStyle = 'rgba(255, 140, 0, 0.8)'
+    ctx.beginPath()
+    ctx.arc(legendX + 20, yPos, 8, 0, Math.PI * 2)
+    ctx.fill()
+    ctx.fillStyle = 'white'
+    ctx.fillText('Medium Risk Users (Orange)', legendX + 40, yPos + 4)
+
+    yPos += 25
+    // Safe active users
+    ctx.fillStyle = 'rgba(0, 255, 255, 0.8)'
+    ctx.beginPath()
+    ctx.arc(legendX + 20, yPos, 8, 0, Math.PI * 2)
+    ctx.fill()
+    ctx.fillStyle = 'white'
+    ctx.fillText('Safe Active Users (Cyan)', legendX + 40, yPos + 4)
+
+    yPos += 25
+    // Flow lines
+    ctx.strokeStyle = 'rgba(0, 255, 255, 0.6)'
+    ctx.lineWidth = 3
+    ctx.beginPath()
+    ctx.moveTo(legendX + 15, yPos)
+    ctx.lineTo(legendX + 25, yPos)
+    ctx.stroke()
+    ctx.fillStyle = 'white'
+    ctx.fillText('Transaction Flow', legendX + 35, yPos + 4)
+
+    yPos += 25
+    // Stats from cache
+    const stats = heatmapCache.riskData || {}
+    const totalTx = (stats.legal || 0) + (stats.illegal || 0)
+    const riskRate = totalTx > 0 ? Math.round((stats.illegal || 0) / totalTx * 100) : 0
+
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.7)'
+    ctx.font = '11px sans-serif'
+    ctx.fillText(`Recent Transactions: ${totalTx}`, legendX + 10, yPos)
+    ctx.fillText(`Risk Rate: ${riskRate}%`, legendX + 10, yPos + 15)
 
     ctx.restore()
 }

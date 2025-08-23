@@ -380,7 +380,7 @@ function createStatisticsPanel() {
                                 </div>
                                 <div class="metric">
                                     <span class="metric-label">Tax Efficiency</span>
-                                    <span class="metric-value" id="tax-efficiency" title="Percentage of potential tax revenue successfully collected">0%</span>
+                                    <span class="metric-value" id="tax-efficiency" title="Percentage of potential fee revenue successfully collected">0%</span>
                                 </div>
                                 <div class="metric">
                                     <span class="metric-label">Victory Progress</span>

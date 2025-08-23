@@ -154,6 +154,9 @@ canvas {
     background: var(--panel-bg);
     backdrop-filter: blur(12px);
     border-radius: var(--radius);
+    transition: var(--transition);
+    transform: translateY(0);
+    opacity: 1;
 
     border: 1px solid var(--border);
     z-index: 100;
@@ -926,7 +929,10 @@ button.errory:hover:not(:disabled) {
 }
 
 .tab-content.hidden {
-    display: none;
+    opacity: 0;
+    transform: translateY(-10px);
+    pointer-events: none;
+    transition: var(--transition);
 }
 
 #tech-tree-container {
@@ -1346,7 +1352,7 @@ small {
     position: absolute;
     width: 204px;
     pointer-events: auto;
-    transition: all 0.1s ease;
+    transition: var(--transition);
 }
 
 .transaction-amount {
