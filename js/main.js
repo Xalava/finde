@@ -320,7 +320,9 @@ function calculateIndicators() {
 
 function calculateCorruptionSpread() {
     const totalCorruption = activeNodes.reduce((sum, n) => sum + n.corruption, 0)
-    return Math.floor((totalCorruption / (HIGH_CORRUPTION_THRESHOLD * activeNodes.length + 2)) * 100)
+    // Additional Margin gives space, especially in the early phases of the game to let players explore the gameplay. 
+    const additionalMargin = 8
+    return Math.floor((totalCorruption / (HIGH_CORRUPTION_THRESHOLD * activeNodes.length + additionalMargin)) * 100)
 }
 
 function checkEndGame() {
@@ -380,25 +382,35 @@ function checkEndGame() {
         return true
     }
 }
-function spawnNode() {
-    const inactiveNodes = nodes.filter(n => !n.active && edges.some(([a, b]) => (a === n.id && nodes[b].active) || (b === n.id && nodes[a].active)))
-    if (inactiveNodes.length > 0) {
-        const newNode = inactiveNodes[Math.floor(Math.random() * inactiveNodes.length)]
-        if (policy.state.requireValidation) {
-            policy.addPendingNode(newNode)
-            UI.showToast('⚖️  Approval needed', `${newNode.name} awaits regulatory clearance`, 'info')
-        } else {
-            activateNode(newNode)
-            if (!isFirstNewNode) {
-                Camera.cinematicCenterPoint(newNode.x, newNode.y, 2)
-                // isFirstNewNode = true // We keep them for the moment.
-                setTimeout(() => {
-                    Camera.cinematicCenterMap(nodes.filter(n => n.active))
-                }, 2000) // Come back after 2 seconds
-            }
+export function spawnNode(specificChoice = null) {
+    let newNode = {}
+    if (specificChoice === null) {
+        const inactiveNodes = nodes.filter(n => !n.active && edges.some(([a, b]) => (a === n.id && nodes[b].active) || (b === n.id && nodes[a].active)))
+        if (inactiveNodes.length > 0) {
+            newNode = inactiveNodes[Math.floor(Math.random() * inactiveNodes.length)]
+        }
+
+    } else {
+        newNode = nodes.find(n => n.id === specificChoice)
+    }
+
+
+    // inactiveNodes = inactiveNodes.filter(n => n.type === restriction)
+    if (policy.state.requireValidation) {
+        policy.addPendingNode(newNode)
+        UI.showToast('⚖️  Approval needed', `${newNode.name} awaits regulatory clearance`, 'info')
+    } else {
+        activateNode(newNode)
+        if (!isFirstNewNode) {
+            Camera.cinematicCenterPoint(newNode.x, newNode.y, 2)
+            // isFirstNewNode = true // We keep them for the moment.
+            setTimeout(() => {
+                Camera.cinematicCenterMap(nodes.filter(n => n.active))
+            }, 2000) // Come back after 2 seconds
         }
     }
 }
+
 
 function checkForHoliday(currentDay) {
     // We perform the following tasks once a day

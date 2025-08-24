@@ -617,11 +617,11 @@ details {
     height: var(--size);
     border-radius: 50%;
     margin: 2px 8px;
-    background: rgba(255, 255, 255, 0.6);
+    background: rgb(255, 255, 255, 0.8);
     box-shadow:
-        0 0 3px 1px rgba(255, 255, 255, 0.8),
-        0 0 6px 2px var(--color),
-        0 0 12px 3px var(--color);
+        inset 0 0 1px 1px var(--color),
+        0 0 6px 3px var(--color),
+        0 0 14px 5px var(--color);
     position: relative;
     animation: pulse 2.5s infinite;
 }
@@ -645,7 +645,7 @@ details {
     }
 
     50% {
-        transform: scale(1.1);
+        transform: scale(1.2);
         opacity: 0.8;
     }
 

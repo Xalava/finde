@@ -2,8 +2,10 @@ import * as UI from './UI/ui-manager.js'
 import * as tech from './game/tech.js'
 import * as camera from './canvas/camera.js'
 import * as policy from './game/policy.js'
+import { spawnNode } from './main.js'
 
 // Unlocks game mechanics. 
+// For the moment, only unlocks what is unlocked during tutorial
 // TODO : 
 //  Replace isFirstPlay and other firstXX mechanisms
 //  Provide some hierachical structure
@@ -14,9 +16,10 @@ export const unlock = {
     reputation: false,
     nodes: false,
     users: false,
-    // During the game
-    research: false,
-    policy: false,
+    endTutorial: false,
+    // During the game (currently not ideal as all is unlocked)
+    // research: false,
+    // policy: false,
 }
 
 function unlockAll() {
@@ -25,8 +28,16 @@ function unlockAll() {
     }
 }
 
-// Returns yes once the tutorial is completed
+// Returns yes once the tutorial is completed. A bit legacy, we could use unlock.endtutorial
 export const isFirstPlay = () => {
+    // We rely on the initial check and the completeTutorial
+    if (unlock.endTutorial)
+        return false
+    else
+        return true
+}
+
+function initialFirstPlayCheck() {
     if (localStorage.getItem('hasPlayedBefore')) {
         unlockAll()
         return false
@@ -34,7 +45,7 @@ export const isFirstPlay = () => {
         return true
     }
 }
-isFirstPlay() // Legacy : To be sure we unlock if not called..
+initialFirstPlayCheck()
 
 const tutorialContainer = document.getElementById('tutorial')
 const tutorialHeader = tutorialContainer?.querySelector('#tutorial-title')
@@ -47,11 +58,14 @@ let currentStep
 function completeTutorial() {
     UI.hide(tutorialContainer)
     localStorage.setItem('hasPlayedBefore', 'true')
+    unlockAll()
     UI.showFullInterface()
 }
 
 export function resetTutorial() {
+    // Resets for future loads
     localStorage.setItem('hasPlayedBefore', '')
+    // Reload page
     window.location.reload()
 }
 
@@ -92,6 +106,7 @@ export function showTutorial() {
     // Show tutorial
     UI.show(tutorialContainer)
 }
+let potentialNewNode
 
 const TUTORIAL_STEPS = [
     {
@@ -126,35 +141,56 @@ const TUTORIAL_STEPS = [
     },
     {
         title: 'Choose an action',
-        content: 'Approving ✅ a legitimate transaction is recommended. Blocking 🛑 it may have consequences. And vice-versa for illegal ones. Suspicious transactions are less predictable',
+        content: 'Approve ✅ legitimate transactions. Block 🛑 illegal ones. Suspicious transactions are less predictable',
         onEnter: () => {
+            // For safety, if the tutorial panel hides the tooltip (should not happen since positiontooltip)
             setTimeout(() => {
                 UI.hide(tutorialContainer)
-            }, 10000)
+            }, 20000)
         },
         waitFor: () => {
             return policy.popularity !== policy.POPULARITY.INIT || tech.getResearchPoints() > 0
         },
     },
     {
-        title: 'Increase popularity and intelligence',
-        content: 'You popularity depend on your accurate and quick judgement. Freezing helps gather intelligence. Reach 250 in popularity and 50 in intelligence',
+        title: 'Reach 300 in popularity',
+        content: 'You popularity depends on your accurate and quick judgement.',
         onEnter: () => {
             unlock.reputation = true
-            unlock.research
+            // unlock.research
             setTimeout(() => {
                 UI.hide(tutorialContainer)
             }, 10000)
+            // After 
+            potentialNewNode = setTimeout(() => {
+                let checkNonSelection = setInterval(() => {
+                    if (!UI.getSelectedTransaction()) {
+                        clearInterval(checkNonSelection)
+                        spawnNode(20)
+                    }
+                }, 300)
+            }, 40000)
         },
         waitFor: () => {
             if (debug) return true
-            if (policy.popularity >= policy.POPULARITY.INIT + 50 && tech.getResearchPoints() >= 50) {
-                UI.show(tutorialContainer)
+            if (policy.popularity >= policy.POPULARITY.INIT + 100) { //&& tech.getResearchPoints() >= 50
+                // UI.show(tutorialContainer)
                 return true
             } else {
                 return false
             }
         },
+    },
+    {
+        title: 'Popularity ✨',
+        content: 'Congratulations! You are now relatively popular among the financial industry.',
+        onEnter: () => {
+            UI.show(tutorialContainer)
+
+            // We didn't get the time to get a new node (unlikely)
+            // clearTimeout(potentialNewNode)
+
+        }
     },
     {
         title: 'Corruption',
@@ -169,7 +205,7 @@ const TUTORIAL_STEPS = [
     },
     {
         title: 'Enforcement Actions',
-        content: 'Take direct action to reduce corruption. Click on the corrupt bank and select Audit 🕵️‍♂️',
+        content: 'Take action to reduce corruption. Click on the corrupt bank and launch an Audit 🕵️‍♂️',
         onEnter: () => {
             if (budget < 160) {
                 budget = 160
@@ -240,7 +276,7 @@ const TUTORIAL_STEPS = [
 
     {
         title: 'Research <span class="oscillate">🧪</span>',
-        content: 'It is time for improvements. Open the research panel and develop a technology.',
+        content: 'It is time for improvements. Open the research panel and develop any technology.',
         onEnter: () => {
             tech.addResearchPoints(100)
         },
@@ -290,7 +326,9 @@ export function showTutorialStep() {
         const checkInterval = setInterval(() => {
             if (step.waitFor()) {
                 clearInterval(checkInterval)
-                nextStep() // We move to the next step. (it will immediately close current one tutorial and settimeout before the next one.)
+                setTimeout(() => {
+                    nextStep() // We move to the next step. (it will immediately close current one tutorial and settimeout before the next one.)
+                }, 400)// We give a bit of extra space after completion
             }
         }, 400)
     }
