@@ -13,12 +13,22 @@ import * as UI from './UI/ui-manager.js'
 import * as uiTransaction from './UI/ui-transaction.js'
 import * as uiUsers from './UI/ui-users.js'
 import * as uiTech from './UI/ui-tech.js'
-import * as uiPolicy from './UI/ui-policy.js' // Import for side effects (event listeners)
-import * as statistics from './UI/statistics.js'
+import * as uiPolicy from './UI/ui-policy.js'
 // Canvas
 import * as Camera from './canvas/camera.js'
 import * as graphics from "./canvas/graphics.js"
 import { findNodeAt, findTransactionAt, findUserAt } from './canvas/finders.js'
+
+// Lazy loaded module
+let statistics = null
+
+window.loadStatisticsModule = async () => {
+    if (!statistics) {
+        console.log('Loading statistics module...')
+        statistics = await import('./UI/statistics.js')
+    }
+    return statistics
+}
 
 window.debug = false
 window.displayHeatmap = false
@@ -79,7 +89,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Initialize UI panels 
     UI.initUI()
-    statistics.initStatistics()
     uiPolicy.initPolicyUI()
 
     // Set initial canvas size and setup event listeners
@@ -544,8 +553,10 @@ function gameLoop() {
             UI.updateCurrentNodeDetails(budget, placeTower, enforceAction)
         }
 
-        // Update statistics panel if visible
-        statistics.updateStatistics()
+        // Update statistics panel if visible and loaded
+        if (statistics) {
+            statistics.updateStatistics()
+        }
         if (currentDay % Math.round(NEW_NODE_FREQUENCY / spawnControl) === 0) {
             // Every 60 days, a new node is added and we check for popularity
             if (!isFirstPlay()) {

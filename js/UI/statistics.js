@@ -6,6 +6,28 @@ import { isMobile } from '../canvas/visual-constants.js'
 let statisticsPanel = null
 let charts = {}
 
+// Simple Chart.js lazy loading
+export async function loadChartJs() {
+    if (window.Chart) return true
+
+    console.log('Loading Chart.js...')
+    return new Promise((resolve) => {
+        const script = document.createElement('script')
+        script.src = 'https://cdn.jsdelivr.net/npm/chart.js'
+        script.onload = () => {
+            console.log('Chart.js loaded')
+            resolve(true)
+        }
+        script.onerror = () => {
+            console.error('Failed to load Chart.js')
+            resolve(false)
+        }
+        document.head.appendChild(script)
+    })
+}
+
+
+
 // Utility functions for transaction filtering
 function getTransactionsByDays(days) {
     const timeThreshold = Date.now() - (days * 1000)
@@ -174,7 +196,7 @@ const CHART_COLORS = {
     accent: '#8b5cf6'
 }
 
-export function initStatistics() {
+function initStatisticsPanel() {
     statisticsPanel = {
         panel: document.getElementById('statistics-panel'),
         close: document.getElementById('close-statistics')
@@ -440,18 +462,23 @@ function switchStatisticsTab(tabName) {
     updateChartsForTab(tabName)
 }
 
-export function showStatistics() {
+export async function showStatistics() {
+
     if (!statisticsPanel || !statisticsPanel.panel) {
-        initStatistics()
+        initStatisticsPanel()
     }
 
-    show(statisticsPanel.panel)
+    // Load Chart.js if not already loaded
+    await loadChartJs()
+    if (!window.Chart) {
+        console.error('Chart.js failed to load')
+        return
+    }
 
-    // Small delay to ensure panel is visible before creating charts
-    setTimeout(() => {
-        initializeAllCharts()
-        updateAllCharts()
-    }, 100)
+    console.log('Chart.js ready, initializing charts...')
+    initializeAllCharts()
+    updateAllCharts()
+    show(statisticsPanel.panel)
 }
 
 export function hideStatistics() {
@@ -592,6 +619,7 @@ function analyzeCurrentGameState() {
 }
 
 function initializeAllCharts() {
+
     // Economics charts
     initChart('revenue-analysis-chart', 'line')
     initChart('cost-breakdown-chart', 'pie')
@@ -610,7 +638,7 @@ function initializeAllCharts() {
 
 function initChart(chartId, type) {
     const canvas = document.getElementById(chartId)
-    if (!canvas) return
+    if (!canvas || typeof window.Chart === 'undefined') return
 
     // Set fixed canvas dimensions to prevent expansion
     canvas.style.maxWidth = '100%'

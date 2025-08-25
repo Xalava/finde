@@ -5,8 +5,7 @@ import { uiFont } from '../canvas/visual-constants.js'
 import { selectRandomly } from '../utils.js'
 import { showTransactionTooltip } from './ui-transaction.js'
 import { closeUserDetails } from './ui-users.js'
-import { showStatistics } from './statistics.js'
-
+let statisticsModule = null
 export let indicators = null
 export let controls = null
 let instructions = null
@@ -35,7 +34,18 @@ export function initUI() {
         day: document.getElementById('day'),
         holiday: document.getElementById('holiday'),
     }
-    indicators.statStatItem.addEventListener('click', showStatistics)
+    indicators.statStatItem.addEventListener('click', async () => {
+        try {
+            // Lazy load statistics module if not already loaded
+            if (!statisticsModule)
+                statisticsModule = await window.loadStatisticsModule()
+            if (statisticsModule) {
+                await statisticsModule.showStatistics()
+            }
+        } catch (error) {
+            console.error('Error showing statistics:', error)
+        }
+    })
 
 
     controls = {
@@ -790,7 +800,7 @@ export function showFullInterface() {
     // show(controls.gdpStatItem)
     // show(controls.maintenanceStatItem)
 
-    // Only show statistics if reporting technology is unlocked
+    // Only show statistics if reporting technology is unlocked.
     if (tech.isTechUnlocked('reporting')) {
         show(indicators.statStatItem)
     }
@@ -801,6 +811,14 @@ export function updateTechUnlocks() {
     // Check and update UI elements that depend on technology unlocks
     if (tech.isTechUnlocked('reporting')) {
         show(indicators.statStatItem)
+        // Preload statistics when technology first becomes available
+        window.loadStatisticsModule().then(stats => {
+            if (stats) {
+                console.log('Statistics module preloaded on tech unlock')
+                statisticsModule = stats
+                statisticsModule.loadChartJs()
+            }
+        })
     }
 }
 

@@ -183,7 +183,7 @@ const TUTORIAL_STEPS = [
     },
     {
         title: 'Popularity ✨',
-        content: 'Congratulations! You are now relatively popular among the financial industry.',
+        content: 'Congratulations! You are now relatively popular.',
         onEnter: () => {
             UI.show(tutorialContainer)
 
