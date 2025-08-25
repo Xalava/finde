@@ -89,7 +89,7 @@ export const actionOptions = {
         description: 'Reduces local corruption when completed.',
         icon: '🕵️‍♂️',
         duration: 10,
-        reputationEffect: -5,
+        reputationEffect: -1,
         corruptionEffect: 0.6,
         techRequirement: null
     },
@@ -99,7 +99,7 @@ export const actionOptions = {
         description: 'Significantly reduces corruption, but damages reputation and popularity.',
         icon: '🚨',
         duration: 5,
-        reputationEffect: -30,
+        reputationEffect: -25,
         popularityEffect: -3,
         corruptionEffect: 0.2,
         techRequirement: 'special_operations'
@@ -110,7 +110,7 @@ export const actionOptions = {
         description: 'Removes corruption and launches a raid in neghbouring institutions.',
         icon: '🌍',
         duration: 25,
-        reputationEffect: -10,
+        reputationEffect: -5,
         corruptionEffect: 0,
         techRequirement: 'international_cooperation',
         affectsConnected: true,

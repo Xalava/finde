@@ -224,7 +224,7 @@ export function enforceAction(node, actionType, free = false) {
             addExpenditure('enforcement', actionCost, `${action.name} at ${node.name}`, node.id)
         }
 
-        node.changeReputation(action.reputationEffect * tech.bonus.reputationDamage) //negative
+        node.changeReputation((action.reputationEffect - node.corruption) * tech.bonus.reputationDamage)
         if (action.popularityEffect)
             policy.changePopularity(action.popularityEffect)
         node.enforcementAction = actionType

@@ -377,7 +377,10 @@ export function drawNode(node) {
         ctx.fillStyle = '#000'
         ctx.shadowColor = color
         ctx.shadowBlur = 4
-        ctx.fillText(`${config.actionOptions[node.enforcementAction].icon} ${config.actionOptions[node.enforcementAction].name}`, node.x - 24, node.y - 30)
+        ctx.fillText(`${config.actionOptions[node.enforcementAction].icon} ${config.actionOptions[node.enforcementAction].name}`, node.x - 28, node.y - 30)
+        ctx.font = `6px ${uiFont}`
+        ctx.shadowBlur = 2
+        ctx.fillText(`${Math.ceil((node.enforcementEnd - Date.now()) / 1000)} `, node.x - 13, node.y - 42)
     }
 
     if (debug) {
