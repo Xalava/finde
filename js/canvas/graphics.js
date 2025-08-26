@@ -131,6 +131,20 @@ let canvas, ctx
 export function init(canvasEl, context) {
     canvas = canvasEl
     ctx = context
+
+    // Mobile performance optimization: reduce canvas resolution while maintaining appearance
+    if (isMobile) {
+        const scale = 0.75 // Render at 75% resolution
+        const rect = canvas.getBoundingClientRect()
+
+        const dpr = window.devicePixelRatio || 1
+        canvas.width = rect.width * scale * dpr
+        canvas.height = rect.height * scale * dpr
+
+        canvas.style.width = rect.width + 'px'
+        canvas.style.height = rect.height + 'px'
+        ctx.scale(scale * dpr, scale * dpr)
+    }
 }
 
 // Todo: modularise, create visual language
