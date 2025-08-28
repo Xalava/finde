@@ -4,8 +4,9 @@ import { isFirstPlay } from '../tutorial.js'
 import * as UI from '../UI/ui-manager.js'
 import { selectRandomly, normalRandom, skewedRandom, pointsDistance } from '../utils.js'
 import { getLegalityCategory, getSizeTier, txSizeOptions } from './config.js'
-import { addEffect, getSpeedControl, dropProbability, incrementDailyDetectedTransactions, addObjectEffect } from '../main.js'
+import { getSpeedControl, dropProbability, incrementDailyDetectedTransactions } from '../main.js'
 import { detect } from './nodes.js'
+import { addEffect, addObjectEffect } from '../canvas/render-manager.js'
 
 let txId = 0
 
@@ -140,7 +141,6 @@ class Transaction {
         this.endReason = null
         this.validated = false
         this.isRecurrent = false
-        
         // Direction tracking for particle trails
         this.dx = 0
         this.dy = 0
@@ -237,12 +237,10 @@ class Transaction {
             //  Move toward target 
             const dx = next.x - this.x
             const dy = next.y - this.y
-            
             // Store normalized direction for particle system
             this.dx = dx / dist
             this.dy = dy / dist
             this.moving = true
-            
             this.x += this.dx * speed
             this.y += this.dy * speed
         }

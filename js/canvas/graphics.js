@@ -263,7 +263,7 @@ export function drawObjectEffects(objectEffects) {
     })
 }
 
-export function drawUser(user, debug = false) {
+export function drawUser(user) {
     ctx.save()
     const isSelectedUser = user === UI.getSelectedUser()
     const baseRadius = Math.max(2, 1 + Math.log(user.activity))

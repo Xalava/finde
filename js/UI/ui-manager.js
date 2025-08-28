@@ -807,7 +807,7 @@ export function showFullInterface() {
     show(controls.gameControls)
 }
 
-export function updateTechUnlocks() {
+export function updateTechUnlocks(researchState) {
     // Check and update UI elements that depend on technology unlocks
     if (tech.isTechUnlocked('reporting')) {
         show(indicators.statStatItem)
@@ -819,6 +819,11 @@ export function updateTechUnlocks() {
                 statisticsModule.loadChartJs()
             }
         })
+    }
+
+    if (researchState.cumulativePoints > 2000) {
+        console.log('Research threshold reached - activating policy button')
+        activatePolicy()
     }
 }
 

@@ -18,6 +18,7 @@ import * as uiPolicy from './UI/ui-policy.js'
 import * as Camera from './canvas/camera.js'
 import * as graphics from "./canvas/graphics.js"
 import { findNodeAt, findTransactionAt, findUserAt } from './canvas/finders.js'
+import * as renderManager from './canvas/render-manager.js'
 
 // Lazy loaded module
 let statistics = null
@@ -40,8 +41,6 @@ const ctx = canvas.getContext('2d')
 graphics.init(canvas, ctx)
 window.addEventListener('resize', Camera.resizeCanvas.bind(null, ctx))
 
-let effects = []
-let objectEffects = []
 
 function handleCanvasClick(screenX, screenY) {
     const tx = findTransactionAt(screenX, screenY)
@@ -108,8 +107,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (isFirstPlay()) {
         UI.hideFullInterface()
     } else {
-        // For returning players, check tech unlocks to show appropriate UI elements
-        UI.updateTechUnlocks()
+
         UI.show(UI.getControls().gameControls)
     }
 
@@ -280,39 +278,7 @@ export function incrementDailyDetectedTransactions() {
     dailyDetectedTransactions++
 }
 
-// TODO : restructure with options or an object of effects
-export function addEffect(x, y, emoji, type = 'default', color = null) {
-    let timer = 0
-    switch (type) {
-        case 'default':
-            timer = 30// Emojis for big actions
-            break
-        case 'invertedPulse':
-        case 'pulseNode':
-            timer = 10
-            break
-        case 'pulse':
-            timer = 8
-            break
-        case 'freeze':
-            timer = 180
-            break
-        default:
-            timer = 15 // small text notifications)
 
-    }
-    effects.push({ x, y, emoji, timer, type, color })
-}
-
-export function addObjectEffect(object, emoji, direction = "+", timer = 30, offset = { x: 4, y: 0 }) {
-    // oddset
-    if (object.size === 'large') {
-        offset.x += 4
-    } else if (object.size === 'medium') {
-        offset.x += 1
-    }
-    objectEffects.push({ object, emoji, direction, timer, offset })
-}
 
 function calculateIndicators() {
     // Calculate GDP from completed transactions over past 150 seconds (150 days)
@@ -467,28 +433,13 @@ function drawGame() {
         .forEach(edge => graphics.drawEdge(edge, nodes))
     activeNodes.forEach(node => graphics.drawNode(node))
     activeUsers.forEach(user => graphics.drawUser(user))
-    // Draw trail particles behind transactions
-    graphics.drawTransactionTrails()
     activeTransactions.forEach(tx => {
         graphics.drawTransaction(tx)
     })
-    graphics.drawEffects(effects)
-    graphics.drawObjectEffects(objectEffects)
+    // Draw trail particles behind transactions
+    graphics.drawTransactionTrails()
 
-    // Filter out expired effects
-    effects = effects.filter(e => e.timer > 0)
-    objectEffects = objectEffects.filter(e => e.timer > 0)
-
-    // Aggressive cleanup if effects arrays get too large
-    const maxEffects = 100 // Maximum number of effects to keep
-    if (effects.length > maxEffects) {
-        // Keep only the most recent effects
-        effects = effects.slice(-maxEffects)
-    }
-    if (objectEffects.length > maxEffects) {
-        // Keep only the most recent object effects
-        objectEffects = objectEffects.slice(-maxEffects)
-    }
+    renderManager.updateAndDrawEffects(graphics)
     if (displayCountries) {
         graphics.drawCountries(nodes, users)
     }
