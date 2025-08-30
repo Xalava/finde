@@ -342,8 +342,8 @@ class Transaction {
             case 'legit':
                 UI.showToast('🛑 Legit transaction blocked', `${reward > 9 ? "Heavy damage" : "Damage"} in global popularity (-${reward * 2})`, 'error')
                 policy.changePopularity(-reward * 2)
-                addObjectEffect(this, "✨", "-")
-
+                // addObjectEffect(this, "✨", "-")
+                addEffect(this.x, this.y, "✨", 'smallMalus')
                 break
             case 'questionable':
                 if (this.riskLevel < 6) {
@@ -354,14 +354,12 @@ class Transaction {
                     UI.showToast('🛑 Transaction blocked', `Suspicious transaction from ${this.sourceUser.name}. Later report show it was part of an illegal scheme, boosting your reputation 🌟 by ${reward}`, 'warning')
                     policy.changePopularity(reward)
                     addObjectEffect(this, "✨")
-
                 }
                 break
             case 'illegal':
                 UI.showToast('🛑 Transaction blocked', `Illegal transaction from ${this.sourceUser.name} has been blocked. Gaining popularity (+${reward})`, 'success')
                 policy.changePopularity(reward)
-                addEffect(this.x, this.y, "✨", 'smallbonus')//not visible as object ended
-
+                addEffect(this.x, this.y, "✨", 'smallBonus')
                 break
         }
     }

@@ -156,28 +156,25 @@ export function drawTransactionTrails() {
 
 export function drawEffects(effects) {
     effects.forEach(e => {
-        e.timer -= 1
         switch (e.type) {
             case 'insitus':
                 ctx.font = `6px ${uiFont}`
                 ctx.fillText(e.emoji, e.x, e.y)
                 break
-            case 'malus':
-                ctx.fillStyle = '#ff3e3e'
-                ctx.font = `12px ${uiFont}`
-                ctx.fillText(e.emoji, e.x - 5, e.y - 50)
-                break
-            case 'bonus':
-                ctx.fillStyle = '#00cc66'
-                ctx.font = `12px ${uiFont}`
-                ctx.fillText(e.emoji, e.x + 25, e.y + 5)
-                break
-            case 'smallbonus':
+            case 'smallBonus': // Associated with insitus for cancelling tx
                 ctx.save()
                 ctx.globalAlpha = Math.min(e.timer / 10, 1)
                 ctx.fillStyle = colors.success
                 ctx.font = `4px ${uiFont}`
-                ctx.fillText(e.emoji, e.x + 8, e.y - 2 - (30 - e.timer) * 0.3)
+                ctx.fillText(e.emoji, e.x + 6, e.y - (30 - e.timer) * 0.3)
+                ctx.restore()
+                break
+            case 'smallMalus': // Associated with insitus for cancelling tx
+                ctx.save()
+                ctx.globalAlpha = Math.min(e.timer / 10, 1)
+                ctx.fillStyle = colors.error
+                ctx.font = `4px ${uiFont}`
+                ctx.fillText(e.emoji, e.x + 6, e.y + (30 - e.timer) * 0.3)
                 ctx.restore()
                 break
             case 'budget':
@@ -207,7 +204,7 @@ export function drawEffects(effects) {
                 ctx.save()
                 ctx.beginPath()
                 const pulseRadiusNode = 25 - e.timer * 2
-                const opacity = 1 - e.timer / 30 // Fade out as timer decreases
+                const opacity = e.timer / 30 // Fade out as timer decreases
                 ctx.globalAlpha = Math.max(0.1, opacity)
                 ctx.arc(e.x, e.y, pulseRadiusNode, 0, Math.PI * 2)
                 ctx.strokeStyle = e.color
@@ -220,47 +217,31 @@ export function drawEffects(effects) {
                 ctx.fillStyle = 'black'
                 ctx.fillText(e.emoji, e.x + 5, e.y + 30)
                 break
-            case 'freeze':
-                ctx.font = `8px ${uiFont}`
-                ctx.fillStyle = 'black'
-                ctx.fillText(e.emoji, e.x, e.y)
-                break
             default:
                 ctx.font = `24px ${uiFont}`
                 ctx.fillStyle = 'black'
                 ctx.fillText(e.emoji, e.x - 12, e.y - 30)
         }
     })
-    // effects = effects.filter(e => {
-    //     e.timer -= 1
-    //     return e.timer >= 0
-    // })
-
 }
 
 export function drawObjectEffects(objectEffects) {
+    ctx.save()
+    ctx.font = `4px ${uiFont}`
     objectEffects.forEach(e => {
-        e.timer -= 1
-        if (!e.object.active) {
-            e.timer = 0
-            return
+        ctx.globalAlpha = Math.min(e.timer / 10, 1) //Sharp decline below 1
+        if (e.direction === '+') {
+            ctx.shadowBlur = 0
+            ctx.filter = ''
+            ctx.fillText(e.emoji, e.object.x + e.offset.x, e.object.y + e.offset.y - ((30 - e.timer) / 6))// effect moves up. Assumes timer 30
         } else {
-            ctx.save()
-            if (e.direction === '+') {
-                ctx.font = `4px ${uiFont}`
-                ctx.fillText(e.emoji, e.object.x + e.offset.x, e.object.y + e.offset.y - ((30 - e.timer) / 10))// object moves up. Assumes timer 30
-                //
-            } else {
-                ctx.shadowColor = 'red'
-                ctx.shadowBlur = 16
-                ctx.filter = "hue-rotate(-50deg)"
-                // display nothing for the moment
-                // ctx.fillText(e.emoji, e.object.x + e.offset.x, e.object.y + e.offset.y)//
-            }
-
-            ctx.restore()
+            ctx.shadowColor = 'red'
+            ctx.shadowBlur = 16
+            ctx.filter = "hue-rotate(-50deg)"
+            ctx.fillText(e.emoji, e.object.x + e.offset.x, e.object.y + e.offset.y + ((30 - e.timer) / 6))// effect moves down
         }
     })
+    ctx.restore()
 }
 
 export function drawUser(user) {

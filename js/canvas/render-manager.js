@@ -13,9 +13,10 @@ export function addEffect(x, y, emoji, type = 'default', color = null) {
     })
 }
 
-export function addObjectEffect(object, emoji, direction = "+", timer = 30, offset = { x: 4, y: 0 }) {
-    if (object.size === 'large') offset.x += 4
+export function addObjectEffect(object, emoji, direction = "+", timer = 30, offset = { x: 3, y: 0 }) {
+    if (object.size === 'large') offset.x += 5
     else if (object.size === 'medium') offset.x += 1
+
 
     objectEffects.push({ object, emoji, direction, timer, offset })
 }
@@ -23,24 +24,20 @@ export function addObjectEffect(object, emoji, direction = "+", timer = 30, offs
 export function updateAndDrawEffects(graphics) {
     // Update and clean up regular effects
     for (let i = effects.length - 1; i >= 0; i--) {
-        const effect = effects[i]
-        effect.timer--
-
-        if (effect.timer <= 0) {
+        effects[i].timer--
+        if (effects[i].timer <= 0) {
             effects.splice(i, 1)
         }
     }
+    graphics.drawEffects(effects)
 
     // Update object effects
     for (let i = objectEffects.length - 1; i >= 0; i--) {
         objectEffects[i].timer--
-        if (objectEffects[i].timer <= 0) {
+        if (objectEffects[i].timer <= 0 || !objectEffects[i].object.active) {
             objectEffects.splice(i, 1)
         }
     }
-
-    // Draw all effects
-    graphics.drawEffects(effects)
     graphics.drawObjectEffects(objectEffects)
 }
 
