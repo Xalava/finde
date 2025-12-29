@@ -62,9 +62,9 @@ export function initNodes() {
         { id: 3, x: 800, y: 850, corruption: 0, type: 'processor', name: 'FastFunds' },
         { id: 4, x: 950, y: 500, corruption: 0, type: 'processor', name: 'QuickTransfer' },
 
-        { id: 5, x: 600, y: 400, corruption: 0, type: 'bank', name: 'Global Bank', active: true },
+        { id: 5, x: 600, y: 400, corruption: 0, type: 'bank', name: 'Global Bank', active: false },
         { id: 6, x: 400, y: 450, corruption: 0, type: 'bank', name: 'Trust Bank', active: true },
-        { id: 7, x: 350, y: 550, corruption: 3, type: 'bank', name: 'Safe Savings', active: true },
+        { id: 7, x: 350, y: 550, corruption: 3, type: 'bank', name: 'Safe Savings', active: false },
         { id: 8, x: 1050, y: 250, corruption: 0, type: 'bank', name: 'Prime Bank' },
         { id: 9, x: 1130, y: 400, corruption: 0, type: 'bank', name: 'Capital Trust' },
         { id: 10, x: 330, y: 350, corruption: 1, type: 'bank', name: 'Union Bank', active: true },
@@ -77,7 +77,7 @@ export function initNodes() {
         { id: 17, x: 1000, y: 650, corruption: 4, type: 'bank', name: 'Crest Bank' },
         { id: 18, x: 400, y: 930, corruption: 0, type: 'bank', name: 'Fortune Bank' },
         { id: 19, x: 600, y: 800, corruption: 0, type: 'bank', name: 'Legacy Bank' },
-        { id: 20, x: 300, y: 280, corruption: 0, type: 'bank', name: 'Prestige Bank' },
+        { id: 20, x: 300, y: 280, corruption: 0, type: 'bank', name: 'Prestige Bank', active: true },
 
         // New  Fintech nodes
         { id: 21, x: 710, y: 510, corruption: 1, type: 'fintech', name: 'Rocket Pay' },

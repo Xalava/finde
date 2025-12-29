@@ -393,11 +393,11 @@ function checkForHoliday(currentDay) {
     // const year = Math.floor(currentDay / 365)
     // After the first drawing, we slow the game to ask for the tutorial 
     if (!isFirstPlay()) {
-        // No holidway while first play
+        // No holiday while first play
         holiday = false
         // Check for specific holidays
         switch (dayOfYear) {
-            case 15: // Lunar New Year
+            case 35: // Lunar New Year
                 holiday = true
                 UI.showToast('🎆 Holiday!', 'Happy Lunar New Year!', 'info')
                 break

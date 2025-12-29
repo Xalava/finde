@@ -31,7 +31,8 @@
 body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen,
         Ubuntu, Cantarell, 'Helvetica Neue', sans-serif;
-    background: linear-gradient(135deg, var(--bg-primary), var(--bg-secondary));
+    background: var(--bg-primary);
+    /* background: linear-gradient(135deg, var(--bg-primary), var(--bg-secondary)); */
     color: var(--text);
     line-height: 1.2;
 }
@@ -55,7 +56,8 @@ body,
     flex: 1 1 auto;
     position: relative;
     overflow: hidden;
-    background: radial-gradient(circle at center, #13131f, #0a0a12);
+    background: var(--bg-primary);
+    /* background: radial-gradient(circle at center, #13131f, #0a0a12); */
 }
 
 canvas {
