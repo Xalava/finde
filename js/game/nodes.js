@@ -116,9 +116,6 @@ export function initNodes() {
                 policy.changePopularity(-100)
                 node.active = false
                 node.tower = null
-                // Update cached activeNodes immediately since bank failed
-                // updateActiveNodes()
-
                 reassignUsersBank(node.id)
             }
         }
@@ -239,65 +236,88 @@ export function enforceAction(node, actionType, free = false) {
             })
         }
     }
-}// TODO : Could be a method of the node
-export function detect(node, tx) {
-    // defensive check
-    if (!node || !tx)
-        console.error("Detect(): Node or tx found", node, tx)
+}
 
-    // No detection if there is no tower
-    if (!node.tower)
-        return false
-
+function calculateDetectionChance(node, tx) {
     const { detectMod, fpMod } = policy.regulationLevels[policy.state.current]
     let detectionChance = node.accuracy * detectMod * events.detectMod
 
-    if (node.tower === 'basic' && tx.size === 'small') {
-        detectionChance *= 0.5 // Reduce accuracy for small transactions (TODO : could be removed)
+    // if (node.tower === 'basic' && tx.size === 'small') {
+    //     detectionChance *= 0.5
+    // }
+
+    if (debug) { console.log(`Detection rolls at ${node.id} with chance ${detectionChance.toFixed(2)} (base accuracy: ${node.accuracy}, detectMod: ${detectMod}, eventMod: ${events.detectMod}, fpMod: ${fpMod})`)
     }
 
-    if (debug) console.log(`Detection rolls at ${node.id} with chance ${detectionChance} (Event mod:`, events.detectMod, "PolicyMod", detectMod, "False Positive Mod", fpMod, ").")
-    if (tx.riskLevel < 6) {
-        // case 'legit': (suspicious tx can be caugh as illegal)
-        if (!isFirstPlay()) {
-            // small chance of false flag, inversely proportional to accuracy, then 10% unless robust tech
-            if (Math.random() > detectionChance && Math.random() < (towerOptions[node.tower].errors * 0.01 * tech.bonus.falsePositive * fpMod)) {
-                addEffect(node.x, node.y, '🔴', "tower")
-                tx.endTransaction("falsePositive")
-                console.log(`🔴 False postive at`, node.name)
-                node.changeReputation(-5) // harmful for reputation, but not for corruption. Also the transaction ends when it shouldn't have, reducing income
-                if (!firstFalsePositive) {
-                    UI.showToast(`🔴 First false postive at`, `Reputation damaged at ${node.name}`, 'error')
+    return { detectionChance, fpMod }
+}
+
+function recordSuccessfulDetection(node, tx) {
+    tx.endTransaction("detected")
+    addEffect(node.x, node.y, '✔️', "tower")
+
+    if (!firstDetection) {
+        UI.showToast('First illegal transaction blocked!', `Detected at ${node.name} (${config.towerOptions[node.tower].name})`, 'success')
+        firstDetection = true
+    }
+
+    console.log(`✔️ Illegal tx blocked at node #${node.id}`)
+    if (debug) console.log(tx)
+
+    node.changeReputation(3)
+
+    // Update UI if this node is currently selected
+    if (UI.getSelecteexportdNode()?.id === node.id) {
+        UI.showNodeDetails(node, budget, placeTower, enforceAction)
+    }
+}
+
+function recordFalsePositive(node, tx) {
+    addEffect(node.x, node.y, '🔴', "tower")
+    tx.endTransaction("falsePositive")
+    console.log(`🔴 False postive at`, node.name)
+    node.changeReputation(-5) // harmful for reputation, but not for corruption. Also the transaction ends when it shouldn't have, reducing income
+    if (!firstFalsePositive) {
+        UI.showToast('🔴 First false positive', `Reputation damaged at ${node.name}`, 'error')
                     firstFalsePositive = true
                 }
-                return true
-            } else {
+}
+
+export function detect(node, tx) {
+    // Defensive checks
+    if (!node || !tx) {
+        console.error("Detect(): Missing node or transaction", { node, tx })
                 return false
             }
-        }
-    } else {
-        // case 'illegal':
-        if (Math.random() < detectionChance) {
-            tx.endTransaction("detected")
-            addEffect(node.x, node.y, '✔️', "tower")
-            if (!firstDetection) {
-                UI.showToast('First illegal transaction blocked!', `Detected at ${node.name} (${towerOptions[node.tower].name})`, 'success')
-                firstDetection = true
-            }
-            console.log(`✔️ Illegal tx blocked #${node.id}`)
-            if (debug) console.log(tx)
 
-            // Gain reputation for successful detection
-            node.changeReputation(3)
+    if (!node.tower) return false
 
-            // Update panel if the detection happens at the selected node
-            if (UI.getSelectedNode() && UI.getSelectedNode().id === node.id) {
-                UI.showNodeDetails(node, budget, placeTower, enforceAction)
-            }
+    const { detectionChance, fpMod } = calculateDetectionChance(node, tx)
+    const isIllegal = tx.riskLevel >= 6
+
+    // Roll for detection
+    const detected = Math.random() < detectionChance
+
+    if (isIllegal) {
+        // Illegal transaction: detection is good
+        if (detected) {
+            recordSuccessfulDetection(node, tx)
             return true
-        } else {
-            return false
         }
+        return false
+    } else {
+        // Legitimate transaction: check for false positive
+        if (isFirstPlay()) return false
+
+        const towerErrorRate = config.towerOptions[node.tower].errors * 0.01
+        const falsePositiveChance = towerErrorRate * tech.bonus.falsePositive * fpMod
+        const falsePositive = !detected && Math.random() < falsePositiveChance
+
+        if (falsePositive) {
+            recordFalsePositive(node, tx)
+            return true
+        }
+        return false
     }
 }
 export function removeExpiredEnforcementActions(now) {

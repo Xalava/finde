@@ -194,7 +194,7 @@ const TUTORIAL_STEPS = [
     },
     {
         title: `<span class="glow glow-orange"></span> <span class="glow glow-orange"></span>`,
-        content: '<strong>Suspicious transactions</strong> are either legal or illegal, but it is not apparent',
+        content: '<strong>Suspicious transactions</strong> are either legal or illegal, but it is not apparent.',
         onEnter: () => {
             unlock.suspicious = true
         }
@@ -208,7 +208,7 @@ const TUTORIAL_STEPS = [
     },
     {
         title: 'Choose an action',
-        content: 'Suspicious transactions are less predictable. You could act as you see fit, or <strong>freeze 🧊 the transaction</strong> to be analysed for a few seconds.',
+        content: 'You could act as you see fit, or <strong>freeze 🧊 the transaction</strong> to be analysed for a few seconds. It will gather intelligence to know its status and for future research.',
         onEnter: () => {
             // For safety, if the tutorial panel hides the tooltip (should not happen since positiontooltip)
             setTimeout(() => {
@@ -219,7 +219,7 @@ const TUTORIAL_STEPS = [
     },
     {
         title: 'Reach 333 in popularity',
-        content: 'You popularity depends on your accurate and quick judgement.',
+        content: 'You will notice that some actions are more rewarding than other.',
         onEnter: () => {
             unlock.reputation = true
             // unlock.research
