@@ -1,7 +1,8 @@
 import * as Camera from '../canvas/camera.js'
 import { isMobile } from '../canvas/visual-constants.js'
 import { legalityColorMap, countries } from '../game/config.js'
-import { setSelectedTransaction, show, tooltip } from './ui-manager.js'
+import { setSelectedTransaction, show, tooltip, hide } from './ui-manager.js'
+import { unlock } from '../tutorial.js'
 
 export function formatTransaction(tx, userId = null, isClickable = false) {
     const template = document.getElementById('transaction-template')
@@ -132,14 +133,35 @@ export function showTransactionTooltip(tx) {
     // Position tooltip
     positionTransactionTooltip(tx)
 
-    if (tx.freezed) {
-        tooltip.allowBtn.disabled = true
-        tooltip.blockBtn.disabled = true
-        tooltip.freezeBtn.disabled = true
+    // If transaction was validated/approved, hide all action buttons
+    if (tx.validated) {
+        hide(tooltip.allowBtn)
+        hide(tooltip.blockBtn)
+        hide(tooltip.freezeBtn)
     } else {
-        tooltip.allowBtn.disabled = tx.validated
-        tooltip.blockBtn.disabled = false
-        tooltip.freezeBtn.disabled = tx.wasFreezed
+        // Show buttons based on state
+        show(tooltip.allowBtn)
+        show(tooltip.blockBtn)
+
+        if (tx.freezed) {
+            // While frozen, disable all actions
+            tooltip.allowBtn.disabled = true
+            tooltip.blockBtn.disabled = true
+            tooltip.freezeBtn.disabled = true
+            show(tooltip.freezeBtn)
+        } else {
+            // Normal state: enable available actions
+            tooltip.allowBtn.disabled = false
+            tooltip.blockBtn.disabled = false
+            tooltip.freezeBtn.disabled = tx.wasFreezed
+
+            // Hide freeze button if not unlocked yet (tutorial restriction)
+            if (!unlock.suspicious) {
+                hide(tooltip.freezeBtn)
+            } else {
+                show(tooltip.freezeBtn)
+            }
+        }
     }
 
     // Show tooltip and store transaction

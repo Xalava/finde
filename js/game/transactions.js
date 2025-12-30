@@ -1,14 +1,34 @@
 import * as policy from './policy.js'
 import * as tech from './tech.js'
-import { isFirstPlay } from '../tutorial.js'
+import { isFirstPlay, unlock } from '../tutorial.js'
 import * as UI from '../UI/ui-manager.js'
 import { selectRandomly, normalRandom, skewedRandom, pointsDistance } from '../utils.js'
-import { getLegalityCategory, getSizeTier, txSizeOptions } from './config.js'
+import { getSizeTier, txSizeOptions } from './config.js'
 import { getSpeedControl, dropProbability, incrementDailyDetectedTransactions } from '../main.js'
 import { detect } from './nodes.js'
 import { addEffect, addObjectEffect } from '../canvas/render-manager.js'
 
 let txId = 0
+
+// == Legality Calculation ==
+
+/**
+ * Determines transaction legality category based on risk level.
+ * During tutorial, suspicious transactions are hidden until unlocked.
+ */
+function getLegalityCategory(riskLevel) {
+
+    if (riskLevel < 4) return 'legit'
+    if (riskLevel < 7) {
+        // Before suspicious unlock: classify as legit (4-5) or illegal (6)
+        // After unlock: all 4-6 are questionable
+        if (!unlock.suspicious) {
+            return riskLevel < 6 ? 'legit' : 'illegal'
+        }
+        return 'questionable'
+    }
+    return 'illegal'
+}
 
 // == Transaction Management ==
 export function spawnTransaction() {

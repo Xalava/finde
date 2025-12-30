@@ -14,6 +14,7 @@ export const unlock = {
     // tutorial
     corruption: false,
     reputation: false,
+    suspicious: false,
     nodes: false,
     users: false,
     endTutorial: false,
@@ -121,7 +122,6 @@ const TUTORIAL_STEPS = [
         title: 'Legality',
         content: `Each transaction has a legality status:
             <br><span class="glow glow-green"></span> <strong>Legitimate</strong> - Probably safe and legal
-            <br><span class="glow glow-orange"></span> <strong>Suspicious</strong> - Could be reviewed
             <br><span class="glow glow-red"></span> <strong>Illegal</strong> - Must be stopped
       `,
     },
@@ -141,7 +141,7 @@ const TUTORIAL_STEPS = [
     },
     {
         title: 'Choose an action',
-        content: 'Approve ✅ legitimate transactions. Block 🛑 illegal ones. Suspicious transactions are less predictable',
+        content: 'Approve ✅ legitimate transactions. Block 🛑 illegal ones.',
         onEnter: () => {
             // For safety, if the tutorial panel hides the tooltip (should not happen since positiontooltip)
             setTimeout(() => {
@@ -153,7 +153,7 @@ const TUTORIAL_STEPS = [
         },
     },
     {
-        title: 'Reach 300 in popularity',
+        title: 'Reach 250 in popularity',
         content: 'You popularity depends on your accurate and quick judgement.',
         onEnter: () => {
             unlock.reputation = true
@@ -173,7 +173,7 @@ const TUTORIAL_STEPS = [
         },
         waitFor: () => {
             if (debug) return true
-            if (policy.popularity >= policy.POPULARITY.INIT + 100) { //&& tech.getResearchPoints() >= 50
+            if (policy.popularity >= policy.POPULARITY.INIT + 50) { //&& tech.getResearchPoints() >= 50
                 // UI.show(tutorialContainer)
                 return true
             } else {
@@ -191,6 +191,60 @@ const TUTORIAL_STEPS = [
             // clearTimeout(potentialNewNode)
 
         }
+    },
+    {
+        title: `<span class="glow glow-orange"></span> <span class="glow glow-orange"></span>`,
+        content: '<strong>Suspicious transactions</strong> are either legal or illegal, but it is not apparent',
+        onEnter: () => {
+            unlock.suspicious = true
+        }
+    },
+    {
+        title: 'Observe a transaction',
+        content: 'Click 👆️ on any suspicious transaction. ',
+        waitFor: () => {
+            return window.transactions.some(t => t.isSelected)
+        }
+    },
+    {
+        title: 'Choose an action',
+        content: 'Suspicious transactions are less predictable. You could act as you see fit, or <strong>freeze 🧊 the transaction</strong> to be analysed for a few seconds.',
+        onEnter: () => {
+            // For safety, if the tutorial panel hides the tooltip (should not happen since positiontooltip)
+            setTimeout(() => {
+                UI.hide(tutorialContainer)
+            }, 20000)
+        },
+
+    },
+    {
+        title: 'Reach 333 in popularity',
+        content: 'You popularity depends on your accurate and quick judgement.',
+        onEnter: () => {
+            unlock.reputation = true
+            // unlock.research
+            setTimeout(() => {
+                UI.hide(tutorialContainer)
+            }, 10000)
+            // After 
+            potentialNewNode = setTimeout(() => {
+                let checkNonSelection = setInterval(() => {
+                    if (!UI.getSelectedTransaction()) {
+                        clearInterval(checkNonSelection)
+                        spawnNode(20)
+                    }
+                }, 300)
+            }, 40000)
+        },
+        waitFor: () => {
+            if (debug) return true
+            if (policy.popularity >= policy.POPULARITY.INIT + 133) { //&& tech.getResearchPoints() >= 50
+                // UI.show(tutorialContainer)
+                return true
+            } else {
+                return false
+            }
+        },
     },
     {
         title: 'Corruption',
