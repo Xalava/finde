@@ -119,51 +119,34 @@ export function positionTransactionTooltip(tx) {
 }
 // Transaction tooltip functions
 export function showTransactionTooltip(tx) {
-
     tooltip.content.innerHTML = formatTransaction(tx, null, false)
     tooltip.motive.innerHTML = tx.motive
-    if (tx.validated) {
-        document.querySelector(".transaction-status").innerHTML += `<div><small>✅</small></div>`
-    }
 
-    if (tx.wasFreezed) {
-        document.querySelector(".transaction-status").innerHTML += `<div><small>🧊</small></div>`
-    }
+    const statusEl = document.querySelector(".transaction-status")
+    if (tx.validated) statusEl.innerHTML += `<div><small>✅</small></div>`
+    if (tx.wasFreezed) statusEl.innerHTML += `<div><small>🧊</small></div>`
 
-    // Position tooltip
     positionTransactionTooltip(tx)
 
-    // If transaction was validated/approved, hide all action buttons
+    // Configure action buttons based on transaction state
+    const { allowBtn, blockBtn, freezeBtn } = tooltip
+
     if (tx.validated) {
-        hide(tooltip.allowBtn)
-        hide(tooltip.blockBtn)
-        hide(tooltip.freezeBtn)
+        // Transaction already approved - hide all actions
+        hide(allowBtn, blockBtn, freezeBtn)
+    } else if (tx.freezed) {
+        // Transaction currently frozen - show all buttons but disable them
+        show(allowBtn, blockBtn, freezeBtn)
+        allowBtn.disabled = blockBtn.disabled = freezeBtn.disabled = true
     } else {
-        // Show buttons based on state
-        show(tooltip.allowBtn)
-        show(tooltip.blockBtn)
+        // Normal state - enable allow/block, conditionally show freeze
+        show(allowBtn, blockBtn)
+        allowBtn.disabled = blockBtn.disabled = false
+        freezeBtn.disabled = tx.wasFreezed
 
-        if (tx.freezed) {
-            // While frozen, disable all actions
-            tooltip.allowBtn.disabled = true
-            tooltip.blockBtn.disabled = true
-            tooltip.freezeBtn.disabled = true
-            show(tooltip.freezeBtn)
-        } else {
-            // Normal state: enable available actions
-            tooltip.allowBtn.disabled = false
-            tooltip.blockBtn.disabled = false
-            tooltip.freezeBtn.disabled = tx.wasFreezed
-
-            // Hide freeze button if not unlocked yet (tutorial restriction)
-            if (!unlock.suspicious) {
-                hide(tooltip.freezeBtn)
-            } else {
-                show(tooltip.freezeBtn)
-            }
-        }
+        // Only show freeze button when unlocked in tutorial
+        unlock.suspicious ? show(freezeBtn) : hide(freezeBtn)
     }
-
     // Show tooltip and store transaction
     show(tooltip.panel)
 }

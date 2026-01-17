@@ -1370,9 +1370,22 @@ small {
 
 #tooltip-actions {
     margin: 2px;
-    display: flex;
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
     gap: 6px;
     flex: 1;
+}
+
+#tooltip-allow {
+    grid-column: 1;
+}
+
+#tooltip-freeze {
+    grid-column: 2;
+}
+
+#tooltip-block {
+    grid-column: 3;
 }
 
 #tooltip-motive {

@@ -429,12 +429,12 @@ export function getNodeDetailsPanel() {
 }
 
 // UI utilities
-export function show(element) {
-    if (element) element.classList.remove('hidden')
+export function show(...elements) {
+    elements.forEach(el => el?.classList.remove('hidden'))
 }
 
-export function hide(element) {
-    if (element) element.classList.add('hidden')
+export function hide(...elements) {
+    elements.forEach(el => el?.classList.add('hidden'))
 }
 
 export function updateCurrentNodeDetails(budget, placeTower, enforceAction) {
